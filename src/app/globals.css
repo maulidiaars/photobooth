@@ -1,0 +1,164 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-paper text-ink font-body;
+  /* Warm paper base with a very soft light-leak wash in the corners —
+     restrained on purpose, so it reads as "paper" not "candy blobs". */
+  background-image: radial-gradient(circle at 8% 0%, rgba(156, 43, 60, 0.06) 0%, transparent 42%),
+    radial-gradient(circle at 100% 12%, rgba(221, 168, 76, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 50% 100%, rgba(143, 184, 140, 0.07) 0%, transparent 45%);
+  background-attachment: fixed;
+  overflow-x: hidden;
+}
+
+/* Paper-grain noise laid over everything — a fine, high-frequency
+   photographic grain (not chunky sand/gravel) so surfaces read as
+   quality printed paper instead of a scanned texture pack. Higher
+   baseFrequency + more octaves = tiny, tight grain; low opacity keeps
+   it a whisper under the content rather than competing with it. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+/* Very faint linen/canvas weave — a second, larger-scale texture
+   layered under the grain so surfaces don't read as a flat colour even
+   when zoomed out (cards, admin panels, modals), kept subtle enough to
+   never look like a visible plaid/pattern. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.35;
+  background-image: repeating-linear-gradient(
+      45deg,
+      rgba(58, 40, 31, 0.012) 0px,
+      rgba(58, 40, 31, 0.012) 1px,
+      transparent 1px,
+      transparent 6px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(58, 40, 31, 0.01) 0px,
+      rgba(58, 40, 31, 0.01) 1px,
+      transparent 1px,
+      transparent 6px
+    );
+}
+
+/* Reusable texture class for surfaces that sit in their own stacking
+   context (modals, admin cards) and so don't inherit body::before. */
+.bg-texture {
+  position: relative;
+}
+.bg-texture::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.3;
+  mix-blend-mode: multiply;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.045 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Full-viewport "one screen, no scroll" page shell. Uses dvh (falls
+   back to vh) so mobile browser chrome doesn't cause the last few
+   pixels of content to hide behind the address bar. Any list/grid
+   inside a page that could grow long (frame carousel, photo grid,
+   slot thumbnails) should scroll internally instead of the page. */
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+::selection {
+  background: #e3abaf;
+  color: #3a281f;
+}
+
+/* Visible, on-brand keyboard focus ring instead of the browser default. */
+:focus-visible {
+  outline: 3px solid #9c2b3c;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* Slim, on-brand scrollbar for carousels */
+.clay-scrollbar::-webkit-scrollbar {
+  height: 8px;
+}
+.clay-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.clay-scrollbar::-webkit-scrollbar-thumb {
+  background: #d98a90;
+  border-radius: 999px;
+}
+
+.text-outline-white {
+  -webkit-text-stroke: 5px #fffbf2;
+  paint-order: stroke fill;
+}
+
+/* Film-sprocket perforation strip — the app's recurring signature
+   motif, used along the edges of the photo strip / step tracker. Draws
+   a row of small punched holes via a repeating radial-gradient so no
+   image asset is needed and it scales to any width. */
+.sprockets {
+  background-image: radial-gradient(circle, rgba(58, 40, 31, 0.35) 0 2.5px, transparent 2.6px);
+  background-size: 18px 100%;
+  background-repeat: repeat-x;
+  background-position: center;
+}
+.sprockets-light {
+  background-image: radial-gradient(circle, rgba(255, 251, 242, 0.55) 0 2.5px, transparent 2.6px);
+  background-size: 18px 100%;
+  background-repeat: repeat-x;
+  background-position: center;
+}
+
+/* A strip of "washi tape" — small rotated rectangle, reused for the
+   torn/taped-on feel of the frame & result cards. */
+.washi-tape {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.35) 0px,
+    rgba(255, 255, 255, 0.35) 6px,
+    rgba(255, 255, 255, 0.15) 6px,
+    rgba(255, 255, 255, 0.15) 12px
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

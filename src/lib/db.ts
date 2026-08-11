@@ -10,6 +10,11 @@ const poolConfig: PoolOptions = {
   connectionLimit: 10,
   queueLimit: 0,
   dateStrings: true,
+
+  // TiDB Cloud requires a secure TLS connection
+  ssl: {
+    minVersion: "TLSv1.2",
+  },
 };
 
 declare global {
@@ -28,7 +33,10 @@ if (process.env.NODE_ENV !== "production") {
   global._clayPhotoboothPool = pool;
 }
 
-export async function query<T>(sql: string, params: unknown[] = []): Promise<T> {
+export async function query<T>(
+  sql: string,
+  params: unknown[] = []
+): Promise<T> {
   const [rows] = await pool.query(sql, params);
   return rows as T;
 }

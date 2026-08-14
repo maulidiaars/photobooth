@@ -173,7 +173,6 @@ export function PhotoLightbox({
                     className="max-h-[60vh] md:max-h-[70vh] w-auto max-w-full object-contain shadow-2xl"
                     style={{ 
                       background: 'transparent',
-                      imageRendering: 'high-quality',
                     }}
                   />
                 </div>

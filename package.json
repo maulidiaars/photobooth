@@ -11,6 +11,7 @@
     "db:init": "node -r dotenv/config scripts/init-db.js"
   },
   "dependencies": {
+    "@vercel/blob": "^2.8.0",
     "autoprefixer": "10.4.20",
     "bcryptjs": "2.4.3",
     "canvas-confetti": "^1.9.3",

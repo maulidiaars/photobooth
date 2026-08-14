@@ -5,7 +5,12 @@ import { motion } from "framer-motion";
 import { Plus, RefreshCw, X } from "lucide-react";
 import { FrameForm } from "@/components/admin/FrameForm";
 import { FrameTable } from "@/components/admin/FrameTable";
-import { getFrames, createFrame, updateFrame, deleteFrame } from "@/services/frameService";
+import {
+  getFrames,
+  createFrame,
+  updateFrame,
+  deleteFrame,
+} from "@/services/frameService";
 import { useToast } from "@/components/ui/Toast";
 import type { Frame } from "@/types/frame";
 
@@ -18,6 +23,7 @@ export default function FramesPage() {
 
   const loadFrames = async () => {
     setLoading(true);
+
     try {
       const data = await getFrames();
       setFrames(data);
@@ -38,7 +44,21 @@ export default function FramesPage() {
     slotLayout?: any[];
   }) => {
     try {
-      await createFrame(payload);
+      // Frame baru wajib memiliki PNG dan layout slot
+      if (!payload.framePngBase64 || !payload.slotLayout) {
+        toast.push("PNG frame dan slot layout wajib diisi", "error");
+        return;
+      }
+
+      const framePngBase64 = payload.framePngBase64;
+      const slotLayout = payload.slotLayout;
+
+      await createFrame({
+        nama: payload.nama,
+        framePngBase64,
+        slotLayout,
+      });
+
       toast.push("Frame berhasil ditambahkan", "success");
       setShowForm(false);
       loadFrames();
@@ -53,8 +73,10 @@ export default function FramesPage() {
     slotLayout?: any[];
   }) => {
     if (!editingFrame) return;
+
     try {
       await updateFrame(editingFrame.id, payload);
+
       toast.push("Frame berhasil diperbarui", "success");
       setEditingFrame(null);
       setShowForm(false);
@@ -67,6 +89,7 @@ export default function FramesPage() {
   const handleDelete = async (frame: Frame) => {
     try {
       await deleteFrame(frame.id);
+
       toast.push("Frame berhasil dihapus", "success");
       loadFrames();
     } catch {
@@ -77,8 +100,8 @@ export default function FramesPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: -8 }} 
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
       >
@@ -86,10 +109,12 @@ export default function FramesPage() {
           <h1 className="font-serif text-2xl font-bold text-[#4A1A1A] tracking-wide">
             Kelola Frame
           </h1>
+
           <p className="font-serif text-sm text-[#4A1A1A]/60 mt-0.5">
             Unggah PNG transparan — deteksi slot otomatis
           </p>
         </div>
+
         <div className="mt-2 sm:mt-0 flex items-center gap-2">
           <button
             onClick={() => {
@@ -110,11 +135,16 @@ export default function FramesPage() {
               </>
             )}
           </button>
+
           <button
             onClick={loadFrames}
             className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F5EBE0] text-[#4A1A1A] shadow-sm hover:shadow-md transition-all"
           >
-            <RefreshCw size={16} strokeWidth={2.2} className={loading ? "animate-spin" : ""} />
+            <RefreshCw
+              size={16}
+              strokeWidth={2.2}
+              className={loading ? "animate-spin" : ""}
+            />
           </button>
         </div>
       </motion.div>
@@ -137,6 +167,7 @@ export default function FramesPage() {
           <h2 className="font-serif text-lg font-semibold text-[#4A1A1A] tracking-wide">
             Semua Frame
           </h2>
+
           <span className="rounded-full bg-[#6B2D2C]/10 px-3.5 py-1 font-serif text-xs font-medium text-[#6B2D2C]">
             {frames.length} frame
           </span>
@@ -144,7 +175,11 @@ export default function FramesPage() {
 
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <RefreshCw size={24} className="animate-spin text-[#6B2D2C]/40" strokeWidth={2} />
+            <RefreshCw
+              size={24}
+              className="animate-spin text-[#6B2D2C]/40"
+              strokeWidth={2}
+            />
           </div>
         ) : (
           <FrameTable

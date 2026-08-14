@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, MessageCircle, Printer, Trash2, Clock3, Download, ChevronLeft, ChevronRight, Hash, Send } from "lucide-react";
 import { ConfirmModal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
-import { buildResultMessage, buildResultPageUrl, buildWhatsappLink } from "@/lib/whatsapp";
 import type { Photo } from "@/types/photo";
 
 // ============================================
@@ -55,10 +54,6 @@ export function PhotoLightbox({
   // ============================================
   // 🔥 FUNGSI KIRIM WHATSAPP (wa.me)
   // ============================================
-  // WhatsApp links can't attach a file automatically (that needs the paid
-  // WhatsApp Business API), so instead of asking the admin to manually
-  // attach the photo, the message links to a public page where the guest
-  // can view + download their own result photo on their own phone.
   const handleSendWhatsApp = () => {
     if (!photo?.whatsapp_number) {
       toast.push("Nomor WhatsApp tidak tersedia", "error");
@@ -68,16 +63,45 @@ export function PhotoLightbox({
     setSending(true);
 
     try {
-      const photoUrl = buildResultPageUrl(photo.id);
-      const message = buildResultMessage({
-        frameName: photo.frame_nama,
-        createdAt: photo.created_at,
-        photoUrl,
-      });
+      // Bersihkan nomor telepon
+      const cleanNumber = photo.whatsapp_number.replace(/[^0-9]/g, "");
+      
+      // Format nomor untuk WhatsApp (62xxx)
+      let formattedNumber = cleanNumber;
+      if (formattedNumber.startsWith("0")) {
+        formattedNumber = `62${formattedNumber.slice(1)}`;
+      } else if (!formattedNumber.startsWith("62")) {
+        formattedNumber = `62${formattedNumber}`;
+      }
 
-      window.open(buildWhatsappLink(photo.whatsapp_number, message), "_blank");
+      // ============================================
+      // 🔥 PESAN OTOMATIS
+      // ============================================
+      const message = encodeURIComponent(
+        `✨ *Terima kasih sudah menggunakan Photobooth kami!* ✨\n\n` +
+        `📸 *Frame:* ${photo.frame_nama ?? "Frame"}\n` +
+        `📅 *Tanggal:* ${formatTime(photo.created_at)}\n\n` +
+        `Berikut hasil foto Anda dalam kualitas HD:\n` +
+        `(Silakan download dan simpan foto di bawah ini)\n\n` +
+        `----------------------------------------\n` +
+        `📱 *Admin:* ${ADMIN_PHONE}\n` +
+        `💬 Jika ada pertanyaan, hubungi admin.\n\n` +
+        `*Salam hangat dari tim Photobooth!* 🎉`
+      );
 
-      toast.push("WhatsApp dibuka dengan link hasil foto — tinggal kirim.", "success");
+      // ============================================
+      // 🔥 BUKA WHATSAPP DENGAN PESAN
+      // ============================================
+      window.open(
+        `https://wa.me/${formattedNumber}?text=${message}`,
+        "_blank"
+      );
+
+      toast.push(
+        "WhatsApp dibuka! Lampirkan foto dan kirim.",
+        "success"
+      );
+
     } catch (error) {
       console.error("WhatsApp error:", error);
       toast.push("Gagal membuka WhatsApp", "error");
@@ -149,7 +173,7 @@ export function PhotoLightbox({
                     className="max-h-[60vh] md:max-h-[70vh] w-auto max-w-full object-contain shadow-2xl"
                     style={{ 
                       background: 'transparent',
-
+                      imageRendering: 'high-quality',
                     }}
                   />
                 </div>

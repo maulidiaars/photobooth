@@ -1,62 +1,53 @@
 /**
- * WhatsApp can't attach a file automatically through a wa.me link — that
- * needs the paid WhatsApp Business API. So instead of opening a chat and
- * hoping the admin remembers to attach the file, the message includes a
- * link to a public page (/foto/[id]) where the guest can view and
- * download their own result photo straight from their phone.
- *
- * Note: if the guest's number isn't already saved in the admin's WhatsApp
- * contacts, WhatsApp itself (not this app) shows a one-time "chat with
- * this number?" confirmation before opening the conversation — that's
- * normal WhatsApp behaviour for unsaved numbers, not a bug, and there's
- * no way to skip it without the paid Business API.
+ * Builds a wa.me deep link so the admin can send the guest their raw
+ * photo file with one click. Browsers/devices can't send a WhatsApp
+ * message with an attachment fully automatically without the WhatsApp
+ * Business API, so this opens a prefilled chat — admin just attaches
+ * the file (already open from "Print"/download) and hits send.
  */
-
-/** Turns a local Indonesian number (08xx / 62xx / +62xx) into the
- *  62-prefixed digits-only format wa.me expects. */
-function toWhatsappDigits(rawNumber: string) {
+export function buildWhatsappLink(rawNumber: string, message?: string) {
   const digits = rawNumber.replace(/[^\d]/g, "");
-  if (digits.startsWith("62")) return digits;
-  if (digits.startsWith("0")) return `62${digits.slice(1)}`;
-  return `62${digits}`;
+  // Indonesian numbers starting with 0 -> country code 62
+  const withCountryCode = digits.startsWith("0") ? `62${digits.slice(1)}` : digits;
+  const text = encodeURIComponent(
+    message ??
+      "Halo! Ini file mentahan hasil photobooth kamu ya, terima kasih sudah mampir."
+  );
+  return `https://wa.me/${withCountryCode}?text=${text}`;
 }
 
-/** Builds a wa.me deep link, prefilled with the given message. */
-export function buildWhatsappLink(rawNumber: string, message: string) {
-  return `https://wa.me/${toWhatsappDigits(rawNumber)}?text=${encodeURIComponent(message)}`;
-}
-
-/** Absolute URL of the public "hasil foto" page for a given photo id. */
-export function buildResultPageUrl(photoId: string) {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
-  const origin = configured || (typeof window !== "undefined" ? window.location.origin : "");
-  return `${origin}/foto/${photoId}`;
-}
-
-/** Ready-to-send WhatsApp message: thanks + frame + link to download. */
-export function buildResultMessage(params: {
-  frameName?: string | null;
-  createdAt: string;
-  photoUrl: string;
-}) {
-  const { frameName, createdAt, photoUrl } = params;
-  const tanggal = new Date(createdAt).toLocaleString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  return [
-    "✨ *Terima kasih sudah menggunakan Photobooth kami!* ✨",
-    "",
-    `📸 *Frame:* ${frameName ?? "Frame"}`,
-    `📅 *Tanggal:* ${tanggal}`,
-    "",
-    "Hasil fotomu sudah siap. Klik link di bawah ini untuk melihat dan mendownload fotonya langsung ke HP kamu:",
-    photoUrl,
-    "",
-    "*Salam hangat dari tim Photobooth!* 🎉",
-  ].join("\n");
+/**
+ * Tries to hand the actual photo file to WhatsApp via the native Web
+ * Share sheet (works on most mobile browsers, and on desktop Chrome/
+ * Edge when a share target is registered) so the admin doesn't have
+ * to manually attach the file after opening the chat. Falls back to
+ * the plain wa.me text link — the only thing possible without the
+ * paid WhatsApp Business API — when file sharing isn't supported.
+ * Returns which path was taken so the caller can inform the admin.
+ */
+export async function shareResultToWhatsapp(
+  imageUrl: string,
+  rawNumber: string,
+  fileName = "photobooth.jpg"
+): Promise<"shared" | "link"> {
+  try {
+    if (typeof navigator !== "undefined" && "share" in navigator) {
+      const res = await fetch(imageUrl);
+      const blob = await res.blob();
+      const file = new File([blob], fileName, { type: blob.type || "image/jpeg" });
+      const canShareFiles =
+        "canShare" in navigator && (navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean }).canShare?.({ files: [file] });
+      if (canShareFiles) {
+        await navigator.share({
+          files: [file],
+          text: "Ini file mentahan hasil photobooth kamu ya, terima kasih sudah mampir!",
+        });
+        return "shared";
+      }
+    }
+  } catch {
+    // user cancelled the share sheet, or it failed — fall through to the link
+  }
+  window.open(buildWhatsappLink(rawNumber), "_blank", "noopener,noreferrer");
+  return "link";
 }

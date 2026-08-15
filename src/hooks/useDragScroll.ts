@@ -21,6 +21,20 @@ export function useDragScroll<T extends HTMLElement>(ref: RefObject<T | null>) {
     const el = ref.current;
     if (!el) return;
 
+    const onPointerMove = (e: PointerEvent) => {
+      if (!state.current.isDown) return;
+      const delta = e.clientX - state.current.startX;
+      if (Math.abs(delta) > 4) state.current.dragged = true;
+      el.scrollLeft = state.current.startScroll - delta;
+    };
+
+    const onPointerUp = () => {
+      state.current.isDown = false;
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+    };
+
     const onPointerDown = (e: PointerEvent) => {
       // Native touch scrolling already works great — only hijack
       // mouse/pen so we don't fight the browser's own touch physics.
@@ -31,24 +45,16 @@ export function useDragScroll<T extends HTMLElement>(ref: RefObject<T | null>) {
       state.current.dragged = false;
       state.current.startX = e.clientX;
       state.current.startScroll = el.scrollLeft;
-      el.setPointerCapture(e.pointerId);
-    };
 
-    const onPointerMove = (e: PointerEvent) => {
-      if (!state.current.isDown) return;
-      const delta = e.clientX - state.current.startX;
-      if (Math.abs(delta) > 4) state.current.dragged = true;
-      el.scrollLeft = state.current.startScroll - delta;
-    };
-
-    const endDrag = (e: PointerEvent) => {
-      if (!state.current.isDown) return;
-      state.current.isDown = false;
-      try {
-        el.releasePointerCapture(e.pointerId);
-      } catch {
-        // already released
-      }
+      // Deliberately NOT using el.setPointerCapture here — that
+      // would retarget the eventual "click" event to this container
+      // instead of whatever card is actually under the pointer,
+      // which silently breaks selecting a frame on a plain click.
+      // Tracking move/up on window instead keeps click hit-testing
+      // completely untouched.
+      window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup", onPointerUp);
+      window.addEventListener("pointercancel", onPointerUp);
     };
 
     const onClickCapture = (e: MouseEvent) => {
@@ -60,17 +66,14 @@ export function useDragScroll<T extends HTMLElement>(ref: RefObject<T | null>) {
     };
 
     el.addEventListener("pointerdown", onPointerDown);
-    el.addEventListener("pointermove", onPointerMove);
-    el.addEventListener("pointerup", endDrag);
-    el.addEventListener("pointercancel", endDrag);
     el.addEventListener("click", onClickCapture, true);
 
     return () => {
       el.removeEventListener("pointerdown", onPointerDown);
-      el.removeEventListener("pointermove", onPointerMove);
-      el.removeEventListener("pointerup", endDrag);
-      el.removeEventListener("pointercancel", endDrag);
       el.removeEventListener("click", onClickCapture, true);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
     };
   }, [ref]);
 }

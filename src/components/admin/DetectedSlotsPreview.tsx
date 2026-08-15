@@ -9,11 +9,15 @@ interface DetectedSlotsPreviewProps {
 
 export function DetectedSlotsPreview({ imageUrl, slots }: DetectedSlotsPreviewProps) {
   return (
-    <div className="relative w-full h-full min-h-[300px] overflow-hidden bg-[repeating-conic-gradient(#2A1510_0%_25%,#1A0A08_0%_50%)] bg-[length:20px_20px]">
-      <img 
-        src={imageUrl} 
-        alt="Preview frame" 
-        className="block w-full h-full object-contain" 
+    // w-full h-full: parent sekarang SELALU punya tinggi pasti
+    // (dikasih dari FrameForm), jadi object-contain di bawah bisa
+    // menghitung skala dengan benar — frame landscape maupun strip
+    // vertikal sama-sama pas di dalam box, gak ada yang "memanjang".
+    <div className="relative h-full w-full overflow-hidden bg-[repeating-conic-gradient(#2A1510_0%_25%,#1A0A08_0%_50%)] bg-[length:20px_20px]">
+      <img
+        src={imageUrl}
+        alt="Preview frame"
+        className="block h-full w-full object-contain"
       />
       {slots.map((s, i) => (
         <div

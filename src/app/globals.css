@@ -139,6 +139,45 @@ body::after {
   border-radius: 999px;
 }
 
+
+/* Drag-to-slide sliders (frame picker, admin frame strip) — no
+   visible scrollbar track/thumb at all, just the images to grab and
+   drag. Works alongside useDragScroll for mouse/pen, and native
+   touch swipe still works untouched since we never block it. */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge/IE */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/new Edge */
+}
+.drag-slider {
+  cursor: grab;
+  touch-action: pan-x;
+}
+.drag-slider:active {
+  cursor: grabbing;
+}
+
+/* Drag-to-slide sliders (frame picker, admin frame strip) — no
+   visible scrollbar track/thumb at all, just the images to grab and
+   drag. Works alongside useDragScroll for mouse/pen, and native
+   touch swipe still works untouched since we never block it. */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge/IE */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/new Edge */
+}
+.drag-slider {
+  cursor: grab;
+  touch-action: pan-x;
+}
+.drag-slider:active {
+  cursor: grabbing;
+}
+
 /* Movie-ticket die-cut notches — the landing redesign's signature CTA
    shape, so "Mulai Sesi Foto" reads like an actual event ticket instead
    of another rounded clay pill. The notch fill matches the landing

@@ -56,42 +56,64 @@ export default function AdminFramesPage() {
   };
 
   return (
-    <div>
+    <div className="flex flex-col gap-10">
+      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-texture relative mb-8 flex flex-wrap items-end justify-between gap-4 overflow-hidden rounded-clay-lg bg-forest-gradient px-5 py-5 text-paper-light shadow-clay sm:px-6"
+        className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
       >
-        <div className="relative z-10">
-          <h1 className="font-heading text-2xl font-semibold sm:text-3xl">Kelola Frame</h1>
-          <p className="mt-1 font-body text-sm text-paper-light/75">
-            Unggah PNG transparan, sisanya — deteksi kotak foto, thumbnail — otomatis.
+        <div>
+          <h1 className="font-serif text-2xl font-bold text-[#4A1A1A] tracking-wide">
+            Kelola Frame
+          </h1>
+          <p className="font-serif text-sm text-[#4A1A1A]/60 mt-0.5">
+            Unggah PNG transparan, deteksi kotak foto &amp; thumbnail otomatis
           </p>
         </div>
-        <div className="relative z-10 rounded-clay-sm bg-white/10 px-4 py-2 text-center">
-          <p className="font-heading text-2xl font-semibold leading-none">{frames.length}</p>
-          <p className="mt-0.5 font-body text-[11px] text-paper-light/70">frame aktif</p>
+
+        <div className="mt-2 sm:mt-0 flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#6B2D2C]/10 px-3 py-1.5 font-serif text-xs text-[#6B2D2C]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#5B7F5C] animate-pulse" />
+            {frames.length} frame aktif
+          </span>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[340px_1fr] items-start">
-        <div className="lg:sticky lg:top-6">
-          <FrameForm
-            key={editing?.id ?? "new"}
-            initial={editing}
-            onSubmit={handleSubmit}
-            onCancel={editing ? () => setEditing(null) : undefined}
-          />
+      {/* Form Tambah/Edit Frame — 2 kolom di dalam komponennya
+          sendiri: kiri input, kanan preview (tinggi preview selalu
+          mengikuti persis tinggi kolom input, lihat FrameForm.tsx). */}
+      <FrameForm
+        key={editing?.id ?? "new"}
+        initial={editing}
+        onSubmit={handleSubmit}
+        onCancel={editing ? () => setEditing(null) : undefined}
+      />
+
+      {/* Daftar Frame — sengaja TANPA card/background di belakangnya,
+          biar PNG frame-nya beneran "mengambang" polos di atas halaman.
+          Satu baris terus, kalau frame-nya banyak tinggal di-scroll ke
+          samping (lihat FrameTable.tsx). */}
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-serif text-lg font-semibold text-[#4A1A1A] tracking-wide">
+            Daftar Frame
+          </h2>
+          <span className="font-serif text-xs text-[#4A1A1A]/50">
+            {frames.length} frame
+          </span>
         </div>
 
-        <div>
-          {loading ? (
-            <p className="text-muted font-body">Memuat frame...</p>
-          ) : (
-            <FrameTable frames={frames} onEdit={setEditing} onDelete={handleDelete} />
-          )}
-        </div>
-      </div>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <p className="font-serif text-lg text-[#4A1A1A]/40">
+              Memuat frame...
+            </p>
+          </div>
+        ) : (
+          <FrameTable frames={frames} onEdit={setEditing} onDelete={handleDelete} />
+        )}
+      </section>
     </div>
   );
 }

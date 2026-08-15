@@ -11,18 +11,6 @@ interface FrameCardProps {
   onSelect: (frame: Frame) => void;
 }
 
-/**
- * Pure "pick the frame" card: just the frame PNG (transparent bg)
- * floating on the page, no white container, no slot-count chip — the
- * frame artwork itself is the entire card, like flipping through
- * real physical frame cut-outs. Selection state is shown with a glow
- * + check badge instead of a boxed background.
- *
- * Sized by a fixed HEIGHT with the width left to auto (a plain <img>,
- * not next/image's `fill`) so a naturally tall/narrow strip frame
- * scales down proportionally instead of being forced into a fixed
- * box and reading as stretched/elongated in the carousel.
- */
 export function FrameCard({ frame, selected, onSelect }: FrameCardProps) {
   return (
     <motion.button
@@ -31,7 +19,7 @@ export function FrameCard({ frame, selected, onSelect }: FrameCardProps) {
       whileTap={{ scale: 0.97 }}
       transition={{ type: "spring", stiffness: 320, damping: 22 }}
       aria-pressed={selected}
-      className="group relative flex shrink-0 snap-center flex-col items-center text-center"
+      className="group relative flex shrink-0 flex-col items-center text-center"
     >
       <div
         className={clsx(
@@ -43,6 +31,7 @@ export function FrameCard({ frame, selected, onSelect }: FrameCardProps) {
         <img
           src={frame.thumbnail}
           alt={frame.nama}
+          draggable={false}
           className="h-full w-auto max-w-[13rem] object-contain"
         />
 

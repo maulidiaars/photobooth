@@ -156,9 +156,7 @@ export default function CameraPage() {
       {/* RIGHT — solid cream half: the live frame, as big as the
           column allows, top-to-bottom, with just a thin margin around
           it — this is the actual strip building itself up live. */}
-      <div className="bg-clay-gradient relative flex min-h-[54vh] shrink-0 flex-col overflow-hidden lg:min-h-0 lg:w-[440px] xl:w-[500px]">
-        <div className="cream-texture" />
-
+      <div className="bg-white relative flex min-h-[54vh] shrink-0 flex-col overflow-hidden lg:min-h-0 lg:w-fit lg:min-w-[280px] lg:max-w-[42vw]">
         <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center p-2 sm:p-2.5 lg:p-3">
           {selectedFrame.slot_layout.length > 0 ? (
             <FramePreviewLive

@@ -306,15 +306,45 @@ function AdminDashboardContent() {
   };
 
   const handlePrint = (photo: Photo) => {
-    const win = window.open(
-      photo.image_result,
-      "_blank"
-    );
+    // Buka tab kosong dulu (bukan langsung ke URL gambar) lalu isi
+    // dengan halaman print sendiri — lebih konsisten daripada
+    // mengandalkan event "load" pada tab gambar mentahan, yang di
+    // beberapa browser tidak selalu terpicu dengan benar.
+    const win = window.open("", "_blank", "width=900,height=1000");
+    if (!win) {
+      toast.push(
+        "Popup diblokir browser. Izinkan popup untuk halaman ini lalu coba lagi.",
+        "error"
+      );
+      return;
+    }
 
-    win?.addEventListener(
-      "load",
-      () => win.print()
-    );
+    win.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Cetak Foto</title>
+          <style>
+            html, body { margin: 0; padding: 0; height: 100%; background: #fff; }
+            body { display: flex; align-items: center; justify-content: center; }
+            img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+            @media print { @page { margin: 0; } }
+          </style>
+        </head>
+        <body>
+          <img src="${photo.image_result}" alt="Hasil foto" />
+        </body>
+      </html>
+    `);
+    win.document.close();
+
+    const img = win.document.querySelector("img");
+    if (img) {
+      img.addEventListener("load", () => {
+        win.focus();
+        win.print();
+      });
+    }
   };
 
   const handleDownload = async (

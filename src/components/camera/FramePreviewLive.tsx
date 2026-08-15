@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { RotateCcw } from "lucide-react";
 import type { Frame } from "@/types/frame";
@@ -14,6 +15,10 @@ interface FramePreviewLiveProps {
   /** Ignore clicks on filled slots while a shot is in flight. */
   locked: boolean;
   onSlotClick: (index: number) => void;
+  /** Fires with the ghost sizer's live rendered pixel width, so the
+   *  parent page can size the column around it exactly instead of
+   *  guessing via CSS. */
+  onMeasure?: (width: number) => void;
 }
 
 /**
@@ -30,8 +35,30 @@ export function FramePreviewLive({
   activeIndex,
   locked,
   onSlotClick,
+  onMeasure,
 }: FramePreviewLiveProps) {
   const slots = Array.from({ length: totalSlots });
+  const roRef = useRef<ResizeObserver | null>(null);
+
+  // Callback ref (not useEffect) so it re-attaches automatically every
+  // time the ghost sizer <img> node itself changes, and reports the
+  // element's real rendered width any time it changes size — frame
+  // switch, window resize, breakpoint change, all covered for free.
+  const ghostRef = useCallback(
+    (node: HTMLImageElement | null) => {
+      roRef.current?.disconnect();
+      roRef.current = null;
+      if (node && onMeasure) {
+        const ro = new ResizeObserver((entries) => {
+          const w = entries[0]?.contentRect.width;
+          if (w) onMeasure(w);
+        });
+        ro.observe(node);
+        roRef.current = ro;
+      }
+    },
+    [onMeasure]
+  );
 
   return (
     <div className="flex h-full min-h-0 w-full items-center justify-center">
@@ -42,7 +69,13 @@ export function FramePreviewLive({
             against, so overlays land pixel-exact on the real artwork
             with zero JS measuring / no layout jump. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={frame.frame_png} alt="" aria-hidden className="invisible h-full w-auto max-w-full object-contain" />
+        <img
+          ref={ghostRef}
+          src={frame.frame_png}
+          alt=""
+          aria-hidden
+          className="invisible h-full w-auto max-w-full object-contain"
+        />
 
         {/* Captured photos, clipped into their real holes, frame
             artwork drawn on top so its opaque design + transparent

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
@@ -12,6 +12,10 @@ import { useSessionStore } from "@/store/sessionStore";
 import type { Frame } from "@/types/frame";
 import { ROUTES } from "@/lib/constants";
 
+// Horizontal breathing room around the frame inside the white column —
+// the "margin tipis" the preview sits in on both sides.
+const PREVIEW_PADDING_X = 20;
+
 export default function FramePage() {
   const router = useRouter();
   const [frames, setFrames] = useState<Frame[]>([]);
@@ -21,6 +25,26 @@ export default function FramePage() {
   const selectedFrame = useSessionStore((s) => s.selectedFrame);
   const setFrame = useSessionStore((s) => s.setFrame);
 
+  // Live-measured render width of the selected frame's own image —
+  // the white column is sized to exactly this (plus the thin padding
+  // above), instead of guessing via CSS, so it always hugs the frame
+  // no matter its aspect ratio.
+  const [previewWidth, setPreviewWidth] = useState<number | null>(null);
+  const roRef = useRef<ResizeObserver | null>(null);
+
+  const previewImgRef = useCallback((node: HTMLImageElement | null) => {
+    roRef.current?.disconnect();
+    roRef.current = null;
+    if (node) {
+      const ro = new ResizeObserver((entries) => {
+        const w = entries[0]?.contentRect.width;
+        if (w) setPreviewWidth(w);
+      });
+      ro.observe(node);
+      roRef.current = ro;
+    }
+  }, []);
+
   useEffect(() => {
     getFrames()
       .then(setFrames)
@@ -28,16 +52,24 @@ export default function FramePage() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (!selectedFrame) setPreviewWidth(null);
+  }, [selectedFrame]);
+
   const handleContinue = () => {
     if (selectedFrame) router.push(ROUTES.camera);
   };
 
+  const columnWidth = previewWidth ? Math.ceil(previewWidth) + PREVIEW_PADDING_X * 2 : undefined;
+
   return (
     <main className="app-shell relative flex w-full flex-col overflow-hidden lg:flex-row">
       {/* LEFT — deep-maroon textured half: step tracker, title, and the
-          frame carousel all live here, edge to edge with the cream
+          frame carousel all live here, edge to edge with the white
           half on the right (no gap, no floating card — a hard split,
-          same as the reference). */}
+          same as the reference). Always flex-1, so it grows to eat up
+          exactly whatever width the white column on the right doesn't
+          need — no leftover strip of body background ever shows. */}
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4 sm:px-8 sm:py-5 lg:px-12 lg:py-7">
         <div className="landing-maroon-bg" />
         <FloatingBackground />
@@ -96,7 +128,7 @@ export default function FramePage() {
           </div>
 
           {/* CTA lives here only on phones/tablets, where there's no
-              separate cream column to anchor it to — on lg+ it moves
+              separate white column to anchor it to — on lg+ it moves
               into the right half below the big preview instead. */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -109,54 +141,63 @@ export default function FramePage() {
         </div>
       </div>
 
-      {/* RIGHT — solid cream half, full height top to bottom: nothing
-          but the live preview of the selected frame, big and centered,
-          with the "lanjut ke kamera" button anchored under it. Hidden
-          below `lg`; phones/tablets keep the single maroon column with
-          the CTA folded back into it above. */}
-        <div className="bg-clay-gradient relative hidden min-h-0 shrink-0 flex-col items-center gap-4 px-6 pb-6 lg:flex lg:w-[400px] xl:w-[460px]">
-          <div className="cream-texture" />
-
-          <div className="relative z-10 flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden">
-            <AnimatePresence mode="wait">
-              {selectedFrame ? (
-                <motion.div
-                  key={selectedFrame.id}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.97 }}
-                  transition={{ type: "spring", stiffness: 220, damping: 22 }}
-                  className="flex h-full w-full items-center justify-center"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={selectedFrame.thumbnail}
-                    alt={selectedFrame.nama}
-                    className="h-full w-full object-contain drop-shadow-[0_20px_36px_rgba(58,40,31,0.28)]"
-                  />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="empty"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex flex-col items-center justify-center gap-2 text-center"
-                >
-                  <Sparkles size={22} strokeWidth={2} className="text-ink/25" />
-                  <p className="text-muted font-hand text-2xl">belum ada yang dipilih</p>
-                  <p className="text-muted/80 font-body max-w-[16rem] text-xs">
-                    Ketuk salah satu frame di sebelah kiri untuk lihat pratinjaunya di sini.
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div className="relative z-10 w-full shrink-0">
-            <ContinueOutline selectedFrame={selectedFrame} onClick={handleContinue} />
-          </div>
+      {/* RIGHT — solid white column, sized in JS to exactly hug the
+          selected frame's rendered width (see previewWidth above), not
+          a fixed/CSS-guessed width — so it presses in tight around the
+          frame with just a thin margin, and the "lanjut ke kamera"
+          button below matches that same width. Hidden below `lg`;
+          phones/tablets keep the single maroon column with the CTA
+          folded back into it above. */}
+      <div
+        className="bg-white relative hidden min-h-0 shrink-0 flex-col items-center gap-4 pb-6 pt-6 lg:flex"
+        style={{
+          width: columnWidth ? `${columnWidth}px` : 280,
+          maxWidth: "46vw",
+          paddingLeft: PREVIEW_PADDING_X,
+          paddingRight: PREVIEW_PADDING_X,
+        }}
+      >
+        <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center overflow-hidden">
+          <AnimatePresence mode="wait">
+            {selectedFrame ? (
+              <motion.div
+                key={selectedFrame.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.97 }}
+                transition={{ type: "spring", stiffness: 220, damping: 22 }}
+                className="flex h-full items-center justify-center"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  ref={previewImgRef}
+                  src={selectedFrame.thumbnail}
+                  alt={selectedFrame.nama}
+                  className="h-full w-auto max-w-full object-contain drop-shadow-[0_20px_36px_rgba(58,40,31,0.28)]"
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col items-center justify-center gap-2 px-2 text-center"
+              >
+                <Sparkles size={22} strokeWidth={2} className="text-ink/25" />
+                <p className="text-muted font-hand text-2xl">belum ada yang dipilih</p>
+                <p className="text-muted/80 font-body max-w-[16rem] text-xs">
+                  Ketuk salah satu frame di sebelah kiri untuk lihat pratinjaunya di sini.
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
+
+        <div className="relative z-10 w-full shrink-0">
+          <ContinueOutline selectedFrame={selectedFrame} onClick={handleContinue} />
+        </div>
+      </div>
     </main>
   );
 }

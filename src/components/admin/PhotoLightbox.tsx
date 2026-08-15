@@ -5,12 +5,21 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, MessageCircle, Printer, Trash2, Clock3, Download, ChevronLeft, ChevronRight, Hash, Send } from "lucide-react";
 import { ConfirmModal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
+import { APP_NAME, APP_URL } from "@/lib/constants";
 import type { Photo } from "@/types/photo";
 
 // ============================================
-// 🔥 KONFIGURASI WHATSAPP
+// 🔥 KONFIGURASI WHATSAPP — ganti nomor di bawah ini
+// dengan nomor WhatsApp admin/pengirim yang kamu mau
+// pakai (format bebas, boleh pakai 08xxx atau +62xxx).
 // ============================================
 const ADMIN_PHONE = "085853164066";
+
+/** "085853164066" -> "0858-5316-4066", cuma buat tampilan biar rapi. */
+function formatPhoneDisplay(raw: string) {
+  const d = raw.replace(/[^\d]/g, "");
+  return d.replace(/(\d{4})(\d{4})(\d+)/, "$1-$2-$3");
+}
 
 interface PhotoLightboxProps {
   photo: Photo | null;
@@ -75,18 +84,43 @@ export function PhotoLightbox({
       }
 
       // ============================================
-      // 🔥 PESAN OTOMATIS
+      // 🔥 PESAN OTOMATIS + LINK HASIL FOTO
+      //
+      // Link SELALU dibangun dari NEXT_PUBLIC_APP_URL (domain
+      // Vercel kamu), BUKAN dari window.location.origin. Kalau
+      // pakai origin browser, link ini jadi ikut domain tempat
+      // admin lagi buka panelnya SAAT ITU — kalau admin lagi
+      // ngetes/jalanin app secara lokal (localhost:3000) meski
+      // datanya tetap di Vercel Blob & DB production, link yang
+      // dikirim ke tamu ikut jadi "http://localhost:3000/..." dan
+      // gak bisa dibuka sama sekali di HP mereka.
+      //
+      // Fallback ke window.location.origin cuma dipakai kalau
+      // NEXT_PUBLIC_APP_URL somehow belum di-set sama sekali di
+      // environment variables Vercel.
       // ============================================
+      const origin =
+        APP_URL || (typeof window !== "undefined" ? window.location.origin : "");
+      const photoLink = `${origin}/foto/${photo.id}`;
+
+      // Catatan: sengaja pakai emoji satu-codepoint yang umum ada
+      // di keyboard emoji HP (🎀✨🥰📸📌📅💕💾💌🎉🤍), dan HINDARI
+      // emoji yang butuh "variation selector" tambahan kayak
+      // 🖼️/🗓️ serta karakter box-drawing kayak "━" — dua jenis
+      // itu yang paling sering muncul jadi kotak/tanda tanya di
+      // WhatsApp versi lama / HP dengan font terbatas.
       const message = encodeURIComponent(
-        `✨ *Terima kasih sudah menggunakan Photobooth kami!* ✨\n\n` +
-        `📸 *Frame:* ${photo.frame_nama ?? "Frame"}\n` +
+        `🎀✨ *${APP_NAME}* ✨🎀\n\n` +
+        `Haii, terima kasih banyak ya udah mampir dan berfoto bareng kami hari ini! 🥰📸\n\n` +
+        `📌 *Frame:* ${photo.frame_nama ?? "Frame"}\n` +
         `📅 *Tanggal:* ${formatTime(photo.created_at)}\n\n` +
-        `Berikut hasil foto Anda dalam kualitas HD:\n` +
-        `(Silakan download dan simpan foto di bawah ini)\n\n` +
-        `----------------------------------------\n` +
-        `📱 *Admin:* ${ADMIN_PHONE}\n` +
-        `💬 Jika ada pertanyaan, hubungi admin.\n\n` +
-        `*Salam hangat dari tim Photobooth!* 🎉`
+        `Hasil foto kamu udah jadi dan siap didownload, nih~ 💕\n` +
+        `👉 ${photoLink}\n\n` +
+        `Tinggal klik link di atas, lalu tekan tombol download 💾 di pojok kanan bawah fotonya ya!\n\n` +
+        `----------------------------\n` +
+        `💌 Ada kendala atau mau cetak ulang? Hubungi admin kami di *${formatPhoneDisplay(ADMIN_PHONE)}*\n\n` +
+        `Semoga harimu menyenangkan, sampai jumpa lagi! 🎉🤍\n` +
+        `_Salam hangat, tim ${APP_NAME}_`
       );
 
       // ============================================
@@ -98,7 +132,7 @@ export function PhotoLightbox({
       );
 
       toast.push(
-        "WhatsApp dibuka! Lampirkan foto dan kirim.",
+        "WhatsApp dibuka dengan link foto siap kirim!",
         "success"
       );
 

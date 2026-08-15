@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import type { Frame } from "@/types/frame";
 import { FrameCard } from "./FrameCard";
+import { useDragScroll } from "@/hooks/useDragScroll";
 
 interface FrameCarouselProps {
   frames: Frame[];
@@ -13,6 +14,7 @@ interface FrameCarouselProps {
 
 export function FrameCarousel({ frames, selectedId, onSelect }: FrameCarouselProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
+  useDragScroll(scrollerRef);
   const [canLeft, setCanLeft] = useState(false);
   const [canRight, setCanRight] = useState(true);
 
@@ -45,7 +47,7 @@ export function FrameCarousel({ frames, selectedId, onSelect }: FrameCarouselPro
       <motion.div
         ref={scrollerRef}
         onScroll={updateArrows}
-        className="clay-scrollbar flex gap-4 overflow-x-auto snap-x snap-mandatory px-2 py-4"
+        className="no-scrollbar drag-slider flex select-none gap-4 overflow-x-auto scroll-smooth px-2 py-4"
       >
         {frames.map((frame) => (
           <FrameCard

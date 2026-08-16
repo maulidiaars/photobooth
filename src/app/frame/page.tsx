@@ -12,10 +12,6 @@ import { useSessionStore } from "@/store/sessionStore";
 import type { Frame } from "@/types/frame";
 import { ROUTES } from "@/lib/constants";
 
-// Horizontal breathing room around the frame inside the white column —
-// the "margin tipis" the preview sits in on both sides.
-const PREVIEW_PADDING_X = 20;
-
 export default function FramePage() {
   const router = useRouter();
   const [frames, setFrames] = useState<Frame[]>([]);
@@ -25,10 +21,6 @@ export default function FramePage() {
   const selectedFrame = useSessionStore((s) => s.selectedFrame);
   const setFrame = useSessionStore((s) => s.setFrame);
 
-  // Live-measured render width of the selected frame's own image —
-  // the white column is sized to exactly this (plus the thin padding
-  // above), instead of guessing via CSS, so it always hugs the frame
-  // no matter its aspect ratio.
   const [previewWidth, setPreviewWidth] = useState<number | null>(null);
   const roRef = useRef<ResizeObserver | null>(null);
 
@@ -60,27 +52,22 @@ export default function FramePage() {
     if (selectedFrame) router.push(ROUTES.camera);
   };
 
-  const columnWidth = previewWidth ? Math.ceil(previewWidth) + PREVIEW_PADDING_X * 2 : undefined;
+  const columnWidth = previewWidth ? Math.ceil(previewWidth) : undefined;
 
   return (
     <main className="app-shell relative flex w-full flex-col overflow-hidden lg:flex-row">
-      {/* LEFT — deep-maroon textured half: step tracker, title, and the
-          frame carousel all live here, edge to edge with the white
-          half on the right (no gap, no floating card — a hard split,
-          same as the reference). Always flex-1, so it grows to eat up
-          exactly whatever width the white column on the right doesn't
-          need — no leftover strip of body background ever shows. */}
+      {/* LEFT — deep-maroon textured half */}
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4 sm:px-8 sm:py-5 lg:px-12 lg:py-7">
         <div className="landing-maroon-bg" />
         <FloatingBackground />
 
-<motion.div
-  initial={{ opacity: 0, y: 12 }}
-  animate={{ opacity: 1, y: 0 }}
-  className="relative z-10 mx-auto mb-3 w-full max-w-md shrink-0 sm:mb-5"
->
-  <StepTracker current={1} theme="maroon" />
-</motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative z-10 mx-auto mb-3 w-full max-w-md shrink-0 sm:mb-5"
+        >
+          <StepTracker current={1} theme="maroon" />
+        </motion.div>
 
         <div className="relative z-10 flex min-h-0 flex-1 flex-col justify-center">
           <motion.div
@@ -102,9 +89,6 @@ export default function FramePage() {
             </p>
           </motion.div>
 
-          {/* display-counter panel — cream, film-perforated top & bottom,
-              holding the carousel so it reads as a lit-up booth counter
-              rather than cards floating loose on the backdrop */}
           <div className="bg-clay-gradient shadow-print-sm min-h-0 w-full rounded-[22px] px-1 py-2.5 sm:rounded-[26px] sm:py-3">
             <div className="sprockets h-2.5 w-full opacity-70" />
 
@@ -127,9 +111,6 @@ export default function FramePage() {
             <div className="sprockets h-2.5 w-full opacity-70" />
           </div>
 
-          {/* CTA lives here only on phones/tablets, where there's no
-              separate white column to anchor it to — on lg+ it moves
-              into the right half below the big preview instead. */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -141,23 +122,16 @@ export default function FramePage() {
         </div>
       </div>
 
-      {/* RIGHT — solid white column, sized in JS to exactly hug the
-          selected frame's rendered width (see previewWidth above), not
-          a fixed/CSS-guessed width — so it presses in tight around the
-          frame with just a thin margin, and the "lanjut ke kamera"
-          button below matches that same width. Hidden below `lg`;
-          phones/tablets keep the single maroon column with the CTA
-          folded back into it above. */}
+      {/* RIGHT — solid white column */}
       <div
-        className="bg-white relative hidden min-h-0 shrink-0 flex-col items-center gap-4 pb-6 pt-6 lg:flex"
+        className="bg-white relative hidden min-h-0 shrink-0 flex-col items-center lg:flex"
         style={{
           width: columnWidth ? `${columnWidth}px` : 280,
           maxWidth: "46vw",
-          paddingLeft: PREVIEW_PADDING_X,
-          paddingRight: PREVIEW_PADDING_X,
         }}
       >
-        <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center overflow-hidden">
+        {/* Preview */}
+        <div className="relative z-10 flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden">
           <AnimatePresence mode="wait">
             {selectedFrame ? (
               <motion.div
@@ -166,14 +140,13 @@ export default function FramePage() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.97 }}
                 transition={{ type: "spring", stiffness: 220, damping: 22 }}
-                className="flex h-full items-center justify-center"
+                className="flex h-full w-full items-center justify-center"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   ref={previewImgRef}
                   src={selectedFrame.thumbnail}
                   alt={selectedFrame.nama}
-                  className="h-full w-auto max-w-full object-contain drop-shadow-[0_20px_36px_rgba(58,40,31,0.28)]"
+                  className="h-full w-full object-contain drop-shadow-[0_20px_36px_rgba(58,40,31,0.28)]"
                 />
               </motion.div>
             ) : (
@@ -194,7 +167,8 @@ export default function FramePage() {
           </AnimatePresence>
         </div>
 
-        <div className="relative z-10 w-full shrink-0">
+        {/* CTA - EDITED: kasih padding di container */}
+        <div className="relative z-10 w-full shrink-0 px-4 pb-4 pt-3 sm:px-6">
           <ContinueOutline selectedFrame={selectedFrame} onClick={handleContinue} />
         </div>
       </div>
@@ -203,10 +177,7 @@ export default function FramePage() {
 }
 
 /**
- * The cream ticket-stub CTA — same family as the landing page's
- * "MULAI SESI FOTO" button. Used on phones/tablets, where the button
- * sits on the maroon column, so it needs to be the cream punched-ticket
- * treatment to stay legible there.
+ * Cream ticket-stub CTA untuk mobile
  */
 function ContinueTicket({
   selectedFrame,
@@ -239,10 +210,7 @@ function ContinueTicket({
 }
 
 /**
- * The lg+ CTA, styled for the cream half instead: a plain garnet-bordered
- * outline button (not the punched-ticket shape) since it now sits on a
- * cream background rather than the maroon one — matches the reference's
- * bordered rectangle exactly.
+ * Desktop CTA - EDITED: ada padding, ga mepet
  */
 function ContinueOutline({
   selectedFrame,
@@ -258,11 +226,13 @@ function ContinueOutline({
       whileHover={selectedFrame ? { y: -3, rotate: -1 } : undefined}
       whileTap={selectedFrame ? { y: 1, scale: 0.98 } : undefined}
       transition={{ type: "spring", stiffness: 420, damping: 22 }}
-      className="ticket ticket-on-cream rounded-clay bg-maroon-gradient shadow-clay hover:shadow-clay-lg text-paper-light flex w-full shrink-0 items-center justify-center gap-4 px-7 py-4 transition-opacity disabled:opacity-20 disabled:hover:shadow-clay sm:gap-5"
+      className="ticket ticket-on-cream rounded-clay bg-maroon-gradient shadow-clay hover:shadow-clay-lg text-paper-light flex w-full shrink-0 items-center justify-between gap-3 px-5 py-3.5 transition-opacity disabled:opacity-20 disabled:hover:shadow-clay sm:px-7 sm:py-4"
     >
-      <p className="font-display text-lg font-bold tracking-wide">LANJUT KE KAMERA</p>
-      <div className="ticket-divider h-8 sm:h-9" />
-      <ArrowRight size={20} strokeWidth={2.4} className="shrink-0" />
+      <span className="font-display text-sm font-bold tracking-wide sm:text-base">
+        LANJUT KE KAMERA
+      </span>
+      <div className="ticket-divider h-7 sm:h-8" />
+      <ArrowRight size={18} strokeWidth={2.4} className="shrink-0 sm:size-5" />
     </motion.button>
   );
 }

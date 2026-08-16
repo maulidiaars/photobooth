@@ -33,10 +33,17 @@ export default function CameraPage() {
     selectedFrame,
   } = usePhotoSession();
 
-  // Slot index the person just tapped in the frame preview, waiting on
-  // their yes/no in the confirm modal — never triggers a retake by
-  // itself, only "ambil ulang?" does after they confirm.
   const [retakeCandidate, setRetakeCandidate] = useState<number | null>(null);
+  const [previewWidth, setPreviewWidth] = useState<number | null>(null);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   useEffect(() => {
     if (!selectedFrame) router.replace(ROUTES.frame);
@@ -56,9 +63,7 @@ export default function CameraPage() {
 
   return (
     <main className="app-shell relative flex w-full flex-col overflow-hidden lg:flex-row">
-      {/* LEFT — deep-maroon half, same backdrop as the landing & frame
-          pages. Pure camera: just the live video, corner brackets and
-          the shutter — no title chip, no counter, no card behind it. */}
+      {/* LEFT — Camera Section */}
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
         <div className="landing-maroon-bg" />
         <FloatingBackground />
@@ -68,8 +73,6 @@ export default function CameraPage() {
           <CountdownOverlay count={count} />
           <ShutterFlash show={showFlash} />
 
-          {/* viewfinder corner brackets — reads as "camera", not a
-              bare video tag */}
           <div className="pointer-events-none absolute inset-3 sm:inset-5">
             {(["top-0 left-0 border-l-2 border-t-2", "top-0 right-0 border-r-2 border-t-2", "bottom-0 left-0 border-l-2 border-b-2", "bottom-0 right-0 border-r-2 border-b-2"] as const).map(
               (pos, i) => (
@@ -81,10 +84,6 @@ export default function CameraPage() {
             )}
           </div>
 
-          {/* Shutter — a classic camera-app ring + dot, no icon needed
-              to read as "press to shoot". One tap fires the whole
-              automatic sequence: 3-2-1-jepret into every remaining
-              slot, one after another. */}
           {!isComplete && (
             <div className="absolute bottom-5 left-1/2 -translate-x-1/2 sm:bottom-7">
               <motion.button
@@ -112,9 +111,6 @@ export default function CameraPage() {
           )}
         </section>
 
-        {/* Below the camera: appears once the strip is fully shot —
-            saves the session and moves on to /result. Compact and
-            centered, not a stretched bar. */}
         <div className="relative z-10 mt-3 flex shrink-0 flex-col items-center gap-2 sm:mt-4">
           {isComplete ? (
             <motion.div
@@ -153,11 +149,22 @@ export default function CameraPage() {
         </div>
       </div>
 
-      {/* RIGHT — solid cream half: the live frame, as big as the
-          column allows, top-to-bottom, with just a thin margin around
-          it — this is the actual strip building itself up live. */}
-      <div className="bg-white relative flex min-h-[54vh] shrink-0 flex-col overflow-hidden lg:min-h-0 lg:w-fit lg:min-w-[280px] lg:max-w-[42vw]">
-        <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center p-2 sm:p-2.5 lg:p-3">
+      {/* RIGHT — Frame Preview Section - FIXED: posisi ke kanan */}
+      <div
+        className="bg-white relative flex min-h-[54vh] w-full shrink-0 flex-col overflow-hidden lg:min-h-0 lg:flex-shrink-0 lg:justify-self-end lg:ml-auto"
+        style={
+          isDesktop
+            ? {
+                width: previewWidth ? `${Math.ceil(previewWidth)}px` : 320,
+                maxWidth: "50vw",
+                minWidth: "240px",
+              }
+            : {
+                minHeight: "55vh",
+              }
+        }
+      >
+        <div className="relative z-10 flex min-h-0 w-full flex-1 items-center justify-center p-0">
           {selectedFrame.slot_layout.length > 0 ? (
             <FramePreviewLive
               frame={selectedFrame}
@@ -166,6 +173,7 @@ export default function CameraPage() {
               activeIndex={activeIndex}
               locked={busy}
               onSlotClick={handleSlotClick}
+              onMeasure={setPreviewWidth}
             />
           ) : (
             <div className="flex flex-col items-center gap-2 text-center">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { FrameForm } from "@/components/admin/FrameForm";
 import { FrameTable } from "@/components/admin/FrameTable";
@@ -18,6 +18,19 @@ export default function AdminFramesPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Frame | null>(null);
   const toast = useToast();
+  const formRef = useRef<HTMLDivElement>(null);
+
+  // Tombol "Edit" di FrameTable cuma set state `editing` — tanpa ini,
+  // form pengeditan di atas berubah isinya tapi viewport admin masih
+  // di posisi scroll semula (di baris daftar frame paling bawah),
+  // jadi kelihatannya seperti "gak kejadian apa-apa". Scroll paksa
+  // ke form-nya begitu tombol edit ditekan.
+  const handleEdit = (frame: Frame) => {
+    setEditing(frame);
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
 
   const loadFrames = () => {
     setLoading(true);
@@ -82,13 +95,17 @@ export default function AdminFramesPage() {
 
       {/* Form Tambah/Edit Frame — 2 kolom di dalam komponennya
           sendiri: kiri input, kanan preview (tinggi preview selalu
-          mengikuti persis tinggi kolom input, lihat FrameForm.tsx). */}
-      <FrameForm
-        key={editing?.id ?? "new"}
-        initial={editing}
-        onSubmit={handleSubmit}
-        onCancel={editing ? () => setEditing(null) : undefined}
-      />
+          mengikuti persis tinggi kolom input, lihat FrameForm.tsx).
+          Dibungkus div + ref supaya tombol "Edit" di tabel bawah bisa
+          men-scroll ke sini (lihat handleEdit di atas). */}
+      <div ref={formRef}>
+        <FrameForm
+          key={editing?.id ?? "new"}
+          initial={editing}
+          onSubmit={handleSubmit}
+          onCancel={editing ? () => setEditing(null) : undefined}
+        />
+      </div>
 
       {/* Daftar Frame — sengaja TANPA card/background di belakangnya,
           biar PNG frame-nya beneran "mengambang" polos di atas halaman.
@@ -111,7 +128,7 @@ export default function AdminFramesPage() {
             </p>
           </div>
         ) : (
-          <FrameTable frames={frames} onEdit={setEditing} onDelete={handleDelete} />
+          <FrameTable frames={frames} onEdit={handleEdit} onDelete={handleDelete} />
         )}
       </section>
     </div>

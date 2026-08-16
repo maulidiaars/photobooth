@@ -16,8 +16,6 @@ import {
   Clock3,
   CheckCircle2,
   BarChart3,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 
 import { StatsCard } from "@/components/admin/StatsCard";
@@ -40,7 +38,6 @@ import type {
 } from "@/types/photo";
 
 const POLL_MS = 6000;
-const PAGE_SIZE = 12;
 
 const FILTERS: {
   label: string;
@@ -72,8 +69,6 @@ function AdminDashboardContent() {
 
   const [filter, setFilter] =
     useState<PhotoStatus | "all">("all");
-
-  const [currentPage, setCurrentPage] = useState(1);
 
   const [activePhoto, setActivePhoto] =
     useState<Photo | null>(null);
@@ -216,16 +211,6 @@ function AdminDashboardContent() {
           ),
     [photos, filter]
   );
-
-  const totalPages = Math.ceil(
-    filteredPhotos.length / PAGE_SIZE
-  );
-
-  const paginatedPhotos =
-    filteredPhotos.slice(
-      (currentPage - 1) * PAGE_SIZE,
-      currentPage * PAGE_SIZE
-    );
 
   const frameBreakdown = useMemo(() => {
     const counts = new Map<
@@ -525,10 +510,7 @@ function AdminDashboardContent() {
                 {FILTERS.map((f) => (
                   <button
                     key={f.value}
-                    onClick={() => {
-                      setFilter(f.value);
-                      setCurrentPage(1);
-                    }}
+                    onClick={() => setFilter(f.value)}
                     className={`rounded-xl px-3.5 py-1.5 font-serif text-xs font-semibold transition-all ${
                       filter === f.value
                         ? "bg-[#6B2D2C] text-[#F5EBE0] shadow-md"
@@ -555,212 +537,76 @@ function AdminDashboardContent() {
                 </p>
               </div>
             ) : (
-              <>
-                <div className="grid grid-cols-3 gap-3 sm:gap-4 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5">
-                  {paginatedPhotos.map(
-                    (
-                      photo,
-                      idx
-                    ) => {
-                      const globalIndex =
-                        (currentPage -
-                          1) *
-                          PAGE_SIZE +
-                        idx;
-
-                      return (
-                        <motion.button
-                          key={
-                            photo.id
-                          }
-                          layout
-                          initial={{
-                            opacity: 0,
-                            scale: 0.9,
-                          }}
-                          animate={{
-                            opacity: 1,
-                            scale: 1,
-                          }}
-                          whileHover={{
-                            y: -4,
-                            transition: {
-                              duration:
-                                0.15,
-                            },
-                          }}
-                          onClick={() =>
-                            openPhoto(
-                              photo,
-                              globalIndex
-                            )
-                          }
-                          className="group relative"
-                        >
-                          <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden shadow-md transition-shadow group-hover:shadow-lg">
-                            <Image
-                              src={
-                                photo.image_result
-                              }
-                              alt=""
-                              fill
-                              sizes="(max-width: 640px) 33vw, (max-width: 1024px) 25vw, 20vw"
-                              className="object-contain"
-                              style={{
-                                background:
-                                  "transparent",
-                              }}
-                            />
-
-                            <div className="absolute left-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#1A0A08]/70 backdrop-blur-sm font-serif text-[9px] font-bold text-[#F5EBE0]">
-                              {globalIndex +
-                                1}
-                            </div>
-
-                            <span
-                              className={`absolute right-1.5 top-1.5 rounded-full px-2 py-0.5 font-serif text-[9px] font-semibold shadow-sm ${
-                                photo.status ===
-                                "printed"
-                                  ? "bg-[#5B7F5C] text-[#FBF7F2]"
-                                  : "bg-[#C9A87C] text-[#4A1A1A]"
-                              }`}
-                            >
-                              {photo.status ===
-                              "printed"
-                                ? "PRINTED"
-                                : "PENDING"}
-                            </span>
-                          </div>
-
-                          <p className="mt-1.5 truncate text-center font-serif text-[10px] text-[#4A1A1A]/50">
-                            {formatTime(
-                              photo.created_at
-                            )}
-                          </p>
-                        </motion.button>
-                      );
-                    }
-                  )}
-                </div>
-
-                {totalPages > 1 && (
-                  <div className="mt-5 flex items-center justify-center gap-2">
-                    <button
-                      onClick={() =>
-                        setCurrentPage(
-                          (p) =>
-                            Math.max(
-                              1,
-                              p - 1
-                            )
-                        )
-                      }
-                      disabled={
-                        currentPage ===
-                        1
-                      }
-                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F5EBE0] text-[#4A1A1A] shadow-sm hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                    >
-                      <ChevronLeft
-                        size={16}
-                        strokeWidth={
-                          2.3
-                        }
-                      />
-                    </button>
-
-                    <div className="flex gap-1">
-                      {Array.from(
-                        {
-                          length:
-                            Math.min(
-                              5,
-                              totalPages
-                            ),
+              // Satu baris, scroll ke samping — sengaja TANPA
+              // card/container di belakang tiap foto (no rounded box,
+              // no shadow, no bg) biar frame-nya "telanjang" full,
+              // cuma nomor & badge status yang nempel di atasnya.
+              // ~3 foto kelihatan per layar (lihat basis width tiap
+              // item), sisanya tinggal discroll admin ke kanan.
+              <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-2 sm:gap-5">
+                {filteredPhotos.map(
+                  (photo, globalIndex) => (
+                    <motion.button
+                      key={photo.id}
+                      layout
+                      initial={{
+                        opacity: 0,
+                        scale: 0.9,
+                      }}
+                      animate={{
+                        opacity: 1,
+                        scale: 1,
+                      }}
+                      whileHover={{
+                        y: -4,
+                        transition: {
+                          duration: 0.15,
                         },
-                        (_, i) => {
-                          let pageNum: number;
-
-                          if (
-                            totalPages <=
-                            5
-                          ) {
-                            pageNum =
-                              i + 1;
-                          } else if (
-                            currentPage <=
-                            3
-                          ) {
-                            pageNum =
-                              i + 1;
-                          } else if (
-                            currentPage >=
-                            totalPages -
-                              2
-                          ) {
-                            pageNum =
-                              totalPages -
-                              4 +
-                              i;
-                          } else {
-                            pageNum =
-                              currentPage -
-                              2 +
-                              i;
-                          }
-
-                          return (
-                            <button
-                              key={
-                                pageNum
-                              }
-                              onClick={() =>
-                                setCurrentPage(
-                                  pageNum
-                                )
-                              }
-                              className={`h-8 w-8 rounded-lg font-serif text-xs font-medium transition-all ${
-                                currentPage ===
-                                pageNum
-                                  ? "bg-[#6B2D2C] text-[#F5EBE0] shadow-md"
-                                  : "bg-[#F5EBE0] text-[#4A1A1A] hover:bg-[#E8DDD0]"
-                              }`}
-                            >
-                              {
-                                pageNum
-                              }
-                            </button>
-                          );
-                        }
-                      )}
-                    </div>
-
-                    <button
+                      }}
                       onClick={() =>
-                        setCurrentPage(
-                          (p) =>
-                            Math.min(
-                              totalPages,
-                              p + 1
-                            )
+                        openPhoto(
+                          photo,
+                          globalIndex
                         )
                       }
-                      disabled={
-                        currentPage ===
-                        totalPages
-                      }
-                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F5EBE0] text-[#4A1A1A] shadow-sm hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                      className="group relative shrink-0 basis-[calc(33.333%-0.75rem)] sm:basis-[calc(33.333%-0.9rem)]"
                     >
-                      <ChevronRight
-                        size={16}
-                        strokeWidth={
-                          2.3
-                        }
-                      />
-                    </button>
-                  </div>
+                      <div className="relative aspect-[3/4] w-full overflow-hidden transition-transform group-hover:scale-[1.015]">
+                        <Image
+                          src={photo.image_result}
+                          alt=""
+                          fill
+                          sizes="33vw"
+                          className="object-contain"
+                          style={{
+                            background: "transparent",
+                          }}
+                        />
+
+                        <div className="absolute left-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-[#1A0A08]/70 backdrop-blur-sm font-serif text-xs font-bold text-[#F5EBE0]">
+                          {globalIndex + 1}
+                        </div>
+
+                        <span
+                          className={`absolute right-2 top-2 rounded-full px-2.5 py-1 font-serif text-[10px] font-semibold shadow-sm ${
+                            photo.status === "printed"
+                              ? "bg-[#5B7F5C] text-[#FBF7F2]"
+                              : "bg-[#C9A87C] text-[#4A1A1A]"
+                          }`}
+                        >
+                          {photo.status === "printed"
+                            ? "PRINTED"
+                            : "PENDING"}
+                        </span>
+                      </div>
+
+                      <p className="mt-1.5 truncate text-center font-serif text-[10px] text-[#4A1A1A]/50">
+                        {formatTime(photo.created_at)}
+                      </p>
+                    </motion.button>
+                  )
                 )}
-              </>
+              </div>
             )}
           </div>
 

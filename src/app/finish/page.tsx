@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { Printer, RotateCcw } from "lucide-react";
+import { Printer } from "lucide-react";
 import { FloatingBackground } from "@/components/ui/FloatingBackground";
 import { Celebration } from "@/components/ui/Celebration";
 import { useSessionStore } from "@/store/sessionStore";
@@ -75,38 +75,14 @@ export default function FinishPage() {
           </p>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, type: "spring", stiffness: 160 }}
-          className="mt-8"
+          transition={{ delay: 0.5 }}
+          className="text-paper-light/50 font-hand mt-8 text-base sm:text-lg"
         >
-          <motion.button
-            onClick={handleNewSession}
-            whileHover={{ y: -3, rotate: -1 }}
-            whileTap={{ y: 1, scale: 0.98 }}
-            transition={{ type: "spring", stiffness: 420, damping: 22 }}
-            className="ticket rounded-clay bg-clay-gradient shadow-clay hover:shadow-clay-lg text-ink flex shrink-0 items-center gap-4 px-8 py-4 sm:gap-5 sm:px-10 sm:py-4"
-          >
-            <div className="text-left">
-              <p className="font-display text-garnet-dark text-lg font-bold tracking-wide sm:text-xl">
-                MULAI SESI BARU
-              </p>
-
-              <p className="text-muted font-body mt-0.5 text-[11px] sm:text-xs">
-                sesi otomatis reset sebentar lagi
-              </p>
-            </div>
-
-            <div className="ticket-divider h-9 sm:h-10" />
-
-            <RotateCcw
-              size={20}
-              strokeWidth={2.4}
-              className="text-garnet-dark shrink-0"
-            />
-          </motion.button>
-        </motion.div>
+          sesi otomatis reset sebentar lagi...
+        </motion.p>
       </div>
     </main>
   );

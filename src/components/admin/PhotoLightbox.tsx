@@ -11,7 +11,7 @@ import type { Photo } from "@/types/photo";
 // ============================================
 // 🔥 KONFIGURASI WHATSAPP — ganti nomor di bawah ini
 // dengan nomor WhatsApp admin/pengirim yang kamu mau
-// pakai (format bebas, boleh pakai 08xxx atau +62xxx).
+// (pakai format 08xxx atau +62xxx).
 // ============================================
 const ADMIN_PHONE = "085853164066";
 
@@ -83,49 +83,34 @@ export function PhotoLightbox({
         formattedNumber = `62${formattedNumber}`;
       }
 
-      // ============================================
-      // 🔥 PESAN OTOMATIS + LINK HASIL FOTO
-      //
-      // Link SELALU dibangun dari NEXT_PUBLIC_APP_URL (domain
-      // Vercel kamu), BUKAN dari window.location.origin. Kalau
-      // pakai origin browser, link ini jadi ikut domain tempat
-      // admin lagi buka panelnya SAAT ITU — kalau admin lagi
-      // ngetes/jalanin app secara lokal (localhost:3000) meski
-      // datanya tetap di Vercel Blob & DB production, link yang
-      // dikirim ke tamu ikut jadi "http://localhost:3000/..." dan
-      // gak bisa dibuka sama sekali di HP mereka.
-      //
-      // Fallback ke window.location.origin cuma dipakai kalau
-      // NEXT_PUBLIC_APP_URL somehow belum di-set sama sekali di
-      // environment variables Vercel.
-      // ============================================
       const origin =
         APP_URL || (typeof window !== "undefined" ? window.location.origin : "");
       const photoLink = `${origin}/foto/${photo.id}`;
 
-      // Catatan: sengaja pakai emoji satu-codepoint yang umum ada
-      // di keyboard emoji HP (🎀✨🥰📸📌📅💕💾💌🎉🤍), dan HINDARI
-      // emoji yang butuh "variation selector" tambahan kayak
-      // 🖼️/🗓️ serta karakter box-drawing kayak "━" — dua jenis
-      // itu yang paling sering muncul jadi kotak/tanda tanya di
-      // WhatsApp versi lama / HP dengan font terbatas.
+      // ============================================
+      // 🔥 PESAN WHATSAPP — 100% KOMPATIBEL
+      // 
+      // RULES WhatsApp:
+      // - Bold: *teks*
+      // - Italic: _teks_
+      // - Strikethrough: ~teks~
+      // - GAK SUPPORT: ---, ===, ###, dsb
+      // - GAK SUPPORT: emoji multi-codepoint
+      // ============================================
       const message = encodeURIComponent(
-        `🎀✨ *${APP_NAME}* ✨🎀\n\n` +
-        `Haii, terima kasih banyak ya udah mampir dan berfoto bareng kami hari ini! 🥰📸\n\n` +
-        `📌 *Frame:* ${photo.frame_nama ?? "Frame"}\n` +
-        `📅 *Tanggal:* ${formatTime(photo.created_at)}\n\n` +
-        `Hasil foto kamu udah jadi dan siap didownload, nih~ 💕\n` +
-        `👉 ${photoLink}\n\n` +
-        `Tinggal klik link di atas, lalu tekan tombol download 💾 di pojok kanan bawah fotonya ya!\n\n` +
-        `----------------------------\n` +
-        `💌 Ada kendala atau mau cetak ulang? Hubungi admin kami di *${formatPhoneDisplay(ADMIN_PHONE)}*\n\n` +
-        `Semoga harimu menyenangkan, sampai jumpa lagi! 🎉🤍\n` +
+        `*${APP_NAME}*\n\n` +
+        `Haii, terima kasih banyak ya udah mampir dan berfoto bareng kami hari ini!\n\n` +
+        `📌 Frame: ${photo.frame_nama ?? "Frame"}\n` +
+        `📅 Tanggal: ${formatTime(photo.created_at)}\n\n` +
+        `Hasil foto kamu udah jadi dan siap didownload, nih~\n` +
+        `${photoLink}\n\n` +
+        `Tinggal klik link di atas, lalu tekan tombol download di pojok kanan bawah fotonya ya!\n\n` +
+        `Ada kendala atau mau cetak ulang?\n` +
+        `Hubungi admin kami di *${formatPhoneDisplay(ADMIN_PHONE)}*\n\n` +
+        `Semoga harimu menyenangkan, sampai jumpa lagi!\n` +
         `_Salam hangat, tim ${APP_NAME}_`
       );
 
-      // ============================================
-      // 🔥 BUKA WHATSAPP DENGAN PESAN
-      // ============================================
       window.open(
         `https://wa.me/${formattedNumber}?text=${message}`,
         "_blank"

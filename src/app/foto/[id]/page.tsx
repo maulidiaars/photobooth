@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Download, ImageOff, Loader2 } from "lucide-react";
+import { Download, ImageOff, Loader2, CheckCircle2, Share2 } from "lucide-react";
 
 interface PublicPhoto {
   id: string;
   image_result: string;
+  frame_nama?: string;
+  created_at?: string;
 }
 
 type Status = "loading" | "ready" | "not-found" | "error";
@@ -17,6 +19,7 @@ export default function PublicFotoPage() {
   const [photo, setPhoto] = useState<PublicPhoto | null>(null);
   const [status, setStatus] = useState<Status>("loading");
   const [downloading, setDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,70 +43,233 @@ export default function PublicFotoPage() {
     };
   }, [params.id]);
 
+  // ============================================
+  // 🔥 FUNGSI DOWNLOAD DENGAN NAMA FILE KEREN
+  // ============================================
   const handleDownload = async () => {
     if (!photo) return;
     setDownloading(true);
+    setDownloadProgress(0);
+
     try {
-      // Fetch as a blob supaya beneran ke-download, bukan cuma
-      // navigasi ke gambarnya (in-app browser WA suka begitu).
-      const res = await fetch(photo.image_result);
-      const blob = await res.blob();
+      const response = await fetch(photo.image_result);
+      
+      const contentLength = response.headers.get('content-length');
+      const total = contentLength ? parseInt(contentLength, 10) : 0;
+      
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No reader");
+
+      const chunks: Uint8Array[] = [];
+      let loaded = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        chunks.push(value);
+        loaded += value.length;
+        
+        if (total > 0) {
+          const progress = Math.round((loaded / total) * 100);
+          setDownloadProgress(progress);
+        }
+      }
+
+      const blob = new Blob(chunks, { 
+        type: response.headers.get('content-type') || 'image/png' 
+      });
+      
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `photobooth-${photo.id.slice(0, 8)}.png`;
+      
+      const frameName = photo.frame_nama 
+        ? photo.frame_nama.toLowerCase().replace(/\s+/g, '-') 
+        : "foto";
+      const shortId = photo.id.slice(0, 8);
+      
+      a.download = `photobooth-${frameName}-${shortId}.png`;
+      
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-    } catch {
-      // Fallback: buka gambarnya langsung biar bisa long-press save.
+
+      setDownloadProgress(100);
+      setTimeout(() => setDownloadProgress(0), 1000);
+
+    } catch (error) {
+      console.error("Download gagal:", error);
       window.open(photo.image_result, "_blank", "noopener,noreferrer");
     } finally {
       setDownloading(false);
     }
   };
 
+  // ============================================
+  // 🔥 FUNGSI SHARE (opsional)
+  // ============================================
+  const handleShare = async () => {
+    if (!photo) return;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Hasil Photobooth',
+          text: `Hasil foto photobooth saya!`,
+          url: window.location.href,
+        });
+      } else {
+        // Fallback: copy link
+        await navigator.clipboard.writeText(window.location.href);
+        alert('Link berhasil disalin!');
+      }
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        console.error('Share failed:', error);
+      }
+    }
+  };
+
+  const formatDate = (iso?: string) => {
+    if (!iso) return "";
+    return new Date(iso).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  };
+
   return (
-    <main className="flex min-h-svh items-center justify-center bg-[#140806] px-4 py-10">
+    <main className="flex min-h-svh items-center justify-center bg-gradient-to-b from-[#140806] to-[#1A0A08] px-4 py-6 sm:px-6 sm:py-10 md:px-8 lg:px-12">
       {status === "loading" && (
         <Loader2 className="animate-spin text-white/40" size={30} strokeWidth={2} />
       )}
 
       {(status === "not-found" || status === "error") && (
-        <div className="flex flex-col items-center gap-2.5 text-center">
-          <ImageOff size={30} className="text-white/30" strokeWidth={1.8} />
-          <p className="text-sm font-medium text-white/60">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center gap-3 text-center"
+        >
+          <div className="rounded-full bg-white/5 p-6">
+            <ImageOff size={40} className="text-white/30" strokeWidth={1.8} />
+          </div>
+          <p className="text-sm font-medium text-white/60 sm:text-base">
             {status === "not-found" ? "Foto tidak ditemukan." : "Gagal memuat foto."}
           </p>
-        </div>
+          <p className="text-xs text-white/30">
+            {status === "not-found" ? "Mungkin foto sudah dihapus atau link salah." : "Coba periksa koneksi internet kamu."}
+          </p>
+        </motion.div>
       )}
 
       {status === "ready" && photo && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ type: "spring", stiffness: 220, damping: 24 }}
-          className="relative w-full max-w-sm"
+          className="relative w-full max-w-[280px] sm:max-w-sm md:max-w-md lg:max-w-lg"
         >
-          <img
-            src={photo.image_result}
-            alt="Hasil photobooth"
-            className="w-full rounded-2xl shadow-2xl"
-          />
+          {/* Card wrapper dengan shadow */}
+          <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-black/40 bg-black/20 backdrop-blur-sm p-1.5 sm:p-2">
+            
+            {/* Frame Name & Date Badge - Responsive */}
+            <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 sm:top-4 sm:left-4 md:top-5 md:left-5">
+              {photo.frame_nama && (
+                <span className="inline-block rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-medium text-white/90 backdrop-blur-sm sm:px-3 sm:py-1.5 sm:text-xs md:text-sm">
+                  {photo.frame_nama}
+                </span>
+              )}
+              {photo.created_at && (
+                <span className="inline-block rounded-full bg-black/40 px-2 py-0.5 text-[8px] text-white/60 backdrop-blur-sm sm:px-2.5 sm:py-1 sm:text-[10px]">
+                  {formatDate(photo.created_at)}
+                </span>
+              )}
+            </div>
 
-          <button
-            onClick={handleDownload}
-            disabled={downloading}
-            aria-label="Download foto"
-            className="absolute bottom-4 right-4 flex h-12 w-12 items-center justify-center rounded-full bg-white/95 text-[#140806] shadow-lg backdrop-blur-sm transition-transform hover:scale-105 active:scale-95 disabled:opacity-60"
+            {/* Image - Full width, maintain aspect ratio */}
+            <img
+              src={photo.image_result}
+              alt={`Hasil photobooth ${photo.frame_nama || ''}`}
+              className="w-full h-auto rounded-xl object-contain bg-[#0D0503]"
+              loading="lazy"
+              style={{ aspectRatio: '2/3' }}
+            />
+
+            {/* Download Button - Responsive size & position */}
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              aria-label="Download foto"
+              className="absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-[#140806] shadow-lg backdrop-blur-sm transition-all hover:scale-105 hover:bg-white active:scale-95 disabled:opacity-60 sm:bottom-4 sm:right-4 sm:h-11 sm:w-11 md:h-12 md:w-12"
+            >
+              {downloading ? (
+                downloadProgress > 0 && downloadProgress < 100 ? (
+                  <div className="relative flex items-center justify-center">
+                    <svg className="h-5 w-5 -rotate-90 sm:h-5 sm:w-5 md:h-6 md:w-6" viewBox="0 0 24 24">
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        fill="none"
+                        stroke="#140806"
+                        strokeWidth="3"
+                        className="opacity-20"
+                      />
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        fill="none"
+                        stroke="#140806"
+                        strokeWidth="3"
+                        strokeDasharray="62.8"
+                        strokeDashoffset={`${62.8 - (62.8 * downloadProgress) / 100}`}
+                        className="transition-all duration-200"
+                      />
+                    </svg>
+                    <span className="absolute text-[7px] font-bold text-[#140806] sm:text-[8px]">
+                      {downloadProgress}%
+                    </span>
+                  </div>
+                ) : downloadProgress === 100 ? (
+                  <CheckCircle2 size={18} className="text-green-600 sm:size-[18px] md:size-[20px]" strokeWidth={2.5} />
+                ) : (
+                  <Loader2 size={16} className="animate-spin sm:size-[17px] md:size-[19px]" strokeWidth={2.4} />
+                )
+              ) : (
+                <Download size={16} className="sm:size-[17px] md:size-[19px]" strokeWidth={2.4} />
+              )}
+            </button>
+
+            {/* Share Button - Opsional, responsive */}
+            <button
+              onClick={handleShare}
+              aria-label="Bagikan foto"
+              className="absolute bottom-3 left-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white/70 shadow-lg backdrop-blur-sm transition-all hover:bg-white/30 hover:scale-105 active:scale-95 sm:bottom-4 sm:left-4 sm:h-11 sm:w-11 md:h-12 md:w-12"
+            >
+              <Share2 size={16} className="sm:size-[17px] md:size-[19px]" strokeWidth={2} />
+            </button>
+          </div>
+
+          {/* Caption / Info di bawah foto - Responsive */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="mt-4 text-center space-y-1.5 sm:mt-5 sm:space-y-2"
           >
-            {downloading ? (
-              <Loader2 size={19} className="animate-spin" strokeWidth={2.4} />
-            ) : (
-              <Download size={19} strokeWidth={2.4} />
-            )}
-          </button>
+            <h1 className="text-sm font-semibold text-white/80 sm:text-base md:text-lg">
+              {photo.frame_nama || 'Hasil Photobooth'}
+            </h1>
+            <p className="text-[10px] text-white/40 sm:text-xs">
+              Klik tombol download di pojok kanan bawah untuk menyimpan foto
+            </p>
+            <p className="text-[8px] text-white/20 sm:text-[10px]">
+              ID: {photo.id.slice(0, 12)}
+            </p>
+          </motion.div>
         </motion.div>
       )}
     </main>

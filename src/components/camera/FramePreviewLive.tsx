@@ -77,11 +77,9 @@ export function FramePreviewLive({
         <div
           className="relative h-full flex-shrink-0 overflow-hidden"
           style={{
-            aspectRatio:
-              frame.width && frame.height
-                ? `${frame.width} / ${frame.height}`
-                : "2 / 3",
+            aspectRatio: "2 / 3",
             height: "100%",
+            width: "auto",
           }}
         >
           <img

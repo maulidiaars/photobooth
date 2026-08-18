@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { CheckCircle2, RotateCcw, Sparkles } from "lucide-react";
@@ -11,6 +11,8 @@ import { FramePreviewLive } from "@/components/camera/FramePreviewLive";
 import { FloatingBackground } from "@/components/ui/FloatingBackground";
 import { ConfirmModal } from "@/components/ui/Modal";
 import { usePhotoSession } from "@/hooks/usePhotoSession";
+import { useFrameContentBox } from "@/hooks/useFrameContentBox";
+import { useFramePreviewLayout } from "@/hooks/useFramePreviewLayout";
 import { ROUTES } from "@/lib/constants";
 
 export default function CameraPage() {
@@ -34,16 +36,18 @@ export default function CameraPage() {
   } = usePhotoSession();
 
   const [retakeCandidate, setRetakeCandidate] = useState<number | null>(null);
-  const [previewWidth, setPreviewWidth] = useState<number | null>(null);
-  const [isDesktop, setIsDesktop] = useState(false);
 
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 1024px)");
-    const update = () => setIsDesktop(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
+  // Right column width (desktop only) is derived from the selected
+  // frame's own trimmed content box + the panel's available height — see
+  // useFrameContentBox/useFramePreviewLayout. The frame PNG carries a
+  // transparent margin around its actual artwork, so sizing from the raw
+  // image ratio would leave that margin as a visible white gap; sizing
+  // from the trimmed box instead makes the panel match the artwork
+  // exactly. Below `lg` this is unused; the panel keeps its plain
+  // mobile-stacked sizing instead (see .frame-col-dynamic-width).
+  const previewAreaRef = useRef<HTMLDivElement>(null);
+  const contentBox = useFrameContentBox(selectedFrame?.frame_png ?? null);
+  const previewLayout = useFramePreviewLayout(previewAreaRef, contentBox);
 
   useEffect(() => {
     if (!selectedFrame) router.replace(ROUTES.frame);
@@ -149,22 +153,17 @@ export default function CameraPage() {
         </div>
       </div>
 
-      {/* RIGHT — Frame Preview Section - FIXED: posisi ke kanan */}
+{/* RIGHT — Frame Preview Section. Width (desktop) comes from the frame's
+          own trimmed content box via useFrameContentBox/useFramePreviewLayout
+          (--preview-w), not a fixed 38vw column and not the raw PNG's
+          transparent-padded canvas ratio, so the preview panel is exactly
+          the size of the frame's visible artwork — no letterboxing, no
+          whitespace around it. */}
       <div
-        className="bg-white relative flex min-h-[54vh] w-full shrink-0 flex-col overflow-hidden lg:min-h-0 lg:flex-shrink-0 lg:justify-self-end lg:ml-auto"
-        style={
-          isDesktop
-            ? {
-                width: previewWidth ? `${Math.ceil(previewWidth)}px` : 320,
-                maxWidth: "50vw",
-                minWidth: "240px",
-              }
-            : {
-                minHeight: "55vh",
-              }
-        }
+        className="frame-col-dynamic-width relative flex min-h-[54vh] w-full shrink-0 flex-col overflow-hidden bg-white lg:h-full lg:min-h-0 lg:flex-shrink-0"
+        style={previewLayout ? ({ "--preview-w": `${previewLayout.width}px` } as React.CSSProperties) : undefined}
       >
-        <div className="relative z-10 flex min-h-0 w-full flex-1 items-center justify-center p-0">
+        <div ref={previewAreaRef} className="relative min-h-0 flex-1">
           {selectedFrame.slot_layout.length > 0 ? (
             <FramePreviewLive
               frame={selectedFrame}
@@ -173,23 +172,16 @@ export default function CameraPage() {
               activeIndex={activeIndex}
               locked={busy}
               onSlotClick={handleSlotClick}
-              onMeasure={setPreviewWidth}
+              contentBox={contentBox}
+              previewLayout={previewLayout}
             />
           ) : (
-            <div className="flex flex-col items-center gap-2 text-center">
+            <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-white text-center">
               <Sparkles size={22} strokeWidth={2} className="text-ink/25" />
               <p className="text-muted font-hand text-2xl">frame ini belum punya slot</p>
             </div>
           )}
         </div>
-
-        {!isComplete && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-2 z-10 flex justify-center px-4 sm:bottom-3">
-            <span className="text-ink/55 font-body rounded-full bg-white/50 px-3 py-1 text-[10px] backdrop-blur-sm sm:text-xs">
-              klik foto yang sudah jadi buat ambil ulang
-            </span>
-          </div>
-        )}
       </div>
 
       <ConfirmModal

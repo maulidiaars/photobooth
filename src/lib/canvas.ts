@@ -42,17 +42,23 @@ function drawCover(
   // frame artwork's hole. Without this, sub-pixel rounding or a soft/
   // anti-aliased edge on the frame PNG's hole can leave a hairline gap
   // where the frame's own background peeks through, reading as a thin
-  // border around every photo.
-  const bleed = 0.015;
+  // white border around every photo.
+  const bleed = 0.025;
   const ox = dw * bleed;
   const oy = dh * bleed;
 
   ctx.save();
-  // Clip strictly to the *original* slot rect as a safety net so the
-  // overscanned photo still can't bleed past the hole into the rest of
-  // the frame artwork, even by a sub-pixel rounding error.
+  // Clip to the *overscanned* rect (not the original slot rect) so the
+  // bleed above actually has somewhere to go. Clipping to the exact
+  // original rect here defeated the overscan entirely — the frame PNG's
+  // hole has a couple of semi-transparent anti-aliased pixels right at
+  // its edge, and clipping the photo to precisely the same rect left
+  // that soft edge showing through as a thin white ring. The frame
+  // artwork drawn on top afterward is fully opaque everywhere outside
+  // the actual hole, so letting the photo bleed slightly further here is
+  // still safe — it just gets covered back up by the frame there.
   ctx.beginPath();
-  ctx.rect(dx, dy, dw, dh);
+  ctx.rect(dx - ox, dy - oy, dw + ox * 2, dh + oy * 2);
   ctx.clip();
   ctx.drawImage(img, sx, sy, sw, sh, dx - ox, dy - oy, dw + ox * 2, dh + oy * 2);
   ctx.restore();

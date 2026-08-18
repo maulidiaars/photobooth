@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
@@ -9,8 +9,17 @@ import { FrameCarousel } from "@/components/frame/FrameCarousel";
 import { StepTracker } from "@/components/ui/StepTracker";
 import { getFrames } from "@/services/frameService";
 import { useSessionStore } from "@/store/sessionStore";
+import { useFrameContentBox } from "@/hooks/useFrameContentBox";
+import { useFramePreviewLayout } from "@/hooks/useFramePreviewLayout";
 import type { Frame } from "@/types/frame";
 import { ROUTES } from "@/lib/constants";
+
+// Static width for the right panel only while there's no frame selected
+// yet (nothing to size a preview around). The moment a frame is picked,
+// the panel switches to being sized by that frame's own trimmed content
+// box (see useFrameContentBox) — its real visible artwork, not the raw
+// PNG canvas, which carries a transparent margin around the ticket.
+const EMPTY_PANEL_WIDTH = 340;
 
 export default function FramePage() {
   const router = useRouter();
@@ -21,21 +30,10 @@ export default function FramePage() {
   const selectedFrame = useSessionStore((s) => s.selectedFrame);
   const setFrame = useSessionStore((s) => s.setFrame);
 
-  const [previewWidth, setPreviewWidth] = useState<number | null>(null);
-  const roRef = useRef<ResizeObserver | null>(null);
-
-  const previewImgRef = useCallback((node: HTMLImageElement | null) => {
-    roRef.current?.disconnect();
-    roRef.current = null;
-    if (node) {
-      const ro = new ResizeObserver((entries) => {
-        const w = entries[0]?.contentRect.width;
-        if (w) setPreviewWidth(w);
-      });
-      ro.observe(node);
-      roRef.current = ro;
-    }
-  }, []);
+  const previewAreaRef = useRef<HTMLDivElement>(null);
+  const contentBox = useFrameContentBox(selectedFrame?.thumbnail ?? null);
+  const previewLayout = useFramePreviewLayout(previewAreaRef, contentBox);
+  const rightColWidth = selectedFrame ? (previewLayout?.width ?? EMPTY_PANEL_WIDTH) : EMPTY_PANEL_WIDTH;
 
   useEffect(() => {
     getFrames()
@@ -44,15 +42,9 @@ export default function FramePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    if (!selectedFrame) setPreviewWidth(null);
-  }, [selectedFrame]);
-
   const handleContinue = () => {
     if (selectedFrame) router.push(ROUTES.camera);
   };
-
-  const columnWidth = previewWidth ? Math.ceil(previewWidth) : undefined;
 
   return (
     <main className="app-shell relative flex w-full flex-col overflow-hidden lg:flex-row">
@@ -122,32 +114,57 @@ export default function FramePage() {
         </div>
       </div>
 
-      {/* RIGHT — solid white column */}
+      {/* RIGHT — white panel whose WIDTH is derived from the selected
+          frame's own trimmed content box (see useFrameContentBox /
+          useFramePreviewLayout), not the raw PNG canvas ratio and not a
+          fixed fraction of the viewport. Narrow frame → narrow panel →
+          left column gets the freed-up space automatically because it's a
+          flex-1 item. */}
       <div
-        className="bg-white relative hidden min-h-0 shrink-0 flex-col items-center lg:flex"
-        style={{
-          width: columnWidth ? `${columnWidth}px` : 280,
-          maxWidth: "46vw",
-        }}
+        className="relative hidden min-h-0 shrink-0 flex-col bg-white lg:flex"
+        style={{ width: rightColWidth, minWidth: 180, maxWidth: "62vw" }}
       >
-        {/* Preview */}
-        <div className="relative z-10 flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden">
+        {/* Preview area — its height (fixed by the page layout) is what
+            drives the panel's width above. The frame is rendered as a
+            background-image with an explicit computed size/position
+            (from useFramePreviewLayout) instead of an <img object-contain>,
+            because the source PNG has a transparent margin baked around
+            the actual ticket artwork — object-contain would show that
+            margin as a white gap. The computed background crops it out so
+            the artwork itself fills the panel edge-to-edge. */}
+        <div ref={previewAreaRef} className="relative min-h-0 flex-1 bg-white">
           <AnimatePresence mode="wait">
             {selectedFrame ? (
               <motion.div
                 key={selectedFrame.id}
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 1.02 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.97 }}
+                exit={{ opacity: 0, scale: 1.01 }}
                 transition={{ type: "spring", stiffness: 220, damping: 22 }}
-                className="flex h-full w-full items-center justify-center"
+                className="absolute inset-0"
+                style={
+                  previewLayout
+                    ? {
+                        backgroundImage: `url(${selectedFrame.thumbnail})`,
+                        backgroundSize: previewLayout.backgroundSize,
+                        backgroundPosition: previewLayout.backgroundPosition,
+                        backgroundRepeat: "no-repeat",
+                      }
+                    : undefined
+                }
               >
-                <img
-                  ref={previewImgRef}
-                  src={selectedFrame.thumbnail}
-                  alt={selectedFrame.nama}
-                  className="h-full w-full object-contain drop-shadow-[0_20px_36px_rgba(58,40,31,0.28)]"
-                />
+                {!previewLayout && (
+                  // First frame of layout, before height is known yet —
+                  // fall back to plain object-contain for one frame so
+                  // something renders immediately; useFramePreviewLayout
+                  // takes over on the very next paint.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={selectedFrame.thumbnail}
+                    alt={selectedFrame.nama}
+                    className="block h-full w-full object-contain"
+                  />
+                )}
               </motion.div>
             ) : (
               <motion.div
@@ -155,7 +172,7 @@ export default function FramePage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex flex-col items-center justify-center gap-2 px-2 text-center"
+                className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white px-4 text-center"
               >
                 <Sparkles size={22} strokeWidth={2} className="text-ink/25" />
                 <p className="text-muted font-hand text-2xl">belum ada yang dipilih</p>
@@ -167,8 +184,10 @@ export default function FramePage() {
           </AnimatePresence>
         </div>
 
-        {/* CTA - EDITED: kasih padding di container */}
-        <div className="relative z-10 w-full shrink-0 px-4 pb-4 pt-3 sm:px-6">
+        {/* CTA — centered and sized to its own content (not full column
+            width), so it reads as a compact button sitting under the
+            frame rather than a big full-width bar. */}
+        <div className="relative z-10 flex w-full shrink-0 justify-center px-4 pb-4 pt-3 sm:px-6">
           <ContinueOutline selectedFrame={selectedFrame} onClick={handleContinue} />
         </div>
       </div>
@@ -210,7 +229,8 @@ function ContinueTicket({
 }
 
 /**
- * Desktop CTA - EDITED: ada padding, ga mepet
+ * Desktop CTA — compact, content-sized (not full-width): smaller than the
+ * frame above it, never wider than it.
  */
 function ContinueOutline({
   selectedFrame,
@@ -226,13 +246,13 @@ function ContinueOutline({
       whileHover={selectedFrame ? { y: -3, rotate: -1 } : undefined}
       whileTap={selectedFrame ? { y: 1, scale: 0.98 } : undefined}
       transition={{ type: "spring", stiffness: 420, damping: 22 }}
-      className="ticket ticket-on-cream rounded-clay bg-maroon-gradient shadow-clay hover:shadow-clay-lg text-paper-light flex w-full shrink-0 items-center justify-between gap-3 px-5 py-3.5 transition-opacity disabled:opacity-20 disabled:hover:shadow-clay sm:px-7 sm:py-4"
+      className="ticket ticket-on-cream rounded-clay bg-maroon-gradient shadow-clay hover:shadow-clay-lg text-paper-light flex w-fit max-w-full shrink-0 items-center gap-2 whitespace-nowrap px-4 py-2 shadow-[0_4px_24px_rgba(0,0,0,0.35)] transition-opacity disabled:opacity-20 disabled:hover:shadow-clay sm:gap-2.5 sm:px-5 sm:py-2.5"
     >
-      <span className="font-display text-sm font-bold tracking-wide sm:text-base">
-        LANJUT KE KAMERA
+      <span className="font-display text-xs font-bold tracking-wide sm:text-sm">
+        NEXT
       </span>
-      <div className="ticket-divider h-7 sm:h-8" />
-      <ArrowRight size={18} strokeWidth={2.4} className="shrink-0 sm:size-5" />
+      <div className="ticket-divider h-4 sm:h-5" />
+      <ArrowRight size={14} strokeWidth={2.4} className="shrink-0 sm:size-4" />
     </motion.button>
   );
 }

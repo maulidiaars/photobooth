@@ -95,6 +95,20 @@ body::after {
   overflow: hidden;
 }
 
+/* Camera page's frame-preview column: below `lg` it stays the plain
+   mobile-stacked box (sized by the min-h-[54vh]/w-full utility classes
+   right on the element). At `lg`+ it switches to being sized by the
+   selected frame's own aspect ratio via the --preview-w custom property
+   (set from JS in useFramePreviewWidth), instead of a fixed vw column, so
+   a narrow frame gets a narrow column and a wide frame a wide one. */
+@media (min-width: 1024px) {
+  .frame-col-dynamic-width {
+    width: var(--preview-w, 340px);
+    min-width: 180px;
+    max-width: 62vw;
+  }
+}
+
 /* Landing page only. Unlike the shared `.app-shell` (locked to exactly
    one viewport, used by the camera/frame/result screens), the landing
    hero now stacks the photo frames *below* the text on phones/tablets,

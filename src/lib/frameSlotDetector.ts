@@ -5,6 +5,29 @@ export interface SlotRect {
   h: number;
 }
 
+/**
+ * `slot_layout` rects are stored as fractions of the frame PNG's *full*
+ * canvas (0-1 of naturalWidth/naturalHeight). When a preview panel is
+ * sized and cropped to the frame's trimmed content box (see
+ * useFrameContentBox/useFramePreviewLayout) instead of the full canvas,
+ * slot overlays need the same remapping — from "fraction of the whole
+ * PNG" to "fraction of the visible content box" — or they'd drift out of
+ * position by exactly the width of the cropped-away transparent margin.
+ */
+export function remapSlotToContentBox(
+  rect: SlotRect,
+  naturalWidth: number,
+  naturalHeight: number,
+  box: { x: number; y: number; w: number; h: number }
+): SlotRect {
+  return {
+    x: (rect.x * naturalWidth - box.x) / box.w,
+    y: (rect.y * naturalHeight - box.y) / box.h,
+    w: (rect.w * naturalWidth) / box.w,
+    h: (rect.h * naturalHeight) / box.h,
+  };
+}
+
 function loadImageFromFile(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);

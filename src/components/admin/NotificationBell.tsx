@@ -7,6 +7,7 @@ import { Bell, MessageCircle, Clock3, Check, X, Eye, Printer, Trash2 } from "luc
 import { getPhotos, markPhotoNotified, updatePhotoStatus } from "@/services/photoService";
 import { ROUTES } from "@/lib/constants";
 import { useToast } from "@/components/ui/Toast";
+import { openPrintWindow } from "@/lib/print";
 import type { Photo } from "@/types/photo";
 
 const POLL_MS = 6000;
@@ -100,20 +101,38 @@ export function NotificationBell() {
     setItems([]);
   };
 
-  // FUNGSI BARU: Mark as Printed langsung dari notif
-  const handleMarkPrinted = async (photo: Photo) => {
+  // FUNGSI: Klik "Cetak" langsung dari notif -> buka preview print, dan
+  // baru setelah proses cetak itu SELESAI (dialog print ditutup / window
+  // preview ditutup) statusnya ditandai printed & notifnya hilang.
+  const handleMarkPrinted = (photo: Photo) => {
     setProcessing(photo.id);
-    try {
-      await updatePhotoStatus(photo.id, "printed");
-      await markPhotoNotified(photo.id);
-      toast.push("Foto ditandai sudah dicetak", "success");
-      setItems((prev) => prev.filter((p) => p.id !== photo.id));
-      load();
-    } catch {
-      toast.push("Gagal memperbarui status", "error");
-    } finally {
-      setProcessing(null);
-    }
+
+    const finalizePrinted = async () => {
+      try {
+        await updatePhotoStatus(photo.id, "printed");
+        await markPhotoNotified(photo.id);
+        toast.push("Foto ditandai sudah dicetak", "success");
+        setItems((prev) => prev.filter((p) => p.id !== photo.id));
+        load();
+      } catch {
+        toast.push("Gagal memperbarui status", "error");
+      } finally {
+        setProcessing(null);
+      }
+    };
+
+    openPrintWindow(photo.image_result, {
+      onDone: () => {
+        void finalizePrinted();
+      },
+      onBlocked: () => {
+        toast.push(
+          "Popup diblokir browser. Izinkan popup untuk halaman ini lalu coba lagi.",
+          "error"
+        );
+        setProcessing(null);
+      },
+    });
   };
 
   // FUNGSI BARU: Open photo in dashboard (bawa ke lightbox)

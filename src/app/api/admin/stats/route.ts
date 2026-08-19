@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { requireAdmin } from "@/lib/requireAdmin";
+import { cleanupExpiredPhotos } from "@/lib/cleanup";
 import type { DashboardStats } from "@/types/photo";
 
 export async function GET(request: NextRequest) {
@@ -10,6 +11,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Sama kayak /api/photos — bersihin foto yang udah lewat 24 jam dulu
+    // biar angka statistiknya gak ikut ngitung foto yang sebetulnya udah
+    // "kadaluwarsa".
+    await cleanupExpiredPhotos();
+
     const [framesRows, photosRows, pendingRows, printedRows, newRows] = await Promise.all([
       query<{ totalFrames: number }[]>("SELECT COUNT(*) AS totalFrames FROM frames"),
       query<{ totalPhotos: number }[]>("SELECT COUNT(*) AS totalPhotos FROM photos"),

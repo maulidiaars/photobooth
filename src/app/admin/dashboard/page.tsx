@@ -9,7 +9,7 @@ import {
 } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Images,
   Camera,
@@ -30,6 +30,7 @@ import {
 } from "@/services/photoService";
 
 import { useToast } from "@/components/ui/Toast";
+import { openPrintWindow } from "@/lib/print";
 
 import type {
   DashboardStats,
@@ -58,6 +59,8 @@ function formatTime(iso: string) {
 }
 
 function AdminDashboardContent() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const photoIdParam = searchParams.get("photo");
 
@@ -76,6 +79,13 @@ function AdminDashboardContent() {
   const [activeIndex, setActiveIndex] = useState(0);
 
   const knownIds = useRef<Set<string>>(new Set());
+
+  // Nyimpen id foto yang query param `?photo=`-nya udah pernah dipakai buat
+  // auto-buka lightbox, biar gak kebuka ulang terus-terusan tiap polling
+  // (setiap 6 detik) narik data baru & bikin state `photos` berubah
+  // reference-nya — sebelumnya bikin modal yang udah ditutup admin nongol
+  // lagi sendiri.
+  const openedFromParam = useRef<string | null>(null);
 
   const toast = useToast();
 
@@ -177,11 +187,14 @@ function AdminDashboardContent() {
     };
   }, []);
 
-  // Handle query param untuk buka lightbox dari notifikasi
+  // Handle query param untuk buka lightbox dari notifikasi — cuma jalan
+  // SEKALI per id (lewat openedFromParam ref) supaya polling berikutnya
+  // gak balikin lightbox yang udah ditutup admin.
   useEffect(() => {
     if (
       photoIdParam &&
-      photos.length > 0
+      photos.length > 0 &&
+      openedFromParam.current !== photoIdParam
     ) {
       const idx = photos.findIndex(
         (p) => p.id === photoIdParam
@@ -191,6 +204,7 @@ function AdminDashboardContent() {
         const photo = photos[idx];
 
         if (photo) {
+          openedFromParam.current = photoIdParam;
           setActivePhoto(photo);
           setActiveIndex(idx);
 
@@ -201,6 +215,25 @@ function AdminDashboardContent() {
       }
     }
   }, [photoIdParam, photos]);
+
+  // Tutup lightbox + bersihin query param `?photo=` dari URL, biar gak
+  // ada jejak yang bisa numicu useEffect di atas buka ulang lightbox-nya.
+  const closeLightbox = () => {
+    setActivePhoto(null);
+
+    if (photoIdParam) {
+      const params = new URLSearchParams(
+        searchParams.toString()
+      );
+      params.delete("photo");
+
+      const query = params.toString();
+      router.replace(
+        query ? `${pathname}?${query}` : pathname,
+        { scroll: false }
+      );
+    }
+  };
 
   const filteredPhotos = useMemo(
     () =>
@@ -237,7 +270,7 @@ function AdminDashboardContent() {
       .sort(
         (a, b) => b[1] - a[1]
       )
-      .slice(0, 5)
+      .slice(0, 3)
       .map(([name, count]) => ({
         name,
         count,
@@ -291,45 +324,14 @@ function AdminDashboardContent() {
   };
 
   const handlePrint = (photo: Photo) => {
-    // Buka tab kosong dulu (bukan langsung ke URL gambar) lalu isi
-    // dengan halaman print sendiri — lebih konsisten daripada
-    // mengandalkan event "load" pada tab gambar mentahan, yang di
-    // beberapa browser tidak selalu terpicu dengan benar.
-    const win = window.open("", "_blank", "width=900,height=1000");
-    if (!win) {
-      toast.push(
-        "Popup diblokir browser. Izinkan popup untuk halaman ini lalu coba lagi.",
-        "error"
-      );
-      return;
-    }
-
-    win.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Cetak Foto</title>
-          <style>
-            html, body { margin: 0; padding: 0; height: 100%; background: #fff; }
-            body { display: flex; align-items: center; justify-content: center; }
-            img { max-width: 100%; max-height: 100vh; object-fit: contain; }
-            @media print { @page { margin: 0; } }
-          </style>
-        </head>
-        <body>
-          <img src="${photo.image_result}" alt="Hasil foto" />
-        </body>
-      </html>
-    `);
-    win.document.close();
-
-    const img = win.document.querySelector("img");
-    if (img) {
-      img.addEventListener("load", () => {
-        win.focus();
-        win.print();
-      });
-    }
+    openPrintWindow(photo.image_result, {
+      onBlocked: () => {
+        toast.push(
+          "Popup diblokir browser. Izinkan popup untuk halaman ini lalu coba lagi.",
+          "error"
+        );
+      },
+    });
   };
 
   const handleDownload = async (
@@ -353,10 +355,19 @@ function AdminDashboardContent() {
 
       link.href = url;
 
+      // Ekstensi ngikutin tipe file aslinya (.webp buat hasil foto baru
+      // yang udah dikompres, .png buat data lama) biar gak salah nama.
+      const ext = blob.type.includes("webp")
+        ? "webp"
+        : blob.type.includes("jpeg") ||
+          blob.type.includes("jpg")
+        ? "jpg"
+        : "png";
+
       link.download = `foto_${photo.id.slice(
         0,
         8
-      )}.png`;
+      )}.${ext}`;
 
       document.body.appendChild(link);
 
@@ -705,9 +716,7 @@ function AdminDashboardContent() {
 
       <PhotoLightbox
         photo={activePhoto}
-        onClose={() =>
-          setActivePhoto(null)
-        }
+        onClose={closeLightbox}
         onMarkPrinted={
           handleMarkPrinted
         }

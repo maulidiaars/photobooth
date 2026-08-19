@@ -16,7 +16,7 @@ export async function saveBase64Image(
   subDir: "frames" | "uploads",
   fileNamePrefix = "img"
 ): Promise<SaveResult> {
-  const match = base64.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/);
+  const match = base64.match(/^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/);
 
   if (!match || !match[1] || !match[2]) {
     throw new Error("Format gambar base64 tidak valid");
@@ -28,9 +28,11 @@ export async function saveBase64Image(
 
   const fileName = `${subDir}/${fileNamePrefix}-${uuidv4()}.${ext}`;
 
+  const contentType = ext === "jpg" ? "image/jpeg" : `image/${ext}`;
+
   const blob = await put(fileName, buffer, {
     access: "public",
-    contentType: `image/${ext === "jpg" ? "jpeg" : ext}`,
+    contentType,
     addRandomSuffix: false,
   });
 

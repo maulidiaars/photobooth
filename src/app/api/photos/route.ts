@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { query } from "@/lib/db";
 import { saveBase64Image } from "@/lib/fileStorage";
+import { cleanupExpiredPhotos } from "@/lib/cleanup";
 import type { CreatePhotoPayload, Photo, PhotoStatus } from "@/types/photo";
 
 export async function GET(request: NextRequest) {
   try {
+    // Bersihin dulu foto yang udah lewat 24 jam sebelum ambil data,
+    // supaya list yang dilihat admin otomatis gak nampilin foto basi.
+    await cleanupExpiredPhotos();
+
     const status = request.nextUrl.searchParams.get("status") as PhotoStatus | null;
 
     const baseSql = `

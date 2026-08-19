@@ -1,4 +1,4 @@
--- Clay Photobooth Database Schema
+-- Klikka Photobooth Database Schema
 CREATE DATABASE IF NOT EXISTS clay_photobooth
   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 

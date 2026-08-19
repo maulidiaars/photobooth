@@ -1,4 +1,4 @@
-export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Clay Photobooth";
+export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Klikka Photobooth";
 
 /** Public base URL of the deployed app (Vercel), used to build the
  *  /foto/[id] link sent to guests over WhatsApp. Override via the

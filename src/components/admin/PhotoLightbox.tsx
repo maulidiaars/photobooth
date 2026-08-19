@@ -13,9 +13,9 @@ import type { Photo } from "@/types/photo";
 // dengan nomor WhatsApp admin/pengirim yang kamu mau
 // (pakai format 08xxx atau +62xxx).
 // ============================================
-const ADMIN_PHONE = "085853164066";
+const ADMIN_PHONE = "085800619612";
 
-/** "085853164066" -> "0858-5316-4066", cuma buat tampilan biar rapi. */
+/** "085800619612" -> "0858-0061-9612", cuma buat tampilan biar rapi. */
 function formatPhoneDisplay(raw: string) {
   const d = raw.replace(/[^\d]/g, "");
   return d.replace(/(\d{4})(\d{4})(\d+)/, "$1-$2-$3");

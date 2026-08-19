@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { LayoutDashboard, Image as ImageIcon, LogOut, Circle, ChevronLeft, Menu } from "lucide-react";
 import { APP_NAME, ROUTES } from "@/lib/constants";
 import { useState, useEffect } from "react";
+import { Logo } from "@/components/ui/Logo";
 
 const NAV_ITEMS = [
   { href: ROUTES.adminDashboard, label: "Dashboard", Icon: LayoutDashboard },
@@ -39,9 +40,15 @@ export function AdminSidebar({ open = false, onClose }: AdminSidebarProps) {
     <>
       {/* 🎨 BRAND HEADER — MAROON & CREAM THEME */}
       <div className="relative z-10 mb-8 flex items-center gap-3 px-1 pt-2">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#6B2D2C] shadow-md">
-          <Circle size={18} className="fill-[#F5EBE0] text-[#F5EBE0]" strokeWidth={0} />
-        </div>
+        <Logo
+          size={40}
+          className="rounded-full"
+          fallback={
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#6B2D2C] shadow-md">
+              <Circle size={18} className="fill-[#F5EBE0] text-[#F5EBE0]" strokeWidth={0} />
+            </div>
+          }
+        />
         <div className="min-w-0">
           <h2 className="truncate font-serif text-xl font-bold leading-tight text-[#4A1A1A] tracking-wide">
             {APP_NAME}

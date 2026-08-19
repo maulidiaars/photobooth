@@ -111,5 +111,11 @@ export async function mergePhotosIntoFrame(
   // photos placed beneath, and its opaque design stays crisp on top.
   ctx.drawImage(frameImg, 0, 0, width, height);
 
-  return canvas.toDataURL("image/png", 1);
+  // WebP instead of PNG: still keeps the alpha/transparency around the
+  // frame's own shape (unlike JPEG), but compresses photographic content
+  // *way* smaller than PNG — a full-quality PNG here easily blew past
+  // Vercel's ~4.5MB request-body limit on /api/photos and failed with a
+  // 413 when saving. 0.9 quality keeps it visually lossless-ish while
+  // landing comfortably under that limit.
+  return canvas.toDataURL("image/webp", 0.9);
 }

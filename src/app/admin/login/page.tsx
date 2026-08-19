@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Lock, User, ShieldCheck, Eye, EyeOff, ArrowRight, Camera, Sparkles } from "lucide-react";
 import { ClayButton } from "@/components/ui/ClayButton";
+import { Logo } from "@/components/ui/Logo";
 import { APP_NAME, ROUTES } from "@/lib/constants";
 
 export default function AdminLoginPage() {
@@ -193,9 +194,15 @@ export default function AdminLoginPage() {
           animate={{ opacity: 1, y: 0 }}
           className="relative z-10 flex items-center gap-4"
         >
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-cream to-cream-dark shadow-2xl shadow-black/40">
-            <Camera size={24} className="text-maroon-deep" strokeWidth={1.8} />
-          </div>
+          <Logo
+            size={56}
+            className="rounded-2xl shadow-2xl shadow-black/40"
+            fallback={
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-cream to-cream-dark shadow-2xl shadow-black/40">
+                <Camera size={24} className="text-maroon-deep" strokeWidth={1.8} />
+              </div>
+            }
+          />
           <div>
             <span className="font-heading text-2xl font-bold text-cream tracking-tight drop-shadow-lg">{APP_NAME}</span>
             <span className="block text-cream/30 text-xs font-medium tracking-[0.2em] uppercase">Photobooth Studio</span>
@@ -336,9 +343,15 @@ export default function AdminLoginPage() {
         >
           {/* Mobile brand */}
           <div className="mb-8 flex items-center justify-center gap-3 lg:hidden">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-maroon-deep shadow-xl shadow-maroon-deep/40">
-              <Camera size={18} className="text-cream" />
-            </div>
+            <Logo
+              size={40}
+              className="rounded-xl shadow-xl shadow-maroon-deep/40"
+              fallback={
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-maroon-deep shadow-xl shadow-maroon-deep/40">
+                  <Camera size={18} className="text-cream" />
+                </div>
+              }
+            />
             <span className="font-heading text-lg font-bold text-maroon-deep tracking-tight">{APP_NAME}</span>
           </div>
 

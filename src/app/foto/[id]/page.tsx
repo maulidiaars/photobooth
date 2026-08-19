@@ -76,8 +76,9 @@ export default function PublicFotoPage() {
         }
       }
 
+      const contentType = response.headers.get('content-type') || 'image/png';
       const blob = new Blob(chunks, { 
-        type: response.headers.get('content-type') || 'image/png' 
+        type: contentType 
       });
       
       const url = URL.createObjectURL(blob);
@@ -88,8 +89,16 @@ export default function PublicFotoPage() {
         ? photo.frame_nama.toLowerCase().replace(/\s+/g, '-') 
         : "foto";
       const shortId = photo.id.slice(0, 8);
+      // Ekstensi ngikutin content-type asli file-nya (bisa .webp buat
+      // hasil foto baru, atau .png buat data lama), bukan di-hardcode
+      // .png biar filenya selalu kebuka bener pas didownload.
+      const ext = contentType.includes('webp')
+        ? 'webp'
+        : contentType.includes('jpeg') || contentType.includes('jpg')
+        ? 'jpg'
+        : 'png';
       
-      a.download = `photobooth-${frameName}-${shortId}.png`;
+      a.download = `photobooth-${frameName}-${shortId}.${ext}`;
       
       document.body.appendChild(a);
       a.click();

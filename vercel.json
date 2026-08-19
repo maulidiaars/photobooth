@@ -1,8 +1,6 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/cleanup-photos",
-      "schedule": "0 * * * *"
-    }
-  ]
-}
+"crons": [
+  {
+    "path": "/api/cron/cleanup-photos",
+    "schedule": "0 0 * * *"  // ✅ Ini tiap hari jam 00:00 (1x sehari)
+  }
+]

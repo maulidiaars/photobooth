@@ -1,4 +1,4 @@
-# 🍡 Clay Photobooth
+# 🍡 Klikka Photobooth
 
 Online Photobooth modern bertema **Claymorphism** (soft 3D, pastel, rounded, playful) —
 dibangun dengan **Next.js 15 (App Router)**, **TypeScript (strict)**, **Tailwind CSS**,

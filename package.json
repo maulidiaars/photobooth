@@ -1,8 +1,8 @@
 {
-  "name": "clay-photobooth",
+  "name": "klikka-photobooth",
   "version": "1.0.0",
   "private": true,
-  "description": "Online Photobooth modern - Claymorphism style (Next.js 15 + TypeScript + Tailwind + Framer Motion + MySQL)",
+  "description": "Klikka Photobooth - Online Photobooth modern, Claymorphism style (Next.js 15 + TypeScript + Tailwind + Framer Motion + MySQL)",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",

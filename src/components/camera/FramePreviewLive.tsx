@@ -74,17 +74,32 @@ export function FramePreviewLive({
           ? remapSlotToContentBox(rawRect, contentBox.naturalWidth, contentBox.naturalHeight, contentBox.box)
           : rawRect;
 
+        // Position in real CSS px, not a plain "% of panel" — the panel
+        // isn't always exactly the content box scaled up (see
+        // useFramePreviewLayout's cover-fit for the stacked mobile
+        // layout, where the box is cropped/centered rather than filling
+        // the panel edge-to-edge). Using px anchored to the same
+        // scale+offset the background itself uses keeps every slot lined
+        // up with the artwork on any panel size. Falls back to plain %
+        // (assumes box == panel) for the one frame before layout/box are
+        // measured.
+        const style =
+          previewLayout && contentBox
+            ? {
+                left: `${previewLayout.offsetX + rect.x * contentBox.box.w * previewLayout.scale}px`,
+                top: `${previewLayout.offsetY + rect.y * contentBox.box.h * previewLayout.scale}px`,
+                width: `${rect.w * contentBox.box.w * previewLayout.scale}px`,
+                height: `${rect.h * contentBox.box.h * previewLayout.scale}px`,
+              }
+            : {
+                left: `${rect.x * 100}%`,
+                top: `${rect.y * 100}%`,
+                width: `${rect.w * 100}%`,
+                height: `${rect.h * 100}%`,
+              };
+
         return (
-          <div
-            key={i}
-            className="absolute overflow-hidden"
-            style={{
-              left: `${rect.x * 100}%`,
-              top: `${rect.y * 100}%`,
-              width: `${rect.w * 100}%`,
-              height: `${rect.h * 100}%`,
-            }}
-          >
+          <div key={i} className="absolute overflow-hidden" style={style}>
             <AnimatePresence mode="wait">
               {photo ? (
                 <motion.button

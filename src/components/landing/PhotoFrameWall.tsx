@@ -79,10 +79,7 @@ function TicketFrame({
       className={className}
       style={{ transformOrigin: "center", ...style }}
     >
-      <div className="frame-notch bg-clay-gradient shadow-clay-lg rounded-[14px] p-1.5 pb-2 sm:rounded-[18px] sm:p-2 sm:pb-2.5 md:rounded-[22px] md:p-2.5 md:pb-3 lg:rounded-[30px] lg:p-3.5 lg:pb-4 xl:p-4 xl:pb-5">
-        <span className="frame-notch-bl" />
-        <span className="frame-notch-br" />
-
+      <div className="bg-clay-gradient shadow-clay-lg rounded-[14px] p-1.5 pb-2 sm:rounded-[18px] sm:p-2 sm:pb-2.5 md:rounded-[22px] md:p-2.5 md:pb-3 lg:rounded-[30px] lg:p-3.5 lg:pb-4 xl:p-4 xl:pb-5">
         {/* label */}
         <div className="mb-1 flex items-center justify-center gap-1 sm:mb-1.5 sm:gap-1.5 md:mb-2 lg:mb-3 lg:gap-2 xl:mb-4">
           <Camera

@@ -80,11 +80,6 @@ function AdminDashboardContent() {
 
   const knownIds = useRef<Set<string>>(new Set());
 
-  // Nyimpen id foto yang query param `?photo=`-nya udah pernah dipakai buat
-  // auto-buka lightbox, biar gak kebuka ulang terus-terusan tiap polling
-  // (setiap 6 detik) narik data baru & bikin state `photos` berubah
-  // reference-nya — sebelumnya bikin modal yang udah ditutup admin nongol
-  // lagi sendiri.
   const openedFromParam = useRef<string | null>(null);
 
   const toast = useToast();
@@ -187,9 +182,6 @@ function AdminDashboardContent() {
     };
   }, []);
 
-  // Handle query param untuk buka lightbox dari notifikasi — cuma jalan
-  // SEKALI per id (lewat openedFromParam ref) supaya polling berikutnya
-  // gak balikin lightbox yang udah ditutup admin.
   useEffect(() => {
     if (
       photoIdParam &&
@@ -216,8 +208,6 @@ function AdminDashboardContent() {
     }
   }, [photoIdParam, photos]);
 
-  // Tutup lightbox + bersihin query param `?photo=` dari URL, biar gak
-  // ada jejak yang bisa numicu useEffect di atas buka ulang lightbox-nya.
   const closeLightbox = () => {
     setActivePhoto(null);
 
@@ -248,10 +238,7 @@ function AdminDashboardContent() {
   );
 
   const frameBreakdown = useMemo(() => {
-    const counts = new Map<
-      string,
-      number
-    >();
+    const counts = new Map<string, number>();
 
     photos.forEach((p) => {
       const key =
@@ -357,8 +344,6 @@ function AdminDashboardContent() {
 
       link.href = url;
 
-      // Ekstensi ngikutin tipe file aslinya (.webp buat hasil foto baru
-      // yang udah dikompres, .png buat data lama) biar gak salah nama.
       const ext = blob.type.includes("webp")
         ? "webp"
         : blob.type.includes("jpeg") ||
@@ -522,7 +507,9 @@ function AdminDashboardContent() {
                 {FILTERS.map((f) => (
                   <button
                     key={f.value}
-                    onClick={() => setFilter(f.value)}
+                    onClick={() =>
+                      setFilter(f.value)
+                    }
                     className={`rounded-xl px-3.5 py-1.5 font-serif text-xs font-semibold transition-all ${
                       filter === f.value
                         ? "bg-[#6B2D2C] text-[#F5EBE0] shadow-md"
@@ -535,8 +522,7 @@ function AdminDashboardContent() {
               </div>
             </div>
 
-            {filteredPhotos.length ===
-            0 ? (
+            {filteredPhotos.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <p className="font-serif text-lg text-[#4A1A1A]/40">
                   Belum ada foto
@@ -549,12 +535,6 @@ function AdminDashboardContent() {
                 </p>
               </div>
             ) : (
-              // Satu baris, scroll ke samping — sengaja TANPA
-              // card/container di belakang tiap foto (no rounded box,
-              // no shadow, no bg) biar frame-nya "telanjang" full,
-              // cuma nomor & badge status yang nempel di atasnya.
-              // 2 foto kelihatan per layar di HP, 3 dari sm ke atas,
-              // sisanya tinggal discroll admin ke kanan.
               <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-2 sm:gap-5">
                 {filteredPhotos.map(
                   (photo, globalIndex) => (
@@ -581,7 +561,7 @@ function AdminDashboardContent() {
                           globalIndex
                         )
                       }
-                      className="group relative shrink-0 basis-[calc(50%-0.5rem)] sm:basis-[calc(33.333%-0.9rem)]"
+                      className="group relative w-1/2 shrink-0 sm:w-1/3"
                     >
                       <div className="relative aspect-[3/4] w-full overflow-hidden transition-transform group-hover:scale-[1.015]">
                         <Image
@@ -591,16 +571,11 @@ function AdminDashboardContent() {
                           sizes="(max-width: 640px) 50vw, 33vw"
                           className="object-contain"
                           style={{
-                            background: "transparent",
+                            background:
+                              "transparent",
                           }}
                         />
 
-                        {/* Nomor & badge status di-skalain sesuai lebar card
-                            (bukan ukuran tetap) — sebelumnya h-7 w-7 +
-                            padding px-2.5 fixed itu kegedean buat card yang
-                            sempit di layar HP, jadi kelihatan "meleber"
-                            saling nabrak. Sekarang lebih kecil & mepet di
-                            layar sempit, membesar lagi begitu ada ruang. */}
                         <div className="absolute left-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#1A0A08]/70 backdrop-blur-sm font-serif text-[10px] font-bold leading-none text-[#F5EBE0] sm:left-2 sm:top-2 sm:h-7 sm:w-7 sm:text-xs">
                           {globalIndex + 1}
                         </div>
@@ -619,7 +594,9 @@ function AdminDashboardContent() {
                       </div>
 
                       <p className="mt-1.5 truncate text-center font-serif text-[10px] text-[#4A1A1A]/50">
-                        {formatTime(photo.created_at)}
+                        {formatTime(
+                          photo.created_at
+                        )}
                       </p>
                     </motion.button>
                   )
@@ -643,8 +620,7 @@ function AdminDashboardContent() {
                 </h2>
               </div>
 
-              {frameBreakdown.length ===
-              0 ? (
+              {frameBreakdown.length === 0 ? (
                 <p className="font-serif text-xs text-[#4A1A1A]/50">
                   Belum ada data.
                 </p>
@@ -652,9 +628,7 @@ function AdminDashboardContent() {
                 <div className="flex flex-col gap-3">
                   {frameBreakdown.map(
                     (f) => (
-                      <div
-                        key={f.name}
-                      >
+                      <div key={f.name}>
                         <div className="mb-1 flex items-center justify-between font-serif text-xs text-[#4A1A1A]/80">
                           <span className="truncate">
                             {f.name}
@@ -685,20 +659,16 @@ function AdminDashboardContent() {
                 Perlu Tindakan
               </h2>
 
-              {(stats?.pendingPrint ??
-                0) === 0 ? (
+              {(stats?.pendingPrint ?? 0) === 0 ? (
                 <div className="flex items-center gap-2">
                   <CheckCircle2
                     size={16}
                     className="text-[#5B7F5C]"
-                    strokeWidth={
-                      2.2
-                    }
+                    strokeWidth={2.2}
                   />
 
                   <p className="font-serif text-sm text-[#4A1A1A]/70">
-                    Semua sudah
-                    beres!
+                    Semua sudah beres!
                   </p>
                 </div>
               ) : (
@@ -707,12 +677,9 @@ function AdminDashboardContent() {
                     <span className="h-2 w-2 shrink-0 rounded-full bg-[#C9A87C]" />
 
                     <strong className="text-[#6B2D2C]">
-                      {
-                        stats?.pendingPrint
-                      }
+                      {stats?.pendingPrint}
                     </strong>{" "}
-                    foto menunggu
-                    cetak
+                    foto menunggu cetak
                   </li>
                 </ul>
               )}
@@ -724,18 +691,12 @@ function AdminDashboardContent() {
       <PhotoLightbox
         photo={activePhoto}
         onClose={closeLightbox}
-        onMarkPrinted={
-          handleMarkPrinted
-        }
+        onMarkPrinted={handleMarkPrinted}
         onDelete={handleDelete}
         onPrint={handlePrint}
-        onDownload={
-          handleDownload
-        }
+        onDownload={handleDownload}
         currentIndex={activeIndex}
-        totalPhotos={
-          filteredPhotos.length
-        }
+        totalPhotos={filteredPhotos.length}
         onPrev={goToPrev}
         onNext={goToNext}
       />

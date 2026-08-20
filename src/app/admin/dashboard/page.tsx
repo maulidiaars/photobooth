@@ -225,9 +225,11 @@ function AdminDashboardContent() {
       const params = new URLSearchParams(
         searchParams.toString()
       );
+
       params.delete("photo");
 
       const query = params.toString();
+
       router.replace(
         query ? `${pathname}?${query}` : pathname,
         { scroll: false }
@@ -418,8 +420,7 @@ function AdminDashboardContent() {
 
   const goToNext = () => {
     if (
-      activeIndex <
-      filteredPhotos.length - 1
+      activeIndex < filteredPhotos.length - 1
     ) {
       const newIndex =
         activeIndex + 1;
@@ -476,7 +477,7 @@ function AdminDashboardContent() {
       )}
 
       {stats && (
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
           <StatsCard
             label="Total Frame"
             value={stats.totalFrames}
@@ -552,8 +553,8 @@ function AdminDashboardContent() {
               // card/container di belakang tiap foto (no rounded box,
               // no shadow, no bg) biar frame-nya "telanjang" full,
               // cuma nomor & badge status yang nempel di atasnya.
-              // ~3 foto kelihatan per layar (lihat basis width tiap
-              // item), sisanya tinggal discroll admin ke kanan.
+              // 2 foto kelihatan per layar di HP, 3 dari sm ke atas,
+              // sisanya tinggal discroll admin ke kanan.
               <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-2 sm:gap-5">
                 {filteredPhotos.map(
                   (photo, globalIndex) => (
@@ -580,26 +581,32 @@ function AdminDashboardContent() {
                           globalIndex
                         )
                       }
-                      className="group relative shrink-0 basis-[calc(33.333%-0.75rem)] sm:basis-[calc(33.333%-0.9rem)]"
+                      className="group relative shrink-0 basis-[calc(50%-0.5rem)] sm:basis-[calc(33.333%-0.9rem)]"
                     >
                       <div className="relative aspect-[3/4] w-full overflow-hidden transition-transform group-hover:scale-[1.015]">
                         <Image
                           src={photo.image_result}
                           alt=""
                           fill
-                          sizes="33vw"
+                          sizes="(max-width: 640px) 50vw, 33vw"
                           className="object-contain"
                           style={{
                             background: "transparent",
                           }}
                         />
 
-                        <div className="absolute left-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-[#1A0A08]/70 backdrop-blur-sm font-serif text-xs font-bold text-[#F5EBE0]">
+                        {/* Nomor & badge status di-skalain sesuai lebar card
+                            (bukan ukuran tetap) — sebelumnya h-7 w-7 +
+                            padding px-2.5 fixed itu kegedean buat card yang
+                            sempit di layar HP, jadi kelihatan "meleber"
+                            saling nabrak. Sekarang lebih kecil & mepet di
+                            layar sempit, membesar lagi begitu ada ruang. */}
+                        <div className="absolute left-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#1A0A08]/70 backdrop-blur-sm font-serif text-[10px] font-bold leading-none text-[#F5EBE0] sm:left-2 sm:top-2 sm:h-7 sm:w-7 sm:text-xs">
                           {globalIndex + 1}
                         </div>
 
                         <span
-                          className={`absolute right-2 top-2 rounded-full px-2.5 py-1 font-serif text-[10px] font-semibold shadow-sm ${
+                          className={`absolute right-1.5 top-1.5 rounded-full px-1.5 py-0.5 font-serif text-[8px] font-semibold leading-none shadow-sm sm:right-2 sm:top-2 sm:px-2.5 sm:py-1 sm:text-[10px] ${
                             photo.status === "printed"
                               ? "bg-[#5B7F5C] text-[#FBF7F2]"
                               : "bg-[#C9A87C] text-[#4A1A1A]"

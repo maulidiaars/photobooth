@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Camera, Sparkles } from "lucide-react";
+import type { CSSProperties } from "react";
 
 // Four sets of real portrait photos — one per big frame — so each
 // strip reads as an actual sample of what the booth prints, not a
@@ -61,11 +62,13 @@ function TicketFrame({
   tag,
   className,
   rotate,
+  style,
 }: {
   photos: string[];
   tag: string;
   className: string;
   rotate: number;
+  style?: CSSProperties;
 }) {
   return (
     <motion.div
@@ -74,7 +77,7 @@ function TicketFrame({
       viewport={{ once: true }}
       transition={{ type: "spring", stiffness: 90, damping: 16 }}
       className={className}
-      style={{ transformOrigin: "center" }}
+      style={{ transformOrigin: "center", ...style }}
     >
       <div className="frame-notch bg-clay-gradient shadow-clay-lg rounded-[14px] p-1.5 pb-2 sm:rounded-[18px] sm:p-2 sm:pb-2.5 md:rounded-[22px] md:p-2.5 md:pb-3 lg:rounded-[30px] lg:p-3.5 lg:pb-4 xl:p-4 xl:pb-5">
         <span className="frame-notch-bl" />
@@ -130,6 +133,29 @@ function TicketFrame({
  * composition that was already right — untouched, just now scoped to
  * `lg+` only since phones/tablets get their own layout below.
  */
+// `.landing-shell` locks this section to exactly `100dvh` from `lg` up
+// (see globals.css) with `overflow: hidden` — and the full-bleed look
+// (frame running off the *bottom* edge, barcode/footer never visible)
+// is the actual intended style here, not a bug. The old fixed-width
+// classes (`w-52`, `xl:w-60`, ...) only reliably bled off the bottom on
+// SOME window sizes though: a frame's rendered height depends only on
+// its width, so on a wide-but-short window that fixed width sometimes
+// came out short enough to fit *inside* 100dvh with room to spare —
+// showing the full barcode + "strip 0X" tag sitting above an empty gap
+// instead of bleeding off, which is the inconsistent "kadang penuh
+// kadang enggak" look.
+//
+// Fix: size the frame off whichever is LARGER — a share of the
+// viewport width or a share of the viewport height — using CSS
+// `max()`. A ticket frame's total height comes out to roughly 2.6–2.8×
+// its width, so flooring the width at a big enough fraction of `dvh`
+// guarantees the frame's rendered height always exceeds the 100dvh
+// container by a healthy margin — i.e. it always bleeds off the
+// bottom — on any window size or zoom level, not just the handful of
+// pixel widths Tailwind's breakpoints happened to cover before.
+const BACK_WIDTH = "max(20vw, 48dvh)";
+const FRONT_WIDTH = "max(17vw, 42dvh)";
+
 export function PhotoFrameWallDesktop() {
   const [left, leftFront, rightFront, right] = FRAME_SETS;
   if (!left || !leftFront || !rightFront || !right) return null;
@@ -141,14 +167,16 @@ export function PhotoFrameWallDesktop() {
         photos={left.photos}
         tag={left.tag}
         rotate={-11}
-        className="absolute -left-14 top-[6%] w-52 xl:-left-10 xl:w-60"
+        className="absolute -left-14 top-[6%] xl:-left-10"
+        style={{ width: BACK_WIDTH }}
       />
       {/* left, front — overlaps the back frame, opposite lean = crossing */}
       <TicketFrame
         photos={leftFront.photos}
         tag={leftFront.tag}
         rotate={8}
-        className="absolute left-[9%] top-[16%] z-10 w-48 xl:left-[11%] xl:w-56"
+        className="absolute left-[9%] top-[16%] z-10 xl:left-[11%]"
+        style={{ width: FRONT_WIDTH }}
       />
 
       {/* right, front — mirrors the left front frame */}
@@ -156,14 +184,16 @@ export function PhotoFrameWallDesktop() {
         photos={rightFront.photos}
         tag={rightFront.tag}
         rotate={-8}
-        className="absolute right-[9%] top-[16%] z-10 w-48 xl:right-[11%] xl:w-56"
+        className="absolute right-[9%] top-[16%] z-10 xl:right-[11%]"
+        style={{ width: FRONT_WIDTH }}
       />
       {/* right, back — bleeds off the right edge */}
       <TicketFrame
         photos={right.photos}
         tag={right.tag}
         rotate={11}
-        className="absolute -right-14 top-[6%] w-52 xl:-right-10 xl:w-60"
+        className="absolute -right-14 top-[6%] xl:-right-10"
+        style={{ width: BACK_WIDTH }}
       />
     </div>
   );

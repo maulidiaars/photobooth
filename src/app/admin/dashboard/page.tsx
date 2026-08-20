@@ -535,7 +535,7 @@ function AdminDashboardContent() {
                 </p>
               </div>
             ) : (
-              <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-2 sm:gap-5">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 xl:grid-cols-5">
                 {filteredPhotos.map(
                   (photo, globalIndex) => (
                     <motion.button
@@ -561,39 +561,44 @@ function AdminDashboardContent() {
                           globalIndex
                         )
                       }
-                      className="group relative w-1/2 shrink-0 sm:w-1/3"
+                      className="group relative w-full"
                     >
-                      <div className="relative aspect-[3/4] w-full overflow-hidden transition-transform group-hover:scale-[1.015]">
+                      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-[#F5EBE0] transition-transform group-hover:scale-[1.015]">
                         <Image
                           src={photo.image_result}
-                          alt=""
+                          alt={`Foto sesi #${globalIndex + 1}`}
                           fill
-                          sizes="(max-width: 640px) 50vw, 33vw"
-                          className="object-contain"
-                          style={{
-                            background:
-                              "transparent",
-                          }}
+                          sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1280px) 25vw, 20vw"
+                          className="object-cover"
                         />
 
-                        <div className="absolute left-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#1A0A08]/70 backdrop-blur-sm font-serif text-[10px] font-bold leading-none text-[#F5EBE0] sm:left-2 sm:top-2 sm:h-7 sm:w-7 sm:text-xs">
-                          {globalIndex + 1}
-                        </div>
+                        <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-1 bg-gradient-to-b from-black/55 via-black/10 to-transparent p-2">
+                          <span className="rounded-md bg-black/60 px-1.5 py-0.5 font-serif text-[11px] font-semibold leading-none text-[#F5EBE0] backdrop-blur-sm">
+                            No. {globalIndex + 1}
+                          </span>
 
-                        <span
-                          className={`absolute right-1.5 top-1.5 rounded-full px-1.5 py-0.5 font-serif text-[8px] font-semibold leading-none shadow-sm sm:right-2 sm:top-2 sm:px-2.5 sm:py-1 sm:text-[10px] ${
-                            photo.status === "printed"
-                              ? "bg-[#5B7F5C] text-[#FBF7F2]"
-                              : "bg-[#C9A87C] text-[#4A1A1A]"
-                          }`}
-                        >
-                          {photo.status === "printed"
-                            ? "PRINTED"
-                            : "PENDING"}
-                        </span>
+                          <span
+                            className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 font-serif text-[10px] font-semibold leading-none shadow-sm ${
+                              photo.status === "printed"
+                                ? "bg-[#5B7F5C] text-[#FBF7F2]"
+                                : "bg-[#C9A87C] text-[#4A1A1A]"
+                            }`}
+                          >
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${
+                                photo.status === "printed"
+                                  ? "bg-[#FBF7F2]"
+                                  : "bg-[#4A1A1A]/60"
+                              }`}
+                            />
+                            {photo.status === "printed"
+                              ? "Dicetak"
+                              : "Pending"}
+                          </span>
+                        </div>
                       </div>
 
-                      <p className="mt-1.5 truncate text-center font-serif text-[10px] text-[#4A1A1A]/50">
+                      <p className="mt-1.5 truncate text-center font-serif text-[11px] text-[#4A1A1A]/50">
                         {formatTime(
                           photo.created_at
                         )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import type { CSSProperties } from "react";
 
 /**
  * Same "photo wall" composition as the landing page's `PhotoFrameWall`
@@ -12,15 +13,16 @@ import { motion } from "framer-motion";
  * and sized big enough that it's fine (expected) for them to run past
  * the bottom of the screen.
  */
-
 function TiltedStrip({
   imageUrl,
   rotate,
   className,
+  style,
 }: {
   imageUrl: string;
   rotate: number;
   className: string;
+  style?: CSSProperties;
 }) {
   return (
     <motion.div
@@ -28,7 +30,7 @@ function TiltedStrip({
       animate={{ opacity: 1, y: 0, rotate }}
       transition={{ type: "spring", stiffness: 90, damping: 16 }}
       className={className}
-      style={{ transformOrigin: "center" }}
+      style={{ transformOrigin: "center", ...style }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -40,6 +42,18 @@ function TiltedStrip({
   );
 }
 
+// clamp(min, preferred-vw, max) gantiin breakpoint w-96/w-[34rem]/w-[38rem]
+// yang lompat-lompat itu. Ini bikin lebar strip ngikutin lebar layar
+// secara HALUS di segala ukuran — laptop 13", laptop 15", monitor
+// lebar — bukan cuma di 3 titik breakpoint doang. Itu yang bikin
+// kelihatan "proporsional di satu layar, kegedean di layar lain":
+// di lebar 1024-1279px, w-96 (384px) itu udah hampir 35% dari layar;
+// di 1920px+, 384px cuma ~20% — padahal kelas Tailwind-nya sama persis.
+const BACK_WIDTH = "clamp(14rem, 26vw, 38rem)";
+const FRONT_WIDTH = "clamp(11rem, 20vw, 30rem)";
+const BACK_OFFSET = "clamp(-11rem, -8vw, -6rem)";
+const FRONT_OFFSET = "clamp(1rem, 3.5vw, 3rem)";
+
 /** Laptop+ only: absolute overlay. Back strip bleeds off the side
  *  edge, front strip sits huge and close on top of it, both pushed
  *  down from the top instead of hugging/overshooting it. */
@@ -50,25 +64,29 @@ export function ResultFrameWallDesktop({ imageUrl }: { imageUrl: string }) {
       <TiltedStrip
         imageUrl={imageUrl}
         rotate={-11}
-        className="absolute -left-32 top-10 w-96 xl:-left-28 xl:w-[34rem] 2xl:-left-32 2xl:w-[38rem]"
+        className="absolute top-10"
+        style={{ width: BACK_WIDTH, left: BACK_OFFSET }}
       />
       {/* left, front — overlaps the back strip tightly */}
       <TiltedStrip
         imageUrl={imageUrl}
         rotate={8}
-        className="absolute left-6 top-24 z-10 w-80 xl:left-10 xl:w-[26rem] 2xl:left-12 2xl:w-[30rem]"
+        className="absolute top-24 z-10"
+        style={{ width: FRONT_WIDTH, left: FRONT_OFFSET }}
       />
       {/* right, front — mirrors the left front strip */}
       <TiltedStrip
         imageUrl={imageUrl}
         rotate={-8}
-        className="absolute right-6 top-24 z-10 w-80 xl:right-10 xl:w-[26rem] 2xl:right-12 2xl:w-[30rem]"
+        className="absolute top-24 z-10"
+        style={{ width: FRONT_WIDTH, right: FRONT_OFFSET }}
       />
       {/* right, back */}
       <TiltedStrip
         imageUrl={imageUrl}
         rotate={11}
-        className="absolute -right-32 top-10 w-96 xl:-right-28 xl:w-[34rem] 2xl:-right-32 2xl:w-[38rem]"
+        className="absolute top-10"
+        style={{ width: BACK_WIDTH, right: BACK_OFFSET }}
       />
     </div>
   );

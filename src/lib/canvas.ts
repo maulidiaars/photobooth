@@ -64,6 +64,30 @@ function drawCover(
   ctx.restore();
 }
 
+// Safari/WebKit — yaitu SEMUA browser di iPhone/iPad, termasuk "Chrome"
+// atau "Firefox" versi iOS sekalipun, karena Apple mewajibkan semua
+// browser di iOS pakai mesin WebKit-nya Safari — sampai sekarang belum
+// bisa encode canvas ke format WebP. Kalau diminta toDataURL("image/webp"),
+// dia gak error, tapi DIAM-DIAM balikin PNG full-size tanpa kompresi
+// sama sekali. Itu yang bikin hasil foto dari iPad jadi jauh lebih besar
+// dari yang seharusnya dan nabrak limit ukuran request Vercel (413).
+// Makanya kita cek dulu betulan didukung apa nggak, jangan cuma asumsi.
+function canvasSupportsWebpEncoding(): boolean {
+  const probe = document.createElement("canvas");
+  probe.width = 1;
+  probe.height = 1;
+  return probe.toDataURL("image/webp", 0.8).startsWith("data:image/webp");
+}
+
+// Sisain jarak aman di bawah limit request-body Vercel (~4.5MB) biar
+// gak mepet-mepet 413 lagi walau sekecil apapun kelebihannya.
+const MAX_RESULT_BYTES = 4 * 1024 * 1024;
+
+function base64ByteLength(dataUrl: string): number {
+  const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
+  return Math.ceil((base64.length * 3) / 4);
+}
+
 /**
  * Merge captured photo data-URLs into the chosen frame's transparent PNG,
  * using that frame's own auto-detected hole positions (slotLayout) so each
@@ -111,11 +135,38 @@ export async function mergePhotosIntoFrame(
   // photos placed beneath, and its opaque design stays crisp on top.
   ctx.drawImage(frameImg, 0, 0, width, height);
 
-  // WebP instead of PNG: still keeps the alpha/transparency around the
-  // frame's own shape (unlike JPEG), but compresses photographic content
-  // *way* smaller than PNG — a full-quality PNG here easily blew past
-  // Vercel's ~4.5MB request-body limit on /api/photos and failed with a
-  // 413 when saving. 0.9 quality keeps it visually lossless-ish while
-  // landing comfortably under that limit.
-  return canvas.toDataURL("image/webp", 0.9);
+  if (canvasSupportsWebpEncoding()) {
+    // WebP tetap dipertahankan buat browser yang beneran dukung
+    // (Chrome/Firefox/Edge, dsb) — transparansinya kejaga & ukurannya
+    // paling kecil. Kalau satu frame tertentu (banyak slot / detail
+    // rumit) masih kegedean walau udah WebP, turunin kualitasnya
+    // sedikit demi sedikit sampai aman di bawah limit.
+    let quality = 0.9;
+    let dataUrl = canvas.toDataURL("image/webp", quality);
+    while (base64ByteLength(dataUrl) > MAX_RESULT_BYTES && quality > 0.5) {
+      quality -= 0.1;
+      dataUrl = canvas.toDataURL("image/webp", quality);
+    }
+    return dataUrl;
+  }
+
+  // Fallback buat Safari/iPad/iPhone: JPEG bisa di-encode di semua
+  // browser dan kompresinya bagus. JPEG gak punya alpha channel, jadi
+  // area transparan di canvas (di luar bentuk frame) dikasih dasar
+  // putih dulu sebelum di-export, supaya gak jadi kotak hitam.
+  const jpegCanvas = document.createElement("canvas");
+  jpegCanvas.width = width;
+  jpegCanvas.height = height;
+  const jctx = jpegCanvas.getContext("2d") as CanvasRenderingContext2D;
+  jctx.fillStyle = "#ffffff";
+  jctx.fillRect(0, 0, width, height);
+  jctx.drawImage(canvas, 0, 0);
+
+  let quality = 0.92;
+  let dataUrl = jpegCanvas.toDataURL("image/jpeg", quality);
+  while (base64ByteLength(dataUrl) > MAX_RESULT_BYTES && quality > 0.5) {
+    quality -= 0.1;
+    dataUrl = jpegCanvas.toDataURL("image/jpeg", quality);
+  }
+  return dataUrl;
 }

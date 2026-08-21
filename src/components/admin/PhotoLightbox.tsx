@@ -267,7 +267,15 @@ export function PhotoLightbox({
                     
                     <div className="grid grid-cols-2 gap-2.5">
                       <button
-                        onClick={() => onPrint(photo)}
+                        onClick={() => {
+                          // Klik Print = foto dianggap sudah dicetak,
+                          // jadi status ikut ke-update sekalian, gak
+                          // perlu tombol/aksi terpisah lagi buat itu.
+                          onPrint(photo);
+                          if (photo.status !== "printed") {
+                            onMarkPrinted(photo);
+                          }
+                        }}
                         className="flex items-center justify-center gap-2 rounded-xl bg-[#2A1510] py-3 font-serif text-sm font-medium text-[#C9A87C] border border-[#4A2A20] hover:border-[#6B2D2C] transition-all"
                       >
                         <Printer size={16} strokeWidth={2.3} />

@@ -41,6 +41,14 @@ export function useDragScroll<T extends HTMLElement>(ref: RefObject<T | null>) {
       if (e.pointerType === "touch") return;
       if (e.button !== 0) return;
 
+      // Without this, mousedown+move over any text/image inside the
+      // slider starts the browser's own text-selection (or, for an
+      // <img>, a native "ghost drag") instead of our drag — that
+      // fight is what made dragging with the mouse feel completely
+      // dead. Blocking the default here is what makes onPointerMove
+      // below actually the one thing driving the scroll.
+      e.preventDefault();
+
       state.current.isDown = true;
       state.current.dragged = false;
       state.current.startX = e.clientX;

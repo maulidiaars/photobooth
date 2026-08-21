@@ -569,7 +569,7 @@ function AdminDashboardContent() {
                  scrollbar yang kelihatan. */
               <div
                 ref={scrollerRef}
-                className="no-scrollbar drag-slider -mx-1 flex select-none gap-3 overflow-x-auto scroll-smooth px-1 pb-2 sm:gap-4"
+                className="no-scrollbar drag-slider -mx-1 flex cursor-grab select-none gap-3 overflow-x-auto scroll-smooth px-1 pb-2 active:cursor-grabbing sm:gap-4"
               >
                 {filteredPhotos.map(
                   (photo, globalIndex) => (
@@ -598,17 +598,19 @@ function AdminDashboardContent() {
                       }
                       className="group relative w-[calc(50%-0.375rem)] shrink-0 sm:w-[calc(25%-0.75rem)]"
                     >
-                      {/* relative + w-full h-auto: box ini ngikutin ukuran
-                          ASLI foto, gak dipaksa jadi kotak aspect-ratio
-                          kayak sebelumnya. Jadi ribbon yang absolute di
-                          dalamnya nempel persis di pojok foto beneran,
-                          bukan ngambang di container yang lebih gede. */}
-                      <div className="relative w-full overflow-hidden rounded-sm transition-transform group-hover:scale-[1.015]">
+                      {/* aspect-[3/4] + object-cover: SEMUA kartu sama
+                          persis ukurannya, gak peduli rasio asli file
+                          frame-nya (strip panjang, pendek, dll). Karena
+                          object-cover gak nyisain ruang kosong sama
+                          sekali (beda sama object-contain kemarin),
+                          ribbon di pojok tetap nempel pas di tepi
+                          gambar, bukan ngambang di celah kosong. */}
+                      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-sm transition-transform group-hover:scale-[1.015]">
                         <img
                           src={photo.image_result}
                           alt={`Foto sesi #${globalIndex + 1}`}
                           draggable={false}
-                          className="block h-auto w-full select-none"
+                          className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
                         />
 
                         {/* Ribbon nomor — nempel di pojok kiri ATAS frame */}

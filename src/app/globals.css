@@ -192,6 +192,48 @@ body::after {
   cursor: grabbing;
 }
 
+
+/* Corner-ribbon badges for the admin photo strip — a compact
+   folded-ribbon tag draped diagonally across each corner, sitting
+   directly on the transparent frame PNG itself (no card/box behind
+   it). Kept intentionally small so it reads as a tag stuck to the
+   corner, not a banner covering the photo. Numbering ribbon hugs the
+   top-left corner, the print-status ribbon hugs the bottom-right. */
+.corner-ribbon {
+  position: absolute;
+  width: 70px;
+  padding: 2px 0;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  box-shadow: 0 1px 4px rgba(26, 10, 8, 0.3);
+  z-index: 10;
+  pointer-events: none;
+}
+.corner-ribbon-tl {
+  top: 8px;
+  left: -19px;
+  transform: rotate(-45deg);
+  background: linear-gradient(135deg, #6b2d2c, #3d1414);
+  color: #f5ebe0;
+}
+.corner-ribbon-br {
+  bottom: 8px;
+  right: -19px;
+  transform: rotate(-45deg);
+}
+.corner-ribbon-pending {
+  background: linear-gradient(135deg, #a9a89f, #7c7b72);
+  color: #33332e;
+}
+.corner-ribbon-printed {
+  background: linear-gradient(135deg, #6f9a70, #435f44);
+  color: #fbf7f2;
+}
+
+
 /* Movie-ticket die-cut notches — the landing redesign's signature CTA
    shape, so "Mulai Sesi Foto" reads like an actual event ticket instead
    of another rounded clay pill. The notch fill matches the landing

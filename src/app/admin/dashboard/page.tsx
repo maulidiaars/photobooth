@@ -8,7 +8,6 @@ import {
   useState,
 } from "react";
 import { motion } from "framer-motion";
-import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Images,
@@ -31,6 +30,7 @@ import {
 
 import { useToast } from "@/components/ui/Toast";
 import { openPrintWindow } from "@/lib/print";
+import { useDragScroll } from "@/hooks/useDragScroll";
 
 import type {
   DashboardStats,
@@ -50,11 +50,24 @@ const FILTERS: {
 ];
 
 function formatTime(iso: string) {
-  return new Date(iso).toLocaleString("id-ID", {
+  // DB (TiDB Cloud) balikin created_at dalam UTC sebagai string polos
+  // tanpa "Z"/offset (lihat `dateStrings: true` di lib/db.ts). Kalau
+  // langsung di-parse & di-toLocaleString apa adanya, browser nganggep
+  // itu jam lokal apa adanya (padahal itu jam UTC) — makanya jamnya
+  // geser/salah. Di sini string dinormalisasi jadi UTC eksplisit dulu,
+  // baru dirender ke jam Indonesia (WIB) apapun timezone perangkatnya.
+  const utcIso = iso.includes("T")
+    ? iso.endsWith("Z")
+      ? iso
+      : `${iso}Z`
+    : `${iso.replace(" ", "T")}Z`;
+
+  return new Date(utcIso).toLocaleString("id-ID", {
     day: "2-digit",
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Asia/Jakarta",
   });
 }
 
@@ -82,6 +95,9 @@ function AdminDashboardContent() {
 
   const openedFromParam = useRef<string | null>(null);
 
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  useDragScroll(scrollerRef);
+
   const toast = useToast();
 
   const refresh = (
@@ -96,11 +112,22 @@ function AdminDashboardContent() {
       getPhotos(),
     ])
       .then(([s, p]) => {
-        const sorted = p.sort(
-          (a, b) =>
+        // Pending duluan, printed otomatis geser ke belakang.
+        // Di dalam masing-masing grup, foto terbaru tetap paling depan.
+        const sorted = p.sort((a, b) => {
+          const statusRank = (status: PhotoStatus) =>
+            status === "printed" ? 1 : 0;
+
+          const rankDiff =
+            statusRank(a.status) - statusRank(b.status);
+
+          if (rankDiff !== 0) return rankDiff;
+
+          return (
             new Date(b.created_at).getTime() -
             new Date(a.created_at).getTime()
-        );
+          );
+        });
 
         if (
           opts.silent &&
@@ -535,7 +562,15 @@ function AdminDashboardContent() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 xl:grid-cols-5">
+              /* Satu baris terus (flex-nowrap, drag buat geser) — 4
+                 kartu pas kelihatan penuh per baris di layar sm ke
+                 atas (2 di mobile), sisanya tinggal di-drag ke
+                 samping. Tidak pernah wrap ke bawah & tidak ada
+                 scrollbar yang kelihatan. */
+              <div
+                ref={scrollerRef}
+                className="no-scrollbar drag-slider -mx-1 flex select-none gap-3 overflow-x-auto scroll-smooth px-1 pb-2 sm:gap-4"
+              >
                 {filteredPhotos.map(
                   (photo, globalIndex) => (
                     <motion.button
@@ -561,41 +596,38 @@ function AdminDashboardContent() {
                           globalIndex
                         )
                       }
-                      className="group relative w-full"
+                      className="group relative w-[calc(50%-0.375rem)] shrink-0 sm:w-[calc(25%-0.75rem)]"
                     >
-                      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-[#F5EBE0] transition-transform group-hover:scale-[1.015]">
-                        <Image
+                      {/* relative + w-full h-auto: box ini ngikutin ukuran
+                          ASLI foto, gak dipaksa jadi kotak aspect-ratio
+                          kayak sebelumnya. Jadi ribbon yang absolute di
+                          dalamnya nempel persis di pojok foto beneran,
+                          bukan ngambang di container yang lebih gede. */}
+                      <div className="relative w-full overflow-hidden rounded-sm transition-transform group-hover:scale-[1.015]">
+                        <img
                           src={photo.image_result}
                           alt={`Foto sesi #${globalIndex + 1}`}
-                          fill
-                          sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1280px) 25vw, 20vw"
-                          className="object-cover"
+                          draggable={false}
+                          className="block h-auto w-full select-none"
                         />
 
-                        <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-1 bg-gradient-to-b from-black/55 via-black/10 to-transparent p-2">
-                          <span className="rounded-md bg-black/60 px-1.5 py-0.5 font-serif text-[11px] font-semibold leading-none text-[#F5EBE0] backdrop-blur-sm">
-                            No. {globalIndex + 1}
-                          </span>
+                        {/* Ribbon nomor — nempel di pojok kiri ATAS frame */}
+                        <span className="corner-ribbon corner-ribbon-tl font-serif">
+                          No. {globalIndex + 1}
+                        </span>
 
-                          <span
-                            className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 font-serif text-[10px] font-semibold leading-none shadow-sm ${
-                              photo.status === "printed"
-                                ? "bg-[#5B7F5C] text-[#FBF7F2]"
-                                : "bg-[#C9A87C] text-[#4A1A1A]"
-                            }`}
-                          >
-                            <span
-                              className={`h-1.5 w-1.5 rounded-full ${
-                                photo.status === "printed"
-                                  ? "bg-[#FBF7F2]"
-                                  : "bg-[#4A1A1A]/60"
-                              }`}
-                            />
-                            {photo.status === "printed"
-                              ? "Dicetak"
-                              : "Pending"}
-                          </span>
-                        </div>
+                        {/* Ribbon status — nempel di pojok kanan BAWAH frame */}
+                        <span
+                          className={`corner-ribbon corner-ribbon-br font-serif ${
+                            photo.status === "printed"
+                              ? "corner-ribbon-printed"
+                              : "corner-ribbon-pending"
+                          }`}
+                        >
+                          {photo.status === "printed"
+                            ? "Printed"
+                            : "Pending"}
+                        </span>
                       </div>
 
                       <p className="mt-1.5 truncate text-center font-serif text-[11px] text-[#4A1A1A]/50">

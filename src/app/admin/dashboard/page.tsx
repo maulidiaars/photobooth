@@ -605,12 +605,12 @@ function AdminDashboardContent() {
                           sekali (beda sama object-contain kemarin),
                           ribbon di pojok tetap nempel pas di tepi
                           gambar, bukan ngambang di celah kosong. */}
-                      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-sm bg-[#0D0503] transition-transform group-hover:scale-[1.015]">
+                      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-sm transition-transform group-hover:scale-[1.015]">
                         <img
                           src={photo.image_result}
                           alt={`Foto sesi #${globalIndex + 1}`}
                           draggable={false}
-                          className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
+                          className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
                         />
 
                         {/* Ribbon nomor — nempel di pojok kiri ATAS frame */}

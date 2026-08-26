@@ -182,20 +182,7 @@ export default function PublicFotoPage() {
         >
           {/* Card wrapper dengan shadow */}
           <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-black/40 bg-black/20 backdrop-blur-sm p-1.5 sm:p-2">
-            
-            {/* Frame Name & Date Badge - Responsive */}
-            <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 sm:top-4 sm:left-4 md:top-5 md:left-5">
-              {photo.frame_nama && (
-                <span className="inline-block rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-medium text-white/90 backdrop-blur-sm sm:px-3 sm:py-1.5 sm:text-xs md:text-sm">
-                  {photo.frame_nama}
-                </span>
-              )}
-              {photo.created_at && (
-                <span className="inline-block rounded-full bg-black/40 px-2 py-0.5 text-[8px] text-white/60 backdrop-blur-sm sm:px-2.5 sm:py-1 sm:text-[10px]">
-                  {formatDate(photo.created_at)}
-                </span>
-              )}
-            </div>
+          
 
             {/* Image - Full width, maintain aspect ratio */}
             <img

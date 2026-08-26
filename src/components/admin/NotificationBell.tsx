@@ -8,6 +8,7 @@ import { getPhotos, markPhotoNotified, updatePhotoStatus } from "@/services/phot
 import { ROUTES } from "@/lib/constants";
 import { useToast } from "@/components/ui/Toast";
 import { openPrintWindow } from "@/lib/print";
+import { parseDbDate, formatDateTimeID } from "@/lib/dateUtils";
 import type { Photo } from "@/types/photo";
 
 const POLL_MS = 6000;
@@ -17,15 +18,13 @@ interface NotificationItem extends Photo {
   expiredAt: Date;
 }
 
-function formatTime(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+// NOTE: created_at dari DB itu UTC tanpa "Z" (lihat lib/db.ts +
+// lib/dateUtils.ts). Kalau di-parse langsung pakai `new Date(iso)` biasa,
+// browser nganggep string itu jam lokal — jamnya jadi geser/salah, dan
+// perhitungan "kapan notif expired" di bawah (yang dulu juga pakai
+// `new Date(p.created_at)` langsung) ikutan ngaco. Sekarang semua lewat
+// util terpusat biar bener.
+const formatTime = formatDateTimeID;
 
 function getTimeAgo(date: Date) {
   const now = new Date();
@@ -54,13 +53,13 @@ export function NotificationBell() {
         const validItems = unread
           .map((p) => ({
             ...p,
-            expiredAt: new Date(new Date(p.created_at).getTime() + NOTIF_EXPIRE_MINUTES * 60000),
+            expiredAt: new Date(parseDbDate(p.created_at).getTime() + NOTIF_EXPIRE_MINUTES * 60000),
           }))
           .filter((item) => item.expiredAt > now);
         
         // Auto-mark expired items sebagai notified (biar ga muncul lagi)
         const expiredItems = unread
-          .filter((p) => new Date(new Date(p.created_at).getTime() + NOTIF_EXPIRE_MINUTES * 60000) <= now);
+          .filter((p) => new Date(parseDbDate(p.created_at).getTime() + NOTIF_EXPIRE_MINUTES * 60000) <= now);
         
         if (expiredItems.length > 0) {
           expiredItems.forEach((p) => markPhotoNotified(p.id).catch(() => {}));
@@ -236,7 +235,7 @@ export function NotificationBell() {
                             {photo.frame_nama ?? "Frame"}
                           </p>
                           <span className="shrink-0 font-serif text-[10px] text-[#4A1A1A]/40">
-                            {getTimeAgo(new Date(photo.created_at))}
+                            {getTimeAgo(parseDbDate(photo.created_at))}
                           </span>
                         </div>
 

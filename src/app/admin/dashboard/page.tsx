@@ -31,6 +31,7 @@ import {
 import { useToast } from "@/components/ui/Toast";
 import { openPrintWindow } from "@/lib/print";
 import { useDragScroll } from "@/hooks/useDragScroll";
+import { formatDateTimeID } from "@/lib/dateUtils";
 
 import type {
   DashboardStats,
@@ -49,27 +50,11 @@ const FILTERS: {
   { label: "Printed", value: "printed" },
 ];
 
-function formatTime(iso: string) {
-  // DB (TiDB Cloud) balikin created_at dalam UTC sebagai string polos
-  // tanpa "Z"/offset (lihat `dateStrings: true` di lib/db.ts). Kalau
-  // langsung di-parse & di-toLocaleString apa adanya, browser nganggep
-  // itu jam lokal apa adanya (padahal itu jam UTC) — makanya jamnya
-  // geser/salah. Di sini string dinormalisasi jadi UTC eksplisit dulu,
-  // baru dirender ke jam Indonesia (WIB) apapun timezone perangkatnya.
-  const utcIso = iso.includes("T")
-    ? iso.endsWith("Z")
-      ? iso
-      : `${iso}Z`
-    : `${iso.replace(" ", "T")}Z`;
-
-  return new Date(utcIso).toLocaleString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Jakarta",
-  });
-}
+// NOTE: parsing & formatting created_at (yang datang dari DB dalam UTC
+// sebagai string polos tanpa "Z") disatuin di `lib/dateUtils.ts` biar
+// semua halaman (dashboard, notifikasi, lightbox, halaman share) pakai
+// logic yang sama persis dan gak ada lagi yang salah/geser jamnya.
+const formatTime = formatDateTimeID;
 
 function AdminDashboardContent() {
   const router = useRouter();

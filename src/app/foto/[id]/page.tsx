@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Download, ImageOff, Loader2, CheckCircle2, Share2 } from "lucide-react";
+import { formatDateID } from "@/lib/dateUtils";
 
 interface PublicPhoto {
   id: string;
@@ -142,11 +143,7 @@ export default function PublicFotoPage() {
 
   const formatDate = (iso?: string) => {
     if (!iso) return "";
-    return new Date(iso).toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
+    return formatDateID(iso);
   };
 
   return (

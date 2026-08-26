@@ -6,6 +6,7 @@ import { X, MessageCircle, Printer, Trash2, Clock3, Download, ChevronLeft, Chevr
 import { ConfirmModal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { APP_NAME, APP_URL } from "@/lib/constants";
+import { formatDateTimeFullID } from "@/lib/dateUtils";
 import type { Photo } from "@/types/photo";
 
 // ============================================
@@ -34,15 +35,10 @@ interface PhotoLightboxProps {
   onNext?: () => void;
 }
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+// NOTE: created_at dari DB itu UTC tanpa "Z" (lihat lib/db.ts +
+// lib/dateUtils.ts). Pakai util terpusat biar jamnya bener (WIB),
+// termasuk yang kepakai di teks share WhatsApp di bawah.
+const formatTime = formatDateTimeFullID;
 
 export function PhotoLightbox({ 
   photo, 

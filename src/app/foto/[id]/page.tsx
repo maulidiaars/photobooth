@@ -256,9 +256,6 @@ export default function PublicFotoPage() {
             transition={{ delay: 0.2 }}
             className="mt-4 text-center space-y-1.5 sm:mt-5 sm:space-y-2"
           >
-            <h1 className="text-sm font-semibold text-white/80 sm:text-base md:text-lg">
-              {photo.frame_nama || 'Hasil Photobooth'}
-            </h1>
             <p className="text-[10px] text-white/40 sm:text-xs">
               Klik tombol download di pojok kanan bawah untuk menyimpan foto
             </p>

@@ -60,10 +60,11 @@ export default function ResultPage() {
     setStatus("saving");
     try {
       await savePhoto({
-        frame_id: selectedFrame.id,
-        imageResultBase64: resultImage,
-        whatsappNumber: number,
-      });
+          frame_id: selectedFrame.id,
+          imageResultBase64: resultImage,
+          rawPhotosBase64: capturedPhotos,
+          whatsappNumber: number,
+        });
       setWhatsappNumber(number);
       setWaModalOpen(false);
       // Go straight to /finish — that page is already the one big

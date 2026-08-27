@@ -100,7 +100,9 @@ export function PhotoLightbox({
         `📅 Tanggal: ${formatTime(photo.created_at)}\n\n` +
         `Hasil foto kamu udah jadi dan siap didownload, nih~\n` +
         `${photoLink}\n\n` +
-        `Tinggal klik link di atas, lalu tekan tombol download di pojok kanan bawah fotonya ya!\n\n` +
+        `Tinggal klik link di atas ya. Di sana ada hasil foto dengan frame, ` +
+        `dan di bawahnya ada foto asli satuan (tanpa frame) yang bisa kamu geser ` +
+        `satu-satu — tinggal tekan ikon download di tiap fotonya!\n\n` +
         `Ada kendala atau mau cetak ulang?\n` +
         `Hubungi admin kami di *${formatPhoneDisplay(ADMIN_PHONE)}*\n\n` +
         `Semoga harimu menyenangkan, sampai jumpa lagi!\n` +
@@ -122,6 +124,36 @@ export function PhotoLightbox({
       toast.push("Gagal membuka WhatsApp", "error");
     } finally {
       setSending(false);
+    }
+  };
+
+  // ============================================
+  // 🔥 DOWNLOAD FOTO ORIGINAL (RAW, TANPA FRAME) — SATU PERSATU
+  // ============================================
+  const handleDownloadRaw = async (url: string, index: number) => {
+    if (!photo) return;
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+
+      const ext = blob.type.includes("webp")
+        ? "webp"
+        : blob.type.includes("jpeg") || blob.type.includes("jpg")
+        ? "jpg"
+        : "png";
+
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `foto_original_${photo.id.slice(0, 8)}_${index + 1}.${ext}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(objectUrl);
+
+      toast.push(`Foto original #${index + 1} berhasil diunduh`, "success");
+    } catch {
+      toast.push("Gagal mengunduh foto original", "error");
     }
   };
 
@@ -234,6 +266,39 @@ export function PhotoLightbox({
                       </span>
                     </div>
                   </div>
+
+                  {/* Foto Original (Raw) — satu-satu tanpa frame, sesuai
+                      jumlah slot. Klik salah satu buat download foto
+                      itu sendiri, terpisah dari hasil framenya. */}
+                  {photo.raw_photos && photo.raw_photos.length > 0 && (
+                    <div>
+                      <p className="mb-2 font-serif text-xs font-semibold uppercase tracking-wide text-[#C9A87C]/70">
+                        Foto Asli (Raw) &middot; {photo.raw_photos.length} foto
+                      </p>
+                      <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+                        {photo.raw_photos.map((url, i) => (
+                          <button
+                            key={`${url}-${i}`}
+                            onClick={() => handleDownloadRaw(url, i)}
+                            title={`Download foto asli #${i + 1}`}
+                            className="group/raw relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-[#4A2A20] transition-transform hover:scale-105"
+                          >
+                            <img
+                              src={url}
+                              alt={`Foto asli #${i + 1}`}
+                              className="h-full w-full object-cover"
+                            />
+                            <span className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all group-hover/raw:bg-black/55 group-hover/raw:opacity-100">
+                              <Download size={16} className="text-white" strokeWidth={2.4} />
+                            </span>
+                            <span className="absolute bottom-0.5 right-1 font-serif text-[9px] font-semibold text-white drop-shadow">
+                              {i + 1}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Divider */}
                   <div className="h-px w-full bg-[#4A2A20]" />

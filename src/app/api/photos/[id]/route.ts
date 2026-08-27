@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { deletePublicFile } from "@/lib/fileStorage";
 import { requireAdmin } from "@/lib/requireAdmin";
-import type { Photo } from "@/types/photo";
+import { parsePhotoRow, type PhotoRow } from "@/lib/photoRow";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -23,7 +23,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       return NextResponse.json({ message: "Status tidak valid" }, { status: 400 });
     }
 
-    const [existing] = await query<Photo[]>("SELECT * FROM photos WHERE id = ?", [id]);
+    const [existing] = await query<PhotoRow[]>("SELECT * FROM photos WHERE id = ?", [id]);
     if (!existing) {
       return NextResponse.json({ message: "Foto tidak ditemukan" }, { status: 404 });
     }
@@ -34,8 +34,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (notified !== undefined) {
       await query("UPDATE photos SET notified = ? WHERE id = ?", [notified ? 1 : 0, id]);
     }
-    const [updated] = await query<Photo[]>("SELECT * FROM photos WHERE id = ?", [id]);
-    return NextResponse.json({ data: updated });
+    const [updated] = await query<PhotoRow[]>("SELECT * FROM photos WHERE id = ?", [id]);
+    return NextResponse.json({ data: updated ? parsePhotoRow(updated) : null });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ message: "Gagal memperbarui status foto" }, { status: 500 });
@@ -50,13 +50,19 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
   const { id } = await params;
   try {
-    const [existing] = await query<Photo[]>("SELECT * FROM photos WHERE id = ?", [id]);
+    const [existing] = await query<PhotoRow[]>("SELECT * FROM photos WHERE id = ?", [id]);
     if (!existing) {
       return NextResponse.json({ message: "Foto tidak ditemukan" }, { status: 404 });
     }
 
     await query("DELETE FROM photos WHERE id = ?", [id]);
-    await deletePublicFile(existing.image_result);
+
+    const photo = parsePhotoRow(existing);
+    // Hapus file hasil frame-nya, lalu semua file raw satu-satu juga —
+    // biar gak ada file "sampah" yang numpuk di Vercel Blob tiap kali
+    // foto dihapus dari dashboard.
+    await deletePublicFile(photo.image_result);
+    await Promise.all(photo.raw_photos.map((url) => deletePublicFile(url)));
 
     return NextResponse.json({ data: { id } });
   } catch (error) {

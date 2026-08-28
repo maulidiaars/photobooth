@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const status = request.nextUrl.searchParams.get("status") as PhotoStatus | null;
 
     const baseSql = `
-      SELECT p.*, f.nama AS frame_nama, f.slot AS frame_slot
+      SELECT p.*, f.nama AS frame_nama, f.slot AS frame_slot, f.slot_layout AS frame_slot_layout
       FROM photos p
       LEFT JOIN frames f ON f.id = p.frame_id
     `;

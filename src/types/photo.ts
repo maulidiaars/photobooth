@@ -1,3 +1,5 @@
+import type { SlotRect } from "@/lib/frameSlotDetector";
+
 export type PhotoStatus = "pending" | "printed";
 
 export interface Photo {
@@ -12,6 +14,10 @@ export interface Photo {
   created_at: string;
   frame_nama?: string;
   frame_slot?: number;
+  /** Posisi & ukuran tiap slot di frame ini (fraksi 0-1 dari kanvas
+   *  penuh) — dipakai buat nyusun kolase foto asli biar strukturnya
+   *  persis ngikutin bentuk frame, tanpa gambar frame-nya sendiri. */
+  frame_slot_layout?: SlotRect[];
 }
 
 export interface CreatePhotoPayload {

@@ -434,7 +434,7 @@ export function PhotoLightbox({
 
       {/* MODAL LIGHTBOX FOTO ASLI (FULLSCREEN) */}
       <AnimatePresence>
-        {lightboxRawOpen && photo && (
+        {lightboxRawOpen && photo && photo.raw_photos && photo.raw_photos.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -458,9 +458,14 @@ export function PhotoLightbox({
                 <X size={22} strokeWidth={2.4} />
               </button>
 
-              {/* Download Button */}
+              {/* Download Button - FIXED: dengan optional chaining dan fallback */}
               <button
-                onClick={() => handleDownloadRaw(photo.raw_photos[lightboxRawIndex], lightboxRawIndex)}
+                onClick={() => {
+                  const url = photo.raw_photos?.[lightboxRawIndex];
+                  if (url) {
+                    handleDownloadRaw(url, lightboxRawIndex);
+                  }
+                }}
                 className="absolute bottom-8 right-8 z-20 flex items-center gap-2 rounded-xl bg-[#2A1510]/90 px-5 py-3 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm border border-[#4A2A20]"
               >
                 <Download size={18} strokeWidth={2.3} />
@@ -474,13 +479,15 @@ export function PhotoLightbox({
                 </span>
               </div>
 
-              {/* Image */}
-              <img
-                src={photo.raw_photos[lightboxRawIndex]}
-                alt={`Foto asli #${lightboxRawIndex + 1}`}
-                className="max-h-[85vh] max-w-[90vw] object-contain rounded-xl shadow-2xl"
-                draggable={false}
-              />
+              {/* Image - FIXED: dengan optional chaining */}
+              {photo.raw_photos[lightboxRawIndex] && (
+                <img
+                  src={photo.raw_photos[lightboxRawIndex]}
+                  alt={`Foto asli #${lightboxRawIndex + 1}`}
+                  className="max-h-[85vh] max-w-[90vw] object-contain rounded-xl shadow-2xl"
+                  draggable={false}
+                />
+              )}
 
               {/* Navigation Arrows for Modal */}
               {photo.raw_photos.length > 1 && (

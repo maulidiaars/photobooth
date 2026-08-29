@@ -183,7 +183,7 @@ export function PhotoLightbox({
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: "spring", stiffness: 300, damping: 28 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative flex w-full max-w-7xl max-h-[96vh] sm:max-h-[94vh] md:max-h-[92vh] flex-col bg-[#1A0A08] rounded-2xl overflow-hidden shadow-2xl"
+              className="relative flex w-full max-w-[1400px] h-[calc(100vh-24px)] max-h-[calc(100vh-24px)] flex-col bg-[#1A0A08] rounded-2xl overflow-hidden shadow-2xl"
             >
               {/* Header */}
               <div className="flex items-center justify-between bg-[#2A1510] px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 border-b border-[#4A2A20] shrink-0">
@@ -218,19 +218,39 @@ export function PhotoLightbox({
               </div>
 
               {/* Body: 2 Kolom */}
-              <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-y-auto">
-                {/* KIRI: Frame */}
-                <div className="flex-1 flex items-center justify-center bg-[#0D0503] p-2 sm:p-3 md:p-4 lg:p-5 min-h-[250px] sm:min-h-[300px]">
+              <div className="flex flex-1 min-h-0 min-w-0 flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
+                {/* KIRI: Frame — kolom mengikuti ukuran frame, tanpa padding/margin */}
+                <div className="relative flex min-h-[240px] sm:min-h-[300px] min-w-0 flex-1 items-center justify-center bg-[#0D0503] overflow-hidden lg:flex-none lg:w-fit lg:min-h-0">
                   <img
                     src={photo.image_result}
                     alt="Hasil foto"
-                    className="max-h-[55vh] sm:max-h-[60vh] lg:max-h-[70vh] w-auto max-w-full object-contain shadow-2xl rounded-lg"
+                    className="block h-auto max-h-[calc(100vh-105px)] w-auto max-w-full object-contain shadow-2xl rounded-lg lg:max-w-[calc(100vw-410px)]"
                     style={{ background: "transparent" }}
                   />
+
+                  {/* Navigasi foto utama — hanya berada di area frame kiri */}
+                  {totalPhotos > 1 && (
+                    <>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onPrev?.(); }}
+                        aria-label="Foto sebelumnya"
+                        className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-[#2A1510]/85 text-[#C9A87C] shadow-lg backdrop-blur-sm hover:bg-[#4A2A20] transition-all"
+                      >
+                        <ChevronLeft size={22} strokeWidth={2.5} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onNext?.(); }}
+                        aria-label="Foto berikutnya"
+                        className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-[#2A1510]/85 text-[#C9A87C] shadow-lg backdrop-blur-sm hover:bg-[#4A2A20] transition-all"
+                      >
+                        <ChevronRight size={22} strokeWidth={2.5} />
+                      </button>
+                    </>
+                  )}
                 </div>
 
                 {/* KANAN: Info + Raw Photos Slider */}
-                <div className="w-full lg:w-80 xl:w-[380px] shrink-0 border-t lg:border-t-0 lg:border-l border-[#4A2A20] bg-[#150907] p-3 sm:p-4 md:p-5 flex flex-col">
+                <div className="w-full lg:w-80 xl:w-[380px] shrink-0 min-h-0 border-t lg:border-t-0 lg:border-l border-[#4A2A20] bg-[#150907] p-3 sm:p-4 md:p-5 flex flex-col overflow-y-auto">
                   {/* Frame Name */}
                   <div className="mb-1.5 sm:mb-2">
                     <p className="font-serif text-lg sm:text-xl font-bold text-[#F5EBE0] truncate">
@@ -262,7 +282,7 @@ export function PhotoLightbox({
 
                   {/* RAW PHOTOS SLIDER */}
                   {hasRaw && (
-                    <div className="flex-1 flex flex-col min-h-0">
+                    <div className="flex flex-col min-h-0 shrink-0">
                       <div className="flex items-center justify-between mb-1.5 sm:mb-2">
                         <div className="flex items-center gap-1.5 sm:gap-2 text-[#C9A87C]">
                           <Images size={14} strokeWidth={2.2} />
@@ -277,7 +297,7 @@ export function PhotoLightbox({
                         )}
                       </div>
 
-                      <div className="relative flex-1 min-h-[150px] sm:min-h-[180px] md:min-h-[200px]">
+                      <div className="relative h-[clamp(150px,28vh,300px)] shrink-0">
                         <div
                           ref={rawScrollerRef}
                           onScroll={handleRawScroll}
@@ -305,9 +325,6 @@ export function PhotoLightbox({
                                 </div>
                               </div>
 
-                              <span className="absolute left-2 sm:left-3 top-2 sm:top-3 flex h-5 sm:h-6 min-w-5 sm:min-w-6 items-center justify-center rounded-full bg-black/70 px-1 sm:px-1.5 font-serif text-[8px] sm:text-[10px] font-medium text-white/90">
-                                {i + 1}
-                              </span>
                             </div>
                           ))}
                         </div>
@@ -402,23 +419,6 @@ export function PhotoLightbox({
                 </div>
               </div>
 
-              {/* Navigation Arrows for Main Photos */}
-              {totalPhotos > 1 && (
-                <>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onPrev?.(); }}
-                    className="absolute left-1 sm:left-2 md:left-3 top-1/2 -translate-y-1/2 flex h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm"
-                  >
-                    <ChevronLeft size={22} strokeWidth={2.5} />
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onNext?.(); }}
-                    className="absolute right-1 sm:right-2 md:right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm"
-                  >
-                    <ChevronRight size={22} strokeWidth={2.5} />
-                  </button>
-                </>
-              )}
             </motion.div>
           </motion.div>
         )}

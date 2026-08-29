@@ -35,9 +35,6 @@ interface PhotoLightboxProps {
   onNext?: () => void;
 }
 
-// NOTE: created_at dari DB itu UTC tanpa "Z" (lihat lib/db.ts +
-// lib/dateUtils.ts). Pakai util terpusat biar jamnya bener (WIB),
-// termasuk yang kepakai di teks share WhatsApp di bawah.
 const formatTime = formatDateTimeFullID;
 
 export function PhotoLightbox({
@@ -54,28 +51,17 @@ export function PhotoLightbox({
 }: PhotoLightboxProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [sending, setSending] = useState(false);
-  // Aspect ratio kanvas frame ini (didapat dari gambar hasil yang udah
-  // dimuat), dipakai biar tiap foto asli di slider bawah proporsinya
-  // sama persis kayak slot aslinya di frame — bukan ditebak/dipaksa
-  // satu bentuk yang sama semua (jadi gak gepeng).
   const [frameAspect, setFrameAspect] = useState<number | null>(null);
-  // Lagi di foto asli keberapa yang ditampilkan di slider tengah.
   const [rawActiveIndex, setRawActiveIndex] = useState(0);
   const rawScrollerRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
 
-  // Foto yang dibuka berganti (navigasi prev/next) -> reset aspect ratio
-  // & posisi slider foto asli, biar gak ke-carry dari frame sebelumnya
-  // yang proporsi/jumlah fotonya beda.
   useEffect(() => {
     setFrameAspect(null);
     setRawActiveIndex(0);
     rawScrollerRef.current?.scrollTo({ left: 0 });
   }, [photo?.id]);
 
-  // ============================================
-  // 🔥 FUNGSI KIRIM WHATSAPP (wa.me)
-  // ============================================
   const handleSendWhatsApp = () => {
     if (!photo?.whatsapp_number) {
       toast.push("Nomor WhatsApp tidak tersedia", "error");
@@ -85,10 +71,8 @@ export function PhotoLightbox({
     setSending(true);
 
     try {
-      // Bersihkan nomor telepon
       const cleanNumber = photo.whatsapp_number.replace(/[^0-9]/g, "");
 
-      // Format nomor untuk WhatsApp (62xxx)
       let formattedNumber = cleanNumber;
       if (formattedNumber.startsWith("0")) {
         formattedNumber = `62${formattedNumber.slice(1)}`;
@@ -100,16 +84,6 @@ export function PhotoLightbox({
         APP_URL || (typeof window !== "undefined" ? window.location.origin : "");
       const photoLink = `${origin}/foto/${photo.id}`;
 
-      // ============================================
-      // 🔥 PESAN WHATSAPP — 100% KOMPATIBEL
-      //
-      // RULES WhatsApp:
-      // - Bold: *teks*
-      // - Italic: _teks_
-      // - Strikethrough: ~teks~
-      // - GAK SUPPORT: ---, ===, ###, dsb
-      // - GAK SUPPORT: emoji multi-codepoint
-      // ============================================
       const message = encodeURIComponent(
         `*${APP_NAME}*\n\n` +
         `Haii, terima kasih banyak ya udah mampir dan berfoto bareng kami hari ini! 🎞️\n\n` +
@@ -143,9 +117,6 @@ export function PhotoLightbox({
     }
   };
 
-  // ============================================
-  // 🔥 DOWNLOAD FOTO ORIGINAL (RAW, TANPA FRAME) — SATU PERSATU
-  // ============================================
   const handleDownloadRaw = async (url: string, index: number) => {
     if (!photo) return;
     try {
@@ -200,21 +171,21 @@ export function PhotoLightbox({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-[#1A0A08]/85 backdrop-blur-md p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
             onClick={onClose}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.92, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ type: "spring", stiffness: 300, damping: 26 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative flex w-full max-w-6xl max-h-[90vh] flex-col bg-[#1A0A08] rounded-2xl overflow-hidden shadow-2xl"
+              className="relative flex w-full max-w-7xl max-h-[92vh] flex-col bg-[#1A0A08] rounded-2xl overflow-hidden shadow-2xl"
             >
               {/* Header */}
-              <div className="flex items-center justify-between bg-[#2A1510] px-6 py-3.5 border-b border-[#4A2A20] shrink-0">
-                <div className="flex items-center gap-4">
-                  <span className="font-serif text-sm font-medium text-[#C9A87C]">
+              <div className="flex items-center justify-between bg-[#2A1510] px-5 py-3 border-b border-[#4A2A20] shrink-0">
+                <div className="flex items-center gap-3">
+                  <span className="font-serif text-xs font-medium text-[#C9A87C]">
                     #{currentIndex + 1} / {totalPhotos}
                   </span>
                   <span className="h-4 w-px bg-[#4A2A20]" />
@@ -243,39 +214,31 @@ export function PhotoLightbox({
                 </div>
               </div>
 
-              {/* Body: Frame | Slider Foto Asli | Keterangan — scrollable
-                  kalau layar pendek. Frame gak lagi dipaksa flex-1 (itu
-                  yang bikin banyak ruang kosong kanan-kiri kalau
-                  frame-nya kurus/strip) — sekarang lebarnya cuma sebesar
-                  gambarnya sendiri (ngepress), barisnya di-center. */}
-              <div className="flex flex-col md:flex-row md:justify-center flex-1 min-h-0 overflow-y-auto">
-                {/* Kiri: Frame — PURE HD, NO BACKGROUND, ngepress */}
-                <div className="flex shrink-0 items-center justify-center bg-[#0D0503] p-4 md:p-6 min-h-[260px] md:min-h-[400px]">
+              {/* Main Content */}
+              <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-y-auto">
+                {/* Left: Frame */}
+                <div className="flex-1 flex items-center justify-center bg-[#0D0503] p-4 lg:p-6 min-h-[300px]">
                   <img
                     src={photo.image_result}
                     alt="Hasil foto"
                     onLoad={(e) =>
                       setFrameAspect(e.currentTarget.naturalWidth / e.currentTarget.naturalHeight)
                     }
-                    className="h-full max-h-[55vh] md:max-h-[68vh] w-auto max-w-full object-contain shadow-2xl"
+                    className="max-h-[55vh] lg:max-h-[70vh] w-auto max-w-full object-contain shadow-2xl rounded-lg"
                     style={{
                       background: "transparent",
                     }}
                   />
                 </div>
 
-                {/* Tengah: Foto Asli — satu foto penuh per slide (geser
-                    pakai panah atau swipe), ukurannya ngikutin proporsi
-                    asli slot-nya biar gak gepeng. Tetap satu tema gelap
-                    kayak panel lain, cuma dikasih border emas tipis
-                    biar kebeda tapi tetap nyatu, gak norak. */}
+                {/* Middle: Raw Photos */}
                 {hasRaw && (
-                  <div className="relative w-full md:w-72 lg:w-80 shrink-0 border-t md:border-t-0 md:border-x border-[#4A2A20] bg-[#150907] p-5 flex flex-col">
+                  <div className="w-full lg:w-80 xl:w-96 shrink-0 border-t lg:border-t-0 lg:border-x border-[#4A2A20] bg-[#150907] p-5 flex flex-col">
                     <div className="mb-3 flex items-center justify-between">
                       <div className="flex items-center gap-2 text-[#C9A87C]">
                         <Images size={14} strokeWidth={2.2} />
                         <p className="font-serif text-xs font-semibold uppercase tracking-wide">
-                          Foto Asli (Raw)
+                          Foto Asli
                         </p>
                       </div>
                       {photo.raw_photos.length > 1 && (
@@ -285,40 +248,37 @@ export function PhotoLightbox({
                       )}
                     </div>
 
-                    <div className="relative">
+                    <div className="relative flex-1">
                       <div
                         ref={rawScrollerRef}
                         onScroll={handleRawScroll}
                         className="no-scrollbar flex w-full snap-x snap-mandatory overflow-x-auto rounded-xl border border-[#C9A87C]/25 bg-[#0D0503] shadow-inner"
+                        style={{ height: '100%', minHeight: '200px' }}
                       >
                         {photo.raw_photos.map((url, i) => {
                           const rect = photo.frame_slot_layout?.[i];
-                          // Aspect asli slot ini = (lebar/tinggi rect) x
-                          // aspect kanvas penuh — tiap foto tampil sesuai
-                          // bentuk slotnya sendiri, gak dipukul rata satu
-                          // bentuk kayak sebelumnya (yang bikin gepeng).
                           const slideAspect =
                             rect && frameAspect ? (rect.w / rect.h) * frameAspect : null;
                           return (
                             <div
                               key={`${url}-${i}`}
-                              className="relative w-full shrink-0 snap-center p-2"
+                              className="relative w-full shrink-0 snap-center p-3 flex items-center justify-center"
                             >
                               <img
                                 src={url}
                                 alt={`Foto asli #${i + 1}`}
-                                className="h-auto w-full rounded-lg bg-[#0D0503] object-contain"
-                                style={{ aspectRatio: slideAspect ? `${slideAspect}` : "3 / 4" }}
+                                className="w-full h-auto max-h-[300px] rounded-lg bg-[#0D0503] object-contain"
+                                style={{ aspectRatio: slideAspect ? `${slideAspect}` : "auto" }}
                                 draggable={false}
                               />
                               <button
                                 onClick={() => handleDownloadRaw(url, i)}
                                 aria-label={`Download foto asli ${i + 1}`}
-                                className="absolute bottom-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-[#2A1510] text-[#F5EBE0] shadow-lg transition-all hover:scale-105 hover:bg-[#3A2018] active:scale-95"
+                                className="absolute bottom-5 right-5 flex h-9 w-9 items-center justify-center rounded-full bg-[#2A1510] text-[#F5EBE0] shadow-lg transition-all hover:scale-105 hover:bg-[#3A2018] active:scale-95"
                               >
                                 <Download size={15} strokeWidth={2.3} />
                               </button>
-                              <span className="absolute left-4 top-4 flex h-5 min-w-5 items-center justify-center rounded-full bg-black/50 px-1.5 font-serif text-[10px] font-medium text-white/85">
+                              <span className="absolute left-4 top-4 flex h-5 min-w-5 items-center justify-center rounded-full bg-black/60 px-1.5 font-serif text-[10px] font-medium text-white/85">
                                 {i + 1}
                               </span>
                             </div>
@@ -326,15 +286,13 @@ export function PhotoLightbox({
                         })}
                       </div>
 
-                      {/* Panah navigasi — cara lain buat geser selain
-                          swipe langsung, muncul cuma kalau foto > 1. */}
                       {photo.raw_photos.length > 1 && (
                         <>
                           <button
                             onClick={() => scrollRawToIndex(rawActiveIndex - 1)}
                             disabled={rawActiveIndex === 0}
                             aria-label="Foto asli sebelumnya"
-                            className="absolute left-1 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] shadow-md backdrop-blur-sm transition-all hover:bg-[#3A2018] disabled:opacity-0"
+                            className="absolute left-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-[#2A1510]/90 text-[#C9A87C] shadow-md backdrop-blur-sm transition-all hover:bg-[#3A2018] disabled:opacity-0"
                           >
                             <ChevronLeft size={16} strokeWidth={2.4} />
                           </button>
@@ -342,7 +300,7 @@ export function PhotoLightbox({
                             onClick={() => scrollRawToIndex(rawActiveIndex + 1)}
                             disabled={rawActiveIndex === photo.raw_photos.length - 1}
                             aria-label="Foto asli berikutnya"
-                            className="absolute right-1 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] shadow-md backdrop-blur-sm transition-all hover:bg-[#3A2018] disabled:opacity-0"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-[#2A1510]/90 text-[#C9A87C] shadow-md backdrop-blur-sm transition-all hover:bg-[#3A2018] disabled:opacity-0"
                           >
                             <ChevronRight size={16} strokeWidth={2.4} />
                           </button>
@@ -365,18 +323,15 @@ export function PhotoLightbox({
                       </div>
                     )}
 
-                    <p className="mt-3 text-center font-serif text-[10px] text-[#C9A87C]/40">
+                    <p className="mt-2 text-center font-serif text-[10px] text-[#C9A87C]/40">
                       Geser untuk foto lain &middot; tekan ikon unduh untuk simpan
                     </p>
                   </div>
                 )}
 
-                {/* Kanan: Keterangan — cuma yang penting: nama frame,
-                    jam & nomor WA pengguna. ID foto & nomor admin gak
-                    ditampilkan lagi, gak relevan buat kerjaan admin
-                    sehari-hari. */}
-                <div className="w-full md:w-80 lg:w-96 bg-[#1A0A08] border-t md:border-t-0 md:border-l border-[#4A2A20] p-6 flex flex-col gap-5">
-                  {/* Nama Frame */}
+                {/* Right: Info & Actions */}
+                <div className="w-full lg:w-80 xl:w-96 bg-[#1A0A08] border-t lg:border-t-0 lg:border-l border-[#4A2A20] p-5 flex flex-col gap-4">
+                  {/* Frame Name */}
                   <div>
                     <p className="font-serif text-xl font-bold text-[#F5EBE0]">
                       {photo.frame_nama ?? "Frame"}
@@ -384,7 +339,7 @@ export function PhotoLightbox({
                   </div>
 
                   {/* Detail Info */}
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     <div className="flex items-center gap-3">
                       <Clock3 size={16} className="text-[#C9A87C]/60 shrink-0" strokeWidth={2} />
                       <span className="font-serif text-sm text-[#C9A87C]/80">
@@ -402,10 +357,7 @@ export function PhotoLightbox({
                     )}
                   </div>
 
-                  {/* Unduh cepat — versi mini foto asli, hover buat
-                      lihat ikon download, klik langsung kesimpen (gak
-                      buka apa-apa lagi, beda fungsi sama slider besar
-                      di tengah yang buat lihat detail). */}
+                  {/* Quick Download */}
                   {hasRaw && (
                     <div>
                       <div className="mb-2 flex items-center gap-1.5 text-[#C9A87C]/60">
@@ -441,7 +393,6 @@ export function PhotoLightbox({
 
                   {/* Actions */}
                   <div className="mt-auto space-y-2.5">
-                    {/* WhatsApp Send Button */}
                     {photo.whatsapp_number && (
                       <button
                         onClick={handleSendWhatsApp}
@@ -465,9 +416,6 @@ export function PhotoLightbox({
                     <div className="grid grid-cols-2 gap-2.5">
                       <button
                         onClick={() => {
-                          // Klik Print = foto dianggap sudah dicetak,
-                          // jadi status ikut ke-update sekalian, gak
-                          // perlu tombol/aksi terpisah lagi buat itu.
                           onPrint(photo);
                           if (photo.status !== "printed") {
                             onMarkPrinted(photo);
@@ -491,18 +439,18 @@ export function PhotoLightbox({
                 </div>
               </div>
 
-              {/* Navigation arrows (ganti foto/hasil lain di dashboard) */}
+              {/* Navigation Arrows */}
               {totalPhotos > 1 && (
                 <>
                   <button
                     onClick={(e) => { e.stopPropagation(); onPrev?.(); }}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm"
                   >
                     <ChevronLeft size={22} strokeWidth={2.5} />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); onNext?.(); }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm"
                   >
                     <ChevronRight size={22} strokeWidth={2.5} />
                   </button>

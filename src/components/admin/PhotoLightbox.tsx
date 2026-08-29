@@ -183,7 +183,7 @@ export function PhotoLightbox({
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: "spring", stiffness: 300, damping: 28 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative flex w-full max-w-7xl max-h-[92vh] flex-col bg-[#1A0A08] rounded-2xl overflow-hidden shadow-2xl"
+              className="relative flex w-full max-w-7xl max-h-[90vh] flex-col bg-[#1A0A08] rounded-2xl overflow-hidden shadow-2xl"
             >
               {/* Header */}
               <div className="flex items-center justify-between bg-[#2A1510] px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 border-b border-[#4A2A20] shrink-0">
@@ -218,13 +218,13 @@ export function PhotoLightbox({
               </div>
 
               {/* Body: 2 Kolom */}
-              <div className="flex min-h-0 min-w-0 flex-col lg:flex-row overflow-y-auto lg:overflow-hidden lg:items-stretch">
+              <div className="flex min-w-0 flex-col lg:flex-row overflow-y-auto lg:overflow-hidden lg:items-stretch">
                 {/* KIRI: Frame — kolom mengikuti ukuran frame, tanpa padding/margin */}
                 <div className="relative flex min-h-[240px] sm:min-h-[300px] min-w-0 flex-1 items-center justify-center bg-[#0D0503] overflow-hidden p-3 sm:p-4 md:p-5 lg:p-6">
                   <img
                     src={photo.image_result}
                     alt="Hasil foto"
-                    className="block h-auto max-h-[70vh] w-auto max-w-full object-contain shadow-2xl rounded-lg"
+                    className="block h-auto max-h-[62vh] w-auto max-w-full object-contain shadow-2xl rounded-lg"
                     style={{ background: "transparent" }}
                   />
 
@@ -250,7 +250,7 @@ export function PhotoLightbox({
                 </div>
 
                 {/* KANAN: Info + Raw Photos Slider */}
-                <div className="w-full lg:w-80 xl:w-[380px] shrink-0 min-h-0 border-t lg:border-t-0 lg:border-l border-[#4A2A20] bg-[#150907] p-3 sm:p-4 md:p-5 flex flex-col overflow-y-auto">
+                <div className="w-full lg:w-80 xl:w-[380px] shrink-0 min-h-0 border-t lg:border-t-0 lg:border-l border-[#4A2A20] bg-[#150907] p-3 sm:p-4 md:p-5 flex flex-col overflow-y-auto lg:max-h-full">
                   {/* Frame Name */}
                   <div className="mb-1.5 sm:mb-2">
                     <p className="font-serif text-lg sm:text-xl font-bold text-[#F5EBE0] truncate">
@@ -297,7 +297,7 @@ export function PhotoLightbox({
                         )}
                       </div>
 
-                      <div className="relative h-[clamp(150px,26vh,270px)] shrink-0">
+                      <div className="relative h-[clamp(150px,23vh,230px)] shrink-0">
                         <div
                           ref={rawScrollerRef}
                           onScroll={handleRawScroll}

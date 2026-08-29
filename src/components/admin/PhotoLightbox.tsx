@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, MessageCircle, Printer, Trash2, Clock3, Download, ChevronLeft, ChevronRight, Images, Zap, Eye } from "lucide-react";
+import { X, MessageCircle, Printer, Trash2, Clock3, Download, ChevronLeft, ChevronRight, Images, Eye } from "lucide-react";
 import { ConfirmModal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { APP_NAME, APP_URL } from "@/lib/constants";
@@ -174,7 +174,7 @@ export function PhotoLightbox({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-2 sm:p-3 md:p-4"
             onClick={onClose}
           >
             <motion.div
@@ -183,16 +183,16 @@ export function PhotoLightbox({
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: "spring", stiffness: 300, damping: 28 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative flex w-full max-w-7xl max-h-[92vh] flex-col bg-[#1A0A08] rounded-2xl overflow-hidden shadow-2xl"
+              className="relative flex w-full max-w-7xl max-h-[96vh] sm:max-h-[94vh] md:max-h-[92vh] flex-col bg-[#1A0A08] rounded-2xl overflow-hidden shadow-2xl"
             >
               {/* Header */}
-              <div className="flex items-center justify-between bg-[#2A1510] px-5 py-3 border-b border-[#4A2A20] shrink-0">
-                <div className="flex items-center gap-3">
-                  <span className="font-serif text-xs font-medium text-[#C9A87C]">
+              <div className="flex items-center justify-between bg-[#2A1510] px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 border-b border-[#4A2A20] shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <span className="font-serif text-[10px] sm:text-xs font-medium text-[#C9A87C]">
                     #{currentIndex + 1} / {totalPhotos}
                   </span>
                   <span className="h-4 w-px bg-[#4A2A20]" />
-                  <span className={`font-serif text-xs font-semibold px-3 py-0.5 rounded-full ${
+                  <span className={`font-serif text-[10px] sm:text-xs font-semibold px-2 sm:px-3 py-0.5 rounded-full ${
                     photo.status === "printed"
                       ? "bg-[#5B7F5C] text-[#F5EBE0]"
                       : "bg-[#C9A87C] text-[#2A1510]"
@@ -200,57 +200,57 @@ export function PhotoLightbox({
                     {photo.status === "printed" ? "DICETAK" : "PENDING"}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <button
                     onClick={onDownload ? () => onDownload(photo) : undefined}
-                    className="flex items-center gap-2 rounded-lg bg-[#4A2A20] px-3.5 py-1.5 font-serif text-xs font-medium text-[#C9A87C] hover:bg-[#5A3A30] transition-colors"
+                    className="flex items-center gap-1.5 sm:gap-2 rounded-lg bg-[#4A2A20] px-2.5 sm:px-3.5 py-1 sm:py-1.5 font-serif text-[10px] sm:text-xs font-medium text-[#C9A87C] hover:bg-[#5A3A30] transition-colors"
                   >
-                    <Download size={14} strokeWidth={2.2} />
-                    Download
+                    <Download size={12} sm={14} strokeWidth={2.2} />
+                    <span className="hidden sm:inline">Download</span>
                   </button>
                   <button
                     onClick={onClose}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#4A2A20] text-[#C9A87C] hover:bg-[#5A3A30] transition-colors"
+                    className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-[#4A2A20] text-[#C9A87C] hover:bg-[#5A3A30] transition-colors"
                   >
-                    <X size={16} strokeWidth={2.4} />
+                    <X size={14} sm={16} strokeWidth={2.4} />
                   </button>
                 </div>
               </div>
 
-              {/* Body: 2 Kolom (Kiri: Frame, Kanan: Info + Raw Photos) */}
+              {/* Body: 2 Kolom (Kiri: Frame, Kanan: Info + Raw Photos) - DIPERKECIL PADDING */}
               <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-y-auto">
-                {/* KIRI: Frame */}
-                <div className="flex-1 flex items-center justify-center bg-[#0D0503] p-4 lg:p-6 min-h-[300px]">
+                {/* KIRI: Frame - PADDING DIKURANGI */}
+                <div className="flex-1 flex items-center justify-center bg-[#0D0503] p-2 sm:p-3 md:p-4 lg:p-5 min-h-[250px] sm:min-h-[300px]">
                   <img
                     src={photo.image_result}
                     alt="Hasil foto"
-                    className="max-h-[55vh] lg:max-h-[70vh] w-auto max-w-full object-contain shadow-2xl rounded-lg"
+                    className="max-h-[55vh] sm:max-h-[60vh] lg:max-h-[70vh] w-auto max-w-full object-contain shadow-2xl rounded-lg"
                     style={{ background: "transparent" }}
                   />
                 </div>
 
                 {/* KANAN: Info + Raw Photos Slider */}
-                <div className="w-full lg:w-96 xl:w-[420px] shrink-0 border-t lg:border-t-0 lg:border-l border-[#4A2A20] bg-[#150907] p-5 flex flex-col">
+                <div className="w-full lg:w-80 xl:w-[380px] shrink-0 border-t lg:border-t-0 lg:border-l border-[#4A2A20] bg-[#150907] p-3 sm:p-4 md:p-5 flex flex-col">
                   {/* Frame Name */}
-                  <div className="mb-2">
-                    <p className="font-serif text-xl font-bold text-[#F5EBE0]">
+                  <div className="mb-1.5 sm:mb-2">
+                    <p className="font-serif text-lg sm:text-xl font-bold text-[#F5EBE0] truncate">
                       {photo.frame_nama ?? "Frame"}
                     </p>
                   </div>
 
                   {/* Detail Info */}
-                  <div className="space-y-2 mb-3">
-                    <div className="flex items-center gap-3">
-                      <Clock3 size={16} className="text-[#C9A87C]/60 shrink-0" strokeWidth={2} />
-                      <span className="font-serif text-sm text-[#C9A87C]/80">
+                  <div className="space-y-1.5 sm:space-y-2 mb-2 sm:mb-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <Clock3 size={14} sm={16} className="text-[#C9A87C]/60 shrink-0" strokeWidth={2} />
+                      <span className="font-serif text-xs sm:text-sm text-[#C9A87C]/80 truncate">
                         {formatTime(photo.created_at)}
                       </span>
                     </div>
 
                     {photo.whatsapp_number && (
-                      <div className="flex items-center gap-3">
-                        <MessageCircle size={16} className="text-[#C9A87C]/60 shrink-0" strokeWidth={2} />
-                        <span className="font-serif text-sm text-[#C9A87C]/80">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <MessageCircle size={14} sm={16} className="text-[#C9A87C]/60 shrink-0" strokeWidth={2} />
+                        <span className="font-serif text-xs sm:text-sm text-[#C9A87C]/80 truncate">
                           {photo.whatsapp_number}
                         </span>
                       </div>
@@ -258,26 +258,26 @@ export function PhotoLightbox({
                   </div>
 
                   {/* Divider */}
-                  <div className="h-px w-full bg-[#4A2A20] mb-3" />
+                  <div className="h-px w-full bg-[#4A2A20] mb-2 sm:mb-3" />
 
                   {/* RAW PHOTOS SLIDER - FULL SIZE */}
                   {hasRaw && (
                     <div className="flex-1 flex flex-col min-h-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2 text-[#C9A87C]">
-                          <Images size={14} strokeWidth={2.2} />
-                          <p className="font-serif text-xs font-semibold uppercase tracking-wide">
+                      <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2 text-[#C9A87C]">
+                          <Images size={12} sm={14} strokeWidth={2.2} />
+                          <p className="font-serif text-[10px] sm:text-xs font-semibold uppercase tracking-wide">
                             Foto Asli
                           </p>
                         </div>
                         {photo.raw_photos.length > 1 && (
-                          <span className="font-serif text-[11px] font-semibold text-[#C9A87C]/50">
+                          <span className="font-serif text-[10px] sm:text-[11px] font-semibold text-[#C9A87C]/50">
                             {rawActiveIndex + 1} / {photo.raw_photos.length}
                           </span>
                         )}
                       </div>
 
-                      <div className="relative flex-1 min-h-[200px]">
+                      <div className="relative flex-1 min-h-[150px] sm:min-h-[180px] md:min-h-[200px]">
                         <div
                           ref={rawScrollerRef}
                           onScroll={handleRawScroll}
@@ -286,7 +286,7 @@ export function PhotoLightbox({
                           {photo.raw_photos.map((url, i) => (
                             <div
                               key={`${url}-${i}`}
-                              className="relative w-full h-full shrink-0 snap-center flex items-center justify-center p-3 cursor-pointer group"
+                              className="relative w-full h-full shrink-0 snap-center flex items-center justify-center p-2 sm:p-3 cursor-pointer group"
                               onClick={() => openRawLightbox(i)}
                             >
                               <img
@@ -296,21 +296,16 @@ export function PhotoLightbox({
                                 draggable={false}
                               />
                               
-                              {/* HOVER OVERLAY - EYE ICON */}
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/50 transition-all duration-300 rounded-lg">
-                                <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 transform scale-90 group-hover:scale-100">
-                                  <div className="flex flex-col items-center gap-2">
-                                    <div className="bg-[#2A1510]/90 p-3 rounded-full backdrop-blur-sm">
-                                      <Eye size={28} className="text-[#C9A87C]" strokeWidth={2} />
-                                    </div>
-                                    <span className="text-white text-xs font-serif bg-black/60 px-3 py-1 rounded-full">
-                                      Klik untuk lihat
-                                    </span>
+                              {/* HOVER OVERLAY - EYE ICON SAJA, TANPA TEKS */}
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-all duration-300 rounded-lg">
+                                <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 transform scale-75 group-hover:scale-100">
+                                  <div className="bg-[#2A1510]/80 p-2.5 sm:p-3 rounded-full backdrop-blur-sm ring-1 ring-[#C9A87C]/30">
+                                    <Eye size={20} sm={24} md={28} className="text-[#C9A87C]" strokeWidth={1.8} />
                                   </div>
                                 </div>
                               </div>
 
-                              <span className="absolute left-3 top-3 flex h-6 min-w-6 items-center justify-center rounded-full bg-black/70 px-1.5 font-serif text-[10px] font-medium text-white/90">
+                              <span className="absolute left-2 sm:left-3 top-2 sm:top-3 flex h-5 sm:h-6 min-w-5 sm:min-w-6 items-center justify-center rounded-full bg-black/70 px-1 sm:px-1.5 font-serif text-[8px] sm:text-[10px] font-medium text-white/90">
                                 {i + 1}
                               </span>
                             </div>
@@ -324,17 +319,17 @@ export function PhotoLightbox({
                               onClick={() => scrollRawToIndex(rawActiveIndex - 1)}
                               disabled={rawActiveIndex === 0}
                               aria-label="Foto asli sebelumnya"
-                              className="absolute left-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-[#2A1510]/90 text-[#C9A87C] shadow-md backdrop-blur-sm transition-all hover:bg-[#3A2018] disabled:opacity-0 z-10"
+                              className="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 flex h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 items-center justify-center rounded-full bg-[#2A1510]/90 text-[#C9A87C] shadow-md backdrop-blur-sm transition-all hover:bg-[#3A2018] disabled:opacity-0 z-10"
                             >
-                              <ChevronLeft size={18} strokeWidth={2.4} />
+                              <ChevronLeft size={14} sm={16} md={18} strokeWidth={2.4} />
                             </button>
                             <button
                               onClick={() => scrollRawToIndex(rawActiveIndex + 1)}
                               disabled={rawActiveIndex === photo.raw_photos.length - 1}
                               aria-label="Foto asli berikutnya"
-                              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-[#2A1510]/90 text-[#C9A87C] shadow-md backdrop-blur-sm transition-all hover:bg-[#3A2018] disabled:opacity-0 z-10"
+                              className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 flex h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 items-center justify-center rounded-full bg-[#2A1510]/90 text-[#C9A87C] shadow-md backdrop-blur-sm transition-all hover:bg-[#3A2018] disabled:opacity-0 z-10"
                             >
-                              <ChevronRight size={18} strokeWidth={2.4} />
+                              <ChevronRight size={14} sm={16} md={18} strokeWidth={2.4} />
                             </button>
                           </>
                         )}
@@ -342,49 +337,49 @@ export function PhotoLightbox({
 
                       {/* Dots Indicator */}
                       {photo.raw_photos.length > 1 && (
-                        <div className="mt-3 flex items-center justify-center gap-1.5">
+                        <div className="mt-2 sm:mt-3 flex items-center justify-center gap-1 sm:gap-1.5">
                           {photo.raw_photos.map((_, i) => (
                             <button
                               key={i}
                               onClick={() => scrollRawToIndex(i)}
                               aria-label={`Ke foto asli #${i + 1}`}
-                              className={`h-1.5 rounded-full transition-all ${
-                                i === rawActiveIndex ? "w-5 bg-[#C9A87C]" : "w-1.5 bg-[#C9A87C]/30"
+                              className={`h-1 sm:h-1.5 rounded-full transition-all ${
+                                i === rawActiveIndex ? "w-3 sm:w-5 bg-[#C9A87C]" : "w-1 sm:w-1.5 bg-[#C9A87C]/30"
                               }`}
                             />
                           ))}
                         </div>
                       )}
 
-                      <p className="mt-2 text-center font-serif text-[10px] text-[#C9A87C]/40">
-                        Hover & klik foto untuk lihat detail • Geser untuk foto lain
+                      <p className="mt-1.5 sm:mt-2 text-center font-serif text-[8px] sm:text-[10px] text-[#C9A87C]/40">
+                        Klik ikon mata untuk lihat detail
                       </p>
                     </div>
                   )}
 
                   {/* Actions - di bawah slider */}
-                  <div className="mt-3 space-y-2.5 pt-3 border-t border-[#4A2A20]">
+                  <div className="mt-2 sm:mt-3 space-y-2 pt-2 sm:pt-3 border-t border-[#4A2A20]">
                     {photo.whatsapp_number && (
                       <button
                         onClick={handleSendWhatsApp}
                         disabled={sending}
-                        className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-[#6B2D2C] py-3 font-serif font-semibold text-[#F5EBE0] shadow-md hover:shadow-lg disabled:opacity-60 transition-all"
+                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#6B2D2C] py-2.5 sm:py-3 font-serif text-sm sm:text-base font-semibold text-[#F5EBE0] shadow-md hover:shadow-lg disabled:opacity-60 transition-all"
                       >
                         {sending ? (
                           <>
-                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#F5EBE0] border-t-transparent" />
-                            Membuka...
+                            <span className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin rounded-full border-2 border-[#F5EBE0] border-t-transparent" />
+                            <span className="text-xs sm:text-sm">Membuka...</span>
                           </>
                         ) : (
                           <>
-                            <MessageCircle size={18} strokeWidth={2.3} />
-                            Kirim WhatsApp
+                            <MessageCircle size={16} sm={18} strokeWidth={2.3} />
+                            <span className="text-xs sm:text-sm">Kirim WhatsApp</span>
                           </>
                         )}
                       </button>
                     )}
 
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => {
                           onPrint(photo);
@@ -392,17 +387,17 @@ export function PhotoLightbox({
                             onMarkPrinted(photo);
                           }
                         }}
-                        className="flex items-center justify-center gap-2 rounded-xl bg-[#2A1510] py-2.5 font-serif text-sm font-medium text-[#C9A87C] border border-[#4A2A20] hover:border-[#6B2D2C] transition-all"
+                        className="flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl bg-[#2A1510] py-2 sm:py-2.5 font-serif text-xs sm:text-sm font-medium text-[#C9A87C] border border-[#4A2A20] hover:border-[#6B2D2C] transition-all"
                       >
-                        <Printer size={16} strokeWidth={2.3} />
+                        <Printer size={14} sm={16} strokeWidth={2.3} />
                         Print
                       </button>
 
                       <button
                         onClick={() => setConfirmDelete(true)}
-                        className="flex items-center justify-center gap-2 rounded-xl bg-[#2A1510] py-2.5 font-serif text-sm font-medium text-[#A0524A] border border-[#4A2A20] hover:border-[#A0524A] transition-all"
+                        className="flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl bg-[#2A1510] py-2 sm:py-2.5 font-serif text-xs sm:text-sm font-medium text-[#A0524A] border border-[#4A2A20] hover:border-[#A0524A] transition-all"
                       >
-                        <Trash2 size={16} strokeWidth={2.3} />
+                        <Trash2 size={14} sm={16} strokeWidth={2.3} />
                         Hapus
                       </button>
                     </div>
@@ -415,15 +410,15 @@ export function PhotoLightbox({
                 <>
                   <button
                     onClick={(e) => { e.stopPropagation(); onPrev?.(); }}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm"
+                    className="absolute left-1 sm:left-2 md:left-3 top-1/2 -translate-y-1/2 flex h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm"
                   >
-                    <ChevronLeft size={22} strokeWidth={2.5} />
+                    <ChevronLeft size={18} sm={20} md={22} strokeWidth={2.5} />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); onNext?.(); }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm"
+                    className="absolute right-1 sm:right-2 md:right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm"
                   >
-                    <ChevronRight size={22} strokeWidth={2.5} />
+                    <ChevronRight size={18} sm={20} md={22} strokeWidth={2.5} />
                   </button>
                 </>
               )}
@@ -448,17 +443,17 @@ export function PhotoLightbox({
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full h-full flex items-center justify-center p-4 md:p-8"
+              className="relative w-full h-full flex items-center justify-center p-2 sm:p-4 md:p-8"
             >
               {/* Close Button */}
               <button
                 onClick={() => setLightboxRawOpen(false)}
-                className="absolute top-4 right-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm"
+                className="absolute top-2 sm:top-4 right-2 sm:right-4 z-20 flex h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm"
               >
-                <X size={22} strokeWidth={2.4} />
+                <X size={18} sm={20} md={22} strokeWidth={2.4} />
               </button>
 
-              {/* Download Button - FIXED: dengan optional chaining dan fallback */}
+              {/* Download Button */}
               <button
                 onClick={() => {
                   const url = photo.raw_photos?.[lightboxRawIndex];
@@ -466,25 +461,25 @@ export function PhotoLightbox({
                     handleDownloadRaw(url, lightboxRawIndex);
                   }
                 }}
-                className="absolute bottom-8 right-8 z-20 flex items-center gap-2 rounded-xl bg-[#2A1510]/90 px-5 py-3 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm border border-[#4A2A20]"
+                className="absolute bottom-4 sm:bottom-6 md:bottom-8 right-4 sm:right-6 md:right-8 z-20 flex items-center gap-1.5 sm:gap-2 rounded-xl bg-[#2A1510]/90 px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm border border-[#4A2A20]"
               >
-                <Download size={18} strokeWidth={2.3} />
-                <span className="font-serif text-sm font-medium">Download</span>
+                <Download size={16} sm={18} strokeWidth={2.3} />
+                <span className="font-serif text-xs sm:text-sm font-medium">Download</span>
               </button>
 
               {/* Counter */}
-              <div className="absolute top-4 left-4 z-20">
-                <span className="font-serif text-sm font-medium text-[#C9A87C] bg-[#2A1510]/80 px-4 py-2 rounded-full backdrop-blur-sm">
+              <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-20">
+                <span className="font-serif text-xs sm:text-sm font-medium text-[#C9A87C] bg-[#2A1510]/80 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full backdrop-blur-sm">
                   {lightboxRawIndex + 1} / {photo.raw_photos.length}
                 </span>
               </div>
 
-              {/* Image - FIXED: dengan optional chaining */}
+              {/* Image */}
               {photo.raw_photos[lightboxRawIndex] && (
                 <img
                   src={photo.raw_photos[lightboxRawIndex]}
                   alt={`Foto asli #${lightboxRawIndex + 1}`}
-                  className="max-h-[85vh] max-w-[90vw] object-contain rounded-xl shadow-2xl"
+                  className="max-h-[80vh] sm:max-h-[85vh] max-w-[95vw] sm:max-w-[90vw] object-contain rounded-xl shadow-2xl"
                   draggable={false}
                 />
               )}
@@ -499,9 +494,9 @@ export function PhotoLightbox({
                         prev > 0 ? prev - 1 : photo.raw_photos.length - 1
                       );
                     }}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm"
+                    className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 flex h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm"
                   >
-                    <ChevronLeft size={26} strokeWidth={2.5} />
+                    <ChevronLeft size={22} sm={24} md={26} strokeWidth={2.5} />
                   </button>
                   <button
                     onClick={(e) => {
@@ -510,16 +505,16 @@ export function PhotoLightbox({
                         prev < photo.raw_photos.length - 1 ? prev + 1 : 0
                       );
                     }}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm"
+                    className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 flex h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm"
                   >
-                    <ChevronRight size={26} strokeWidth={2.5} />
+                    <ChevronRight size={22} sm={24} md={26} strokeWidth={2.5} />
                   </button>
                 </>
               )}
 
               {/* Dots Indicator for Modal */}
               {photo.raw_photos.length > 1 && (
-                <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-2">
+                <div className="absolute bottom-16 sm:bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-1.5 sm:gap-2">
                   {photo.raw_photos.map((_, i) => (
                     <button
                       key={i}
@@ -527,8 +522,8 @@ export function PhotoLightbox({
                         e.stopPropagation();
                         setLightboxRawIndex(i);
                       }}
-                      className={`h-2 rounded-full transition-all ${
-                        i === lightboxRawIndex ? "w-8 bg-[#C9A87C]" : "w-2 bg-[#C9A87C]/30"
+                      className={`h-1.5 sm:h-2 rounded-full transition-all ${
+                        i === lightboxRawIndex ? "w-6 sm:w-8 bg-[#C9A87C]" : "w-1.5 sm:w-2 bg-[#C9A87C]/30"
                       }`}
                     />
                   ))}

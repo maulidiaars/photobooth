@@ -183,7 +183,7 @@ export function PhotoLightbox({
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: "spring", stiffness: 300, damping: 28 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative flex w-full max-w-[1400px] h-[calc(100vh-24px)] max-h-[calc(100vh-24px)] flex-col bg-[#1A0A08] rounded-2xl overflow-hidden shadow-2xl"
+              className="relative flex w-full max-w-7xl max-h-[92vh] flex-col bg-[#1A0A08] rounded-2xl overflow-hidden shadow-2xl"
             >
               {/* Header */}
               <div className="flex items-center justify-between bg-[#2A1510] px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 border-b border-[#4A2A20] shrink-0">
@@ -218,13 +218,13 @@ export function PhotoLightbox({
               </div>
 
               {/* Body: 2 Kolom */}
-              <div className="flex flex-1 min-h-0 min-w-0 flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
+              <div className="flex min-h-0 min-w-0 flex-col lg:flex-row overflow-y-auto lg:overflow-hidden lg:items-stretch">
                 {/* KIRI: Frame — kolom mengikuti ukuran frame, tanpa padding/margin */}
-                <div className="relative flex min-h-[240px] sm:min-h-[300px] min-w-0 flex-1 items-center justify-center bg-[#0D0503] overflow-hidden lg:flex-none lg:w-fit lg:min-h-0">
+                <div className="relative flex min-h-[240px] sm:min-h-[300px] min-w-0 flex-1 items-center justify-center bg-[#0D0503] overflow-hidden p-3 sm:p-4 md:p-5 lg:p-6">
                   <img
                     src={photo.image_result}
                     alt="Hasil foto"
-                    className="block h-auto max-h-[calc(100vh-105px)] w-auto max-w-full object-contain shadow-2xl rounded-lg lg:max-w-[calc(100vw-410px)]"
+                    className="block h-auto max-h-[70vh] w-auto max-w-full object-contain shadow-2xl rounded-lg"
                     style={{ background: "transparent" }}
                   />
 
@@ -297,7 +297,7 @@ export function PhotoLightbox({
                         )}
                       </div>
 
-                      <div className="relative h-[clamp(150px,28vh,300px)] shrink-0">
+                      <div className="relative h-[clamp(150px,26vh,270px)] shrink-0">
                         <div
                           ref={rawScrollerRef}
                           onScroll={handleRawScroll}
@@ -372,7 +372,7 @@ export function PhotoLightbox({
                   )}
 
                   {/* Actions */}
-                  <div className="mt-2 sm:mt-3 space-y-2 pt-2 sm:pt-3 border-t border-[#4A2A20]">
+                  <div className="mt-2 sm:mt-3 space-y-2 pt-2 sm:pt-3 border-t border-[#4A2A20] shrink-0">
                     {photo.whatsapp_number && (
                       <button
                         onClick={handleSendWhatsApp}

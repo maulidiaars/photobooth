@@ -283,7 +283,7 @@ export function PhotoLightbox({
               fixed inset-0 z-50
               flex items-center justify-center
               bg-black/75 backdrop-blur-md
-              p-2 sm:p-4
+              p-2 xs:p-3 sm:p-4 md:p-5
               overflow-hidden
             "
             onClick={onClose}
@@ -313,13 +313,11 @@ export function PhotoLightbox({
               className="
                 relative
                 flex flex-col
-                w-[calc(100vw-16px)]
-                sm:w-[calc(100vw-32px)]
-                lg:w-auto
+                w-full
                 max-w-[1040px]
-                max-h-[94vh]
+                max-h-[95vh] xs:max-h-[94vh] sm:max-h-[94vh] lg:max-h-[92vh]
                 overflow-hidden
-                rounded-[20px]
+                rounded-[16px] xs:rounded-[18px] sm:rounded-[20px]
                 bg-[#120604]
                 border border-[#4A2A20]
                 shadow-[0_30px_80px_rgba(0,0,0,0.65)]
@@ -332,25 +330,25 @@ export function PhotoLightbox({
                 className="
                   flex shrink-0
                   items-center justify-between
-                  min-h-[58px]
-                  sm:min-h-[64px]
-                  px-4 sm:px-5
+                  min-h-[50px] xs:min-h-[54px] sm:min-h-[58px] md:min-h-[64px]
+                  px-3 xs:px-4 sm:px-5 md:px-6
                   bg-[#2A1510]
                   border-b border-[#4A2A20]
                 "
               >
                 {/* LEFT — STATUS */}
-                <div className="flex items-center">
+                <div className="flex items-center min-w-0">
                   <span
                     className={`
                       inline-flex items-center
                       rounded-full
-                      px-3 sm:px-4
-                      py-1.5
+                      px-2.5 xs:px-3 sm:px-4
+                      py-1 xs:py-1.5
                       font-serif
-                      text-[10px] sm:text-xs
+                      text-[9px] xs:text-[10px] sm:text-xs
                       font-bold
                       tracking-wide
+                      whitespace-nowrap
                       ${
                         photo.status === "printed"
                           ? "bg-[#5B7F5C] text-[#F5EBE0]"
@@ -365,32 +363,34 @@ export function PhotoLightbox({
                 </div>
 
                 {/* RIGHT — DOWNLOAD + CLOSE */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-2.5 shrink-0">
                   {onDownload && (
                     <button
                       onClick={() => onDownload(photo)}
                       className="
                         flex items-center justify-center
-                        gap-2
+                        gap-1.5 xs:gap-2
                         rounded-xl
                         bg-[#4A2A20]
-                        px-3 sm:px-4
-                        py-2
+                        px-2.5 xs:px-3 sm:px-4
+                        py-1.5 xs:py-2
                         font-serif
-                        text-xs sm:text-sm
+                        text-[10px] xs:text-xs sm:text-sm
                         font-medium
                         text-[#C9A87C]
                         transition-all
                         hover:bg-[#5A3A30]
                         active:scale-95
+                        whitespace-nowrap
                       "
                     >
                       <Download
-                        size={16}
+                        size={14}
                         strokeWidth={2.2}
+                        className="xs:w-4 xs:h-4 sm:w-[16px] sm:h-[16px]"
                       />
 
-                      <span className="hidden sm:inline">
+                      <span className="hidden xs:inline">
                         Download
                       </span>
                     </button>
@@ -401,8 +401,7 @@ export function PhotoLightbox({
                     aria-label="Tutup"
                     className="
                       flex
-                      h-9 w-9
-                      sm:h-10 sm:w-10
+                      h-8 w-8 xs:h-9 xs:w-9 sm:h-10 sm:w-10
                       items-center justify-center
                       rounded-xl
                       bg-[#4A2A20]
@@ -413,8 +412,9 @@ export function PhotoLightbox({
                     "
                   >
                     <X
-                      size={19}
+                      size={17}
                       strokeWidth={2.3}
+                      className="xs:w-[18px] xs:h-[18px] sm:w-[19px] sm:h-[19px]"
                     />
                   </button>
                 </div>
@@ -436,21 +436,20 @@ export function PhotoLightbox({
                 "
               >
                 {/* =================================================
-                    LEFT — FRAME
+                    LEFT — FRAME PHOTO
                 ================================================= */}
                 <div
                   className="
                     relative
                     flex
                     min-h-0
-                    flex-[0_0_54%]
+                    flex-[0_0_auto]
+                    lg:flex-[0_0_54%]
                     items-center
                     justify-center
                     overflow-hidden
                     bg-[#0D0503]
-                    p-4
-                    sm:p-5
-                    lg:p-7
+                    p-3 xs:p-4 sm:p-5 md:p-6 lg:p-7
                   "
                 >
                   <img
@@ -458,13 +457,9 @@ export function PhotoLightbox({
                     alt="Hasil foto"
                     className="
                       block
-                      w-auto
-                      h-auto
+                      w-auto h-auto
                       max-w-full
-                      max-h-[34vh]
-                      sm:max-h-[38vh]
-                      md:max-h-[48vh]
-                      lg:max-h-[68vh]
+                      max-h-[30vh] xs:max-h-[32vh] sm:max-h-[38vh] md:max-h-[45vh] lg:max-h-[60vh] xl:max-h-[68vh]
                       object-contain
                       rounded-lg
                       shadow-[0_18px_45px_rgba(0,0,0,0.55)]
@@ -487,22 +482,17 @@ export function PhotoLightbox({
                     lg:border-t-0
                     lg:border-l
                     border-[#4A2A20]
-                    p-4
-                    sm:p-5
-                    lg:p-6
-                    flex
-                    flex-col
-                    overflow-hidden
+                    p-3 xs:p-4 sm:p-5 md:p-6 lg:p-6
+                    flex flex-col
+                    overflow-y-auto
                   "
                 >
                   {/* FRAME NAME */}
-                  <div className="shrink-0 mb-3">
+                  <div className="shrink-0 mb-2 xs:mb-2.5 sm:mb-3">
                     <h2
                       className="
                         font-serif
-                        text-xl
-                        sm:text-2xl
-                        lg:text-[28px]
+                        text-lg xs:text-xl sm:text-2xl lg:text-[26px] xl:text-[28px]
                         leading-tight
                         font-bold
                         text-[#F5EBE0]
@@ -517,22 +507,21 @@ export function PhotoLightbox({
                   <div
                     className="
                       shrink-0
-                      space-y-2
-                      sm:space-y-2.5
-                      mb-3
+                      space-y-1.5 xs:space-y-2 sm:space-y-2.5
+                      mb-2 xs:mb-2.5 sm:mb-3
                     "
                   >
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2 xs:gap-2.5">
                       <Clock3
-                        size={17}
-                        className="shrink-0 text-[#C9A87C]/70"
+                        size={15}
+                        className="shrink-0 text-[#C9A87C]/70 xs:w-[16px] xs:h-[16px] sm:w-[17px] sm:h-[17px]"
                         strokeWidth={2}
                       />
 
                       <span
                         className="
                           font-serif
-                          text-xs sm:text-sm
+                          text-[10px] xs:text-xs sm:text-sm
                           text-[#C9A87C]/85
                           truncate
                         "
@@ -542,17 +531,17 @@ export function PhotoLightbox({
                     </div>
 
                     {photo.whatsapp_number && (
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2 xs:gap-2.5">
                         <MessageCircle
-                          size={17}
-                          className="shrink-0 text-[#C9A87C]/70"
+                          size={15}
+                          className="shrink-0 text-[#C9A87C]/70 xs:w-[16px] xs:h-[16px] sm:w-[17px] sm:h-[17px]"
                           strokeWidth={2}
                         />
 
                         <span
                           className="
                             font-serif
-                            text-xs sm:text-sm
+                            text-[10px] xs:text-xs sm:text-sm
                             text-[#C9A87C]/85
                             truncate
                           "
@@ -564,7 +553,7 @@ export function PhotoLightbox({
                   </div>
 
                   {/* DIVIDER */}
-                  <div className="h-px shrink-0 bg-[#4A2A20] mb-3" />
+                  <div className="h-px shrink-0 bg-[#4A2A20] mb-2 xs:mb-2.5 sm:mb-3" />
 
                   {/* =================================================
                       RAW PHOTOS
@@ -574,8 +563,8 @@ export function PhotoLightbox({
                       className="
                         min-h-0
                         shrink
-                        flex
-                        flex-col
+                        flex flex-col
+                        flex-1
                       "
                     >
                       {/* TITLE */}
@@ -585,27 +574,27 @@ export function PhotoLightbox({
                           items-center
                           justify-between
                           shrink-0
-                          mb-2
+                          mb-1.5 xs:mb-2
                         "
                       >
                         <div
                           className="
                             flex
                             items-center
-                            gap-2
+                            gap-1.5 xs:gap-2
                             text-[#C9A87C]
                           "
                         >
                           <Images
-                            size={15}
+                            size={13}
                             strokeWidth={2.2}
+                            className="xs:w-[14px] xs:h-[14px] sm:w-[15px] sm:h-[15px]"
                           />
 
                           <span
                             className="
                               font-serif
-                              text-[10px]
-                              sm:text-xs
+                              text-[9px] xs:text-[10px] sm:text-xs
                               font-bold
                               uppercase
                               tracking-wider
@@ -618,8 +607,7 @@ export function PhotoLightbox({
                         <span
                           className="
                             font-serif
-                            text-[10px]
-                            sm:text-xs
+                            text-[9px] xs:text-[10px] sm:text-xs
                             font-semibold
                             text-[#C9A87C]/55
                           "
@@ -634,10 +622,7 @@ export function PhotoLightbox({
                         className="
                           relative
                           w-full
-                          h-[145px]
-                          sm:h-[165px]
-                          md:h-[180px]
-                          lg:h-[190px]
+                          h-[120px] xs:h-[140px] sm:h-[160px] md:h-[175px] lg:h-[180px] xl:h-[190px]
                           shrink-0
                         "
                       >
@@ -652,7 +637,7 @@ export function PhotoLightbox({
                             snap-x
                             snap-mandatory
                             overflow-x-auto
-                            rounded-2xl
+                            rounded-xl xs:rounded-2xl
                             border border-[#C9A87C]/20
                             bg-[#0D0503]
                           "
@@ -670,7 +655,7 @@ export function PhotoLightbox({
                                   flex
                                   items-center
                                   justify-center
-                                  p-2 sm:p-3
+                                  p-1.5 xs:p-2 sm:p-3
                                   cursor-pointer
                                   group
                                 "
@@ -687,7 +672,7 @@ export function PhotoLightbox({
                                     w-full
                                     h-full
                                     object-contain
-                                    rounded-xl
+                                    rounded-lg xs:rounded-xl
                                   "
                                   draggable={false}
                                 />
@@ -696,11 +681,11 @@ export function PhotoLightbox({
                                 <div
                                   className="
                                     absolute
-                                    inset-2 sm:inset-3
+                                    inset-1.5 xs:inset-2 sm:inset-3
                                     flex
                                     items-center
                                     justify-center
-                                    rounded-xl
+                                    rounded-lg xs:rounded-xl
                                     bg-black/0
                                     group-hover:bg-black/35
                                     transition-all
@@ -717,15 +702,15 @@ export function PhotoLightbox({
                                       duration-300
                                       rounded-full
                                       bg-[#21100C]/90
-                                      p-3
+                                      p-2 xs:p-2.5 sm:p-3
                                       border
                                       border-[#C9A87C]/25
                                       shadow-xl
                                     "
                                   >
                                     <Eye
-                                      size={22}
-                                      className="text-[#C9A87C]"
+                                      size={18}
+                                      className="text-[#C9A87C] xs:w-[20px] xs:h-[20px] sm:w-[22px] sm:h-[22px]"
                                       strokeWidth={1.8}
                                     />
                                   </div>
@@ -735,9 +720,8 @@ export function PhotoLightbox({
                           )}
                         </div>
 
-                        {/* LEFT */}
-                        {photo.raw_photos.length >
-                          1 && (
+                        {/* LEFT NAV */}
+                        {photo.raw_photos.length > 1 && (
                           <button
                             onClick={() =>
                               scrollRawToIndex(
@@ -750,11 +734,11 @@ export function PhotoLightbox({
                             aria-label="Foto sebelumnya"
                             className="
                               absolute
-                              left-2
+                              left-1 xs:left-1.5 sm:left-2
                               top-1/2
                               -translate-y-1/2
                               flex
-                              h-8 w-8
+                              h-6 w-6 xs:h-7 xs:w-7 sm:h-8 sm:w-8
                               items-center
                               justify-center
                               rounded-full
@@ -764,18 +748,19 @@ export function PhotoLightbox({
                               transition-all
                               hover:bg-[#3A2018]
                               disabled:opacity-0
+                              disabled:cursor-default
                             "
                           >
                             <ChevronLeft
-                              size={18}
+                              size={16}
                               strokeWidth={2.4}
+                              className="xs:w-[17px] xs:h-[17px] sm:w-[18px] sm:h-[18px]"
                             />
                           </button>
                         )}
 
-                        {/* RIGHT */}
-                        {photo.raw_photos.length >
-                          1 && (
+                        {/* RIGHT NAV */}
+                        {photo.raw_photos.length > 1 && (
                           <button
                             onClick={() =>
                               scrollRawToIndex(
@@ -789,11 +774,11 @@ export function PhotoLightbox({
                             aria-label="Foto berikutnya"
                             className="
                               absolute
-                              right-2
+                              right-1 xs:right-1.5 sm:right-2
                               top-1/2
                               -translate-y-1/2
                               flex
-                              h-8 w-8
+                              h-6 w-6 xs:h-7 xs:w-7 sm:h-8 sm:w-8
                               items-center
                               justify-center
                               rounded-full
@@ -803,26 +788,27 @@ export function PhotoLightbox({
                               transition-all
                               hover:bg-[#3A2018]
                               disabled:opacity-0
+                              disabled:cursor-default
                             "
                           >
                             <ChevronRight
-                              size={18}
+                              size={16}
                               strokeWidth={2.4}
+                              className="xs:w-[17px] xs:h-[17px] sm:w-[18px] sm:h-[18px]"
                             />
                           </button>
                         )}
                       </div>
 
                       {/* DOTS */}
-                      {photo.raw_photos.length >
-                        1 && (
+                      {photo.raw_photos.length > 1 && (
                         <div
                           className="
                             flex
                             items-center
                             justify-center
-                            gap-1.5
-                            mt-2
+                            gap-1 xs:gap-1.5
+                            mt-1.5 xs:mt-2
                             shrink-0
                           "
                         >
@@ -837,14 +823,14 @@ export function PhotoLightbox({
                                   i + 1
                                 }`}
                                 className={`
-                                  h-1.5
+                                  h-1 xs:h-1.5
                                   rounded-full
                                   transition-all
                                   ${
                                     i ===
                                     rawActiveIndex
-                                      ? "w-5 bg-[#C9A87C]"
-                                      : "w-1.5 bg-[#C9A87C]/25"
+                                      ? "w-4 xs:w-5 sm:w-6 bg-[#C9A87C]"
+                                      : "w-1 xs:w-1.5 bg-[#C9A87C]/25"
                                   }
                                 `}
                               />
@@ -855,12 +841,11 @@ export function PhotoLightbox({
 
                       <p
                         className="
-                          mt-1.5
+                          mt-1 xs:mt-1.5
                           shrink-0
                           text-center
                           font-serif
-                          text-[9px]
-                          sm:text-[10px]
+                          text-[8px] xs:text-[9px] sm:text-[10px]
                           text-[#C9A87C]/40
                         "
                       >
@@ -875,7 +860,7 @@ export function PhotoLightbox({
                   <div
                     className="
                       mt-auto
-                      pt-3
+                      pt-2 xs:pt-2.5 sm:pt-3
                       shrink-0
                       border-t border-[#4A2A20]
                     "
@@ -889,14 +874,12 @@ export function PhotoLightbox({
                           flex
                           items-center
                           justify-center
-                          gap-2
+                          gap-1.5 xs:gap-2
                           rounded-xl
                           bg-[#6B2D2C]
-                          py-2.5
-                          sm:py-3
+                          py-2 xs:py-2.5 sm:py-3
                           font-serif
-                          text-sm
-                          sm:text-base
+                          text-xs xs:text-sm sm:text-base
                           font-semibold
                           text-[#F5EBE0]
                           shadow-lg
@@ -905,13 +888,14 @@ export function PhotoLightbox({
                           hover:shadow-xl
                           active:scale-[0.99]
                           disabled:opacity-60
+                          min-h-[40px] xs:min-h-[44px] sm:min-h-[48px]
                         "
                       >
                         {sending ? (
                           <>
                             <span
                               className="
-                                h-4 w-4
+                                h-3.5 w-3.5 xs:h-4 xs:w-4
                                 animate-spin
                                 rounded-full
                                 border-2
@@ -927,8 +911,9 @@ export function PhotoLightbox({
                         ) : (
                           <>
                             <MessageCircle
-                              size={19}
+                              size={17}
                               strokeWidth={2.3}
+                              className="xs:w-[18px] xs:h-[18px] sm:w-[19px] sm:h-[19px]"
                             />
 
                             <span>
@@ -943,10 +928,10 @@ export function PhotoLightbox({
                       className={`
                         grid
                         grid-cols-2
-                        gap-2
+                        gap-1.5 xs:gap-2
                         ${
                           photo.whatsapp_number
-                            ? "mt-2"
+                            ? "mt-1.5 xs:mt-2"
                             : ""
                         }
                       `}
@@ -967,24 +952,26 @@ export function PhotoLightbox({
                           flex
                           items-center
                           justify-center
-                          gap-2
+                          gap-1.5 xs:gap-2
                           rounded-xl
                           bg-[#21100C]
                           border border-[#4A2A20]
-                          py-2.5
+                          py-2 xs:py-2.5
                           font-serif
-                          text-xs sm:text-sm
+                          text-[10px] xs:text-xs sm:text-sm
                           font-medium
                           text-[#C9A87C]
                           transition-all
                           hover:border-[#6B2D2C]
                           hover:bg-[#2A1510]
                           active:scale-[0.99]
+                          min-h-[36px] xs:min-h-[40px] sm:min-h-[44px]
                         "
                       >
                         <Printer
-                          size={17}
+                          size={15}
                           strokeWidth={2.3}
+                          className="xs:w-[16px] xs:h-[16px] sm:w-[17px] sm:h-[17px]"
                         />
                         Print
                       </button>
@@ -998,24 +985,26 @@ export function PhotoLightbox({
                           flex
                           items-center
                           justify-center
-                          gap-2
+                          gap-1.5 xs:gap-2
                           rounded-xl
                           bg-[#21100C]
                           border border-[#4A2A20]
-                          py-2.5
+                          py-2 xs:py-2.5
                           font-serif
-                          text-xs sm:text-sm
+                          text-[10px] xs:text-xs sm:text-sm
                           font-medium
                           text-[#A0524A]
                           transition-all
                           hover:border-[#A0524A]
                           hover:bg-[#2A1510]
                           active:scale-[0.99]
+                          min-h-[36px] xs:min-h-[40px] sm:min-h-[44px]
                         "
                       >
                         <Trash2
-                          size={17}
+                          size={15}
                           strokeWidth={2.3}
+                          className="xs:w-[16px] xs:h-[16px] sm:w-[17px] sm:h-[17px]"
                         />
                         Hapus
                       </button>
@@ -1030,7 +1019,6 @@ export function PhotoLightbox({
 
       {/* =========================================================
           RAW PHOTO VIEWER
-          BUKAN FULL SCREEN PANEL LAGI
       ========================================================= */}
       <AnimatePresence>
         {lightboxRawOpen &&
@@ -1050,8 +1038,7 @@ export function PhotoLightbox({
                 justify-center
                 bg-black/80
                 backdrop-blur-md
-                p-3
-                sm:p-5
+                p-2 xs:p-3 sm:p-4 md:p-5
               "
               onClick={() =>
                 setLightboxRawOpen(false)
@@ -1083,13 +1070,12 @@ export function PhotoLightbox({
                 }
                 className="
                   relative
-                  flex
-                  flex-col
+                  flex flex-col
                   w-full
                   max-w-[900px]
-                  max-h-[90vh]
+                  max-h-[92vh] xs:max-h-[90vh] sm:max-h-[88vh]
                   overflow-hidden
-                  rounded-[20px]
+                  rounded-[16px] xs:rounded-[18px] sm:rounded-[20px]
                   bg-[#120604]
                   border border-[#4A2A20]
                   shadow-[0_30px_90px_rgba(0,0,0,0.7)]
@@ -1098,14 +1084,10 @@ export function PhotoLightbox({
                 {/* RAW HEADER */}
                 <div
                   className="
-                    flex
-                    shrink-0
-                    items-center
-                    justify-between
-                    px-3
-                    sm:px-4
-                    py-2.5
-                    sm:py-3
+                    flex shrink-0
+                    items-center justify-between
+                    px-2.5 xs:px-3 sm:px-4
+                    py-2 xs:py-2.5 sm:py-3
                     bg-[#2A1510]
                     border-b border-[#4A2A20]
                   "
@@ -1116,17 +1098,17 @@ export function PhotoLightbox({
                       rounded-full
                       bg-[#21100C]
                       border border-[#C9A87C]/15
-                      px-3
-                      py-1
+                      px-2.5 xs:px-3
+                      py-0.5 xs:py-1
                     "
                   >
                     <span
                       className="
                         font-serif
-                        text-[10px]
-                        sm:text-xs
+                        text-[9px] xs:text-[10px] sm:text-xs
                         font-semibold
                         text-[#C9A87C]
+                        whitespace-nowrap
                       "
                     >
                       Foto {lightboxRawIndex + 1}{" "}
@@ -1135,7 +1117,7 @@ export function PhotoLightbox({
                   </div>
 
                   {/* ACTIONS */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 xs:gap-2">
                     <button
                       onClick={() => {
                         const url =
@@ -1154,29 +1136,29 @@ export function PhotoLightbox({
                         flex
                         items-center
                         justify-center
-                        gap-2
+                        gap-1.5 xs:gap-2
                         rounded-xl
                         bg-[#21100C]
                         border border-[#4A2A20]
-                        px-3
-                        sm:px-4
-                        py-2
+                        px-2.5 xs:px-3 sm:px-4
+                        py-1.5 xs:py-2
                         font-serif
-                        text-xs
-                        sm:text-sm
+                        text-[10px] xs:text-xs sm:text-sm
                         font-medium
                         text-[#C9A87C]
                         transition-all
                         hover:bg-[#3A2018]
                         active:scale-95
+                        whitespace-nowrap
                       "
                     >
                       <Download
-                        size={16}
+                        size={14}
                         strokeWidth={2.2}
+                        className="xs:w-[15px] xs:h-[15px] sm:w-[16px] sm:h-[16px]"
                       />
 
-                      <span className="hidden sm:inline">
+                      <span className="hidden xs:inline">
                         Download
                       </span>
                     </button>
@@ -1188,8 +1170,7 @@ export function PhotoLightbox({
                       aria-label="Tutup foto"
                       className="
                         flex
-                        h-9
-                        w-9
+                        h-8 w-8 xs:h-9 xs:w-9
                         items-center
                         justify-center
                         rounded-xl
@@ -1202,8 +1183,9 @@ export function PhotoLightbox({
                       "
                     >
                       <X
-                        size={18}
+                        size={16}
                         strokeWidth={2.3}
+                        className="xs:w-[17px] xs:h-[17px] sm:w-[18px] sm:h-[18px]"
                       />
                     </button>
                   </div>
@@ -1219,9 +1201,7 @@ export function PhotoLightbox({
                     items-center
                     justify-center
                     bg-[#080302]
-                    p-3
-                    sm:p-5
-                    md:p-7
+                    p-2 xs:p-3 sm:p-4 md:p-5 lg:p-7
                     overflow-hidden
                   "
                 >
@@ -1240,9 +1220,7 @@ export function PhotoLightbox({
                       className="
                         block
                         max-w-full
-                        max-h-[68vh]
-                        sm:max-h-[72vh]
-                        md:max-h-[74vh]
+                        max-h-[60vh] xs:max-h-[65vh] sm:max-h-[68vh] md:max-h-[72vh] lg:max-h-[74vh]
                         object-contain
                         rounded-xl
                         shadow-[0_20px_60px_rgba(0,0,0,0.65)]
@@ -1268,14 +1246,11 @@ export function PhotoLightbox({
                       aria-label="Foto sebelumnya"
                       className="
                         absolute
-                        left-2
-                        sm:left-4
-                        md:left-5
+                        left-1.5 xs:left-2 sm:left-3 md:left-4 lg:left-5
                         top-1/2
                         -translate-y-1/2
                         flex
-                        h-9 w-9
-                        sm:h-11 sm:w-11
+                        h-8 w-8 xs:h-9 xs:w-9 sm:h-10 sm:w-10 md:h-11 md:w-11
                         items-center
                         justify-center
                         rounded-full
@@ -1289,8 +1264,9 @@ export function PhotoLightbox({
                       "
                     >
                       <ChevronLeft
-                        size={22}
+                        size={20}
                         strokeWidth={2.4}
+                        className="xs:w-[21px] xs:h-[21px] sm:w-[22px] sm:h-[22px]"
                       />
                     </button>
                   )}
@@ -1313,14 +1289,11 @@ export function PhotoLightbox({
                       aria-label="Foto berikutnya"
                       className="
                         absolute
-                        right-2
-                        sm:right-4
-                        md:right-5
+                        right-1.5 xs:right-2 sm:right-3 md:right-4 lg:right-5
                         top-1/2
                         -translate-y-1/2
                         flex
-                        h-9 w-9
-                        sm:h-11 sm:w-11
+                        h-8 w-8 xs:h-9 xs:w-9 sm:h-10 sm:w-10 md:h-11 md:w-11
                         items-center
                         justify-center
                         rounded-full
@@ -1334,8 +1307,9 @@ export function PhotoLightbox({
                       "
                     >
                       <ChevronRight
-                        size={22}
+                        size={20}
                         strokeWidth={2.4}
+                        className="xs:w-[21px] xs:h-[21px] sm:w-[22px] sm:h-[22px]"
                       />
                     </button>
                   )}
@@ -1349,10 +1323,10 @@ export function PhotoLightbox({
                       shrink-0
                       items-center
                       justify-center
-                      gap-1.5
+                      gap-1 xs:gap-1.5
                       bg-[#120604]
-                      px-4
-                      py-2.5
+                      px-3 xs:px-4
+                      py-2 xs:py-2.5
                       border-t border-[#4A2A20]
                     "
                   >
@@ -1368,14 +1342,14 @@ export function PhotoLightbox({
                             i + 1
                           }`}
                           className={`
-                            h-1.5
+                            h-1 xs:h-1.5
                             rounded-full
                             transition-all
                             ${
                               i ===
                               lightboxRawIndex
-                                ? "w-7 bg-[#C9A87C]"
-                                : "w-1.5 bg-[#C9A87C]/25"
+                                ? "w-5 xs:w-6 sm:w-7 bg-[#C9A87C]"
+                                : "w-1 xs:w-1.5 bg-[#C9A87C]/25"
                             }
                           `}
                         />

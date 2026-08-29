@@ -53,10 +53,6 @@ export function PhotoLightbox({
   onDelete,
   onPrint,
   onDownload,
-  currentIndex = 0,
-  totalPhotos = 0,
-  onPrev,
-  onNext,
 }: PhotoLightboxProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [sending, setSending] = useState(false);
@@ -71,39 +67,31 @@ export function PhotoLightbox({
   const toast = useToast();
 
   // ============================================
-  // RESET RAW SLIDER SAAT FOTO BERUBAH
+  // RESET RAW PHOTO SLIDER
   // ============================================
   useEffect(() => {
     setRawActiveIndex(0);
 
-    rawScrollerRef.current?.scrollTo({
-      left: 0,
-      behavior: "auto",
+    requestAnimationFrame(() => {
+      rawScrollerRef.current?.scrollTo({
+        left: 0,
+        behavior: "auto",
+      });
     });
   }, [photo?.id]);
 
   // ============================================
-  // CLOSE RAW MODAL DENGAN ESC
+  // ESCAPE KEY
   // ============================================
   useEffect(() => {
-    if (!lightboxRawOpen) return;
+    if (!photo && !lightboxRawOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setLightboxRawOpen(false);
-      }
-
-      if (photo?.raw_photos?.length && photo.raw_photos.length > 1) {
-        if (e.key === "ArrowLeft") {
-          setLightboxRawIndex((prev) =>
-            prev > 0 ? prev - 1 : photo.raw_photos.length - 1
-          );
-        }
-
-        if (e.key === "ArrowRight") {
-          setLightboxRawIndex((prev) =>
-            prev < photo.raw_photos.length - 1 ? prev + 1 : 0
-          );
+        if (lightboxRawOpen) {
+          setLightboxRawOpen(false);
+        } else {
+          onClose();
         }
       }
     };
@@ -113,7 +101,7 @@ export function PhotoLightbox({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [lightboxRawOpen, photo]);
+  }, [photo, lightboxRawOpen, onClose]);
 
   // ============================================
   // WHATSAPP
@@ -158,7 +146,7 @@ export function PhotoLightbox({
           `Ada kendala atau mau cetak ulang? Hubungi admin kami di *${formatPhoneDisplay(
             ADMIN_PHONE
           )}*\n\n` +
-          `Semoga harimu menyenangkan, sampai jumpa lagi! 👋\n` +
+          `Semoga harimu menyenangkan, sampai jumpa lagi! 👋\n\n` +
           `_Salam hangat, tim ${APP_NAME}_`
       );
 
@@ -180,7 +168,7 @@ export function PhotoLightbox({
   };
 
   // ============================================
-  // DOWNLOAD FOTO ASLI
+  // DOWNLOAD RAW PHOTO
   // ============================================
   const handleDownloadRaw = async (
     url: string,
@@ -228,12 +216,12 @@ export function PhotoLightbox({
   };
 
   // ============================================
-  // RAW SLIDER
+  // RAW PHOTO SCROLL
   // ============================================
   const handleRawScroll = () => {
     const el = rawScrollerRef.current;
 
-    if (!el || !photo?.raw_photos?.length) return;
+    if (!el || !photo) return;
 
     const index = Math.round(
       el.scrollLeft / el.clientWidth
@@ -250,7 +238,7 @@ export function PhotoLightbox({
   const scrollRawToIndex = (index: number) => {
     const el = rawScrollerRef.current;
 
-    if (!el || !photo?.raw_photos?.length) return;
+    if (!el || !photo) return;
 
     const clamped = Math.min(
       photo.raw_photos.length - 1,
@@ -266,7 +254,7 @@ export function PhotoLightbox({
   };
 
   // ============================================
-  // OPEN FOTO ASLI
+  // OPEN RAW PHOTO MODAL
   // ============================================
   const openRawLightbox = (index: number) => {
     setLightboxRawIndex(index);
@@ -281,22 +269,21 @@ export function PhotoLightbox({
 
   return (
     <>
-      {/* ======================================================
+      {/* =====================================================
           MAIN PHOTO MODAL
-      ====================================================== */}
+      ===================================================== */}
       <AnimatePresence>
         {photo && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.18 }}
             className="
               fixed inset-0 z-50
               flex items-center justify-center
-              bg-black/75
-              backdrop-blur-md
-              p-3 sm:p-4
+              bg-black/75 backdrop-blur-md
+              p-2 sm:p-4
               overflow-hidden
             "
             onClick={onClose}
@@ -305,7 +292,7 @@ export function PhotoLightbox({
               initial={{
                 opacity: 0,
                 scale: 0.96,
-                y: 12,
+                y: 10,
               }}
               animate={{
                 opacity: 1,
@@ -319,58 +306,47 @@ export function PhotoLightbox({
               }}
               transition={{
                 type: "spring",
-                stiffness: 300,
+                stiffness: 320,
                 damping: 28,
               }}
               onClick={(e) => e.stopPropagation()}
               className="
                 relative
                 flex flex-col
-                w-full
-                max-w-6xl
-                h-auto
-                max-h-[92vh]
+                w-[calc(100vw-16px)]
+                sm:w-[calc(100vw-32px)]
+                lg:w-auto
+                max-w-[1040px]
+                max-h-[94vh]
                 overflow-hidden
-                rounded-[22px]
-                bg-[#150907]
+                rounded-[20px]
+                bg-[#120604]
                 border border-[#4A2A20]
-                shadow-[0_25px_80px_rgba(0,0,0,0.55)]
+                shadow-[0_30px_80px_rgba(0,0,0,0.65)]
               "
             >
-              {/* ==================================================
+              {/* =================================================
                   HEADER
-              ================================================== */}
+              ================================================= */}
               <div
                 className="
-                  shrink-0
-                  flex items-center justify-between
+                  flex shrink-0
+                  items-center justify-between
+                  min-h-[58px]
+                  sm:min-h-[64px]
+                  px-4 sm:px-5
                   bg-[#2A1510]
                   border-b border-[#4A2A20]
-                  px-4 sm:px-5 md:px-6
-                  py-3
                 "
               >
-                {/* LEFT : STATUS */}
-                <div className="flex items-center gap-3">
-                  <span
-                    className="
-                      font-serif
-                      text-[11px] sm:text-xs
-                      font-semibold
-                      uppercase
-                      tracking-[0.12em]
-                      text-[#C9A87C]
-                    "
-                  >
-                    Foto
-                  </span>
-
-                  <span className="h-4 w-px bg-[#5A3327]" />
-
+                {/* LEFT — STATUS */}
+                <div className="flex items-center">
                   <span
                     className={`
+                      inline-flex items-center
                       rounded-full
-                      px-3 py-1
+                      px-3 sm:px-4
+                      py-1.5
                       font-serif
                       text-[10px] sm:text-xs
                       font-bold
@@ -388,28 +364,29 @@ export function PhotoLightbox({
                   </span>
                 </div>
 
-                {/* RIGHT : ACTIONS */}
+                {/* RIGHT — DOWNLOAD + CLOSE */}
                 <div className="flex items-center gap-2">
                   {onDownload && (
                     <button
                       onClick={() => onDownload(photo)}
                       className="
-                        flex items-center justify-center gap-2
+                        flex items-center justify-center
+                        gap-2
                         rounded-xl
                         bg-[#4A2A20]
-                        px-3.5 sm:px-4
+                        px-3 sm:px-4
                         py-2
                         font-serif
-                        text-xs
+                        text-xs sm:text-sm
                         font-medium
                         text-[#C9A87C]
                         transition-all
                         hover:bg-[#5A3A30]
-                        hover:-translate-y-0.5
+                        active:scale-95
                       "
                     >
                       <Download
-                        size={15}
+                        size={16}
                         strokeWidth={2.2}
                       />
 
@@ -425,26 +402,29 @@ export function PhotoLightbox({
                     className="
                       flex
                       h-9 w-9
+                      sm:h-10 sm:w-10
                       items-center justify-center
                       rounded-xl
                       bg-[#4A2A20]
                       text-[#C9A87C]
                       transition-all
-                      hover:bg-[#63372B]
-                      hover:rotate-90
+                      hover:bg-[#5A3A30]
+                      active:scale-95
                     "
                   >
                     <X
-                      size={18}
+                      size={19}
                       strokeWidth={2.3}
                     />
                   </button>
                 </div>
               </div>
 
-              {/* ==================================================
-                  BODY
-              ================================================== */}
+              {/* =================================================
+                  CONTENT
+                  DESKTOP = 2 COLUMN
+                  MOBILE = STACK
+              ================================================= */}
               <div
                 className="
                   flex
@@ -456,21 +436,21 @@ export function PhotoLightbox({
                 "
               >
                 {/* =================================================
-                    LEFT : FRAME
+                    LEFT — FRAME
                 ================================================= */}
                 <div
                   className="
                     relative
-                    flex-1
-                    min-h-0
-                    min-w-0
                     flex
+                    min-h-0
+                    flex-[0_0_54%]
                     items-center
                     justify-center
-                    bg-[#0D0503]
-                    px-5 sm:px-7 lg:px-8
-                    py-5 sm:py-6
                     overflow-hidden
+                    bg-[#0D0503]
+                    p-4
+                    sm:p-5
+                    lg:p-7
                   "
                 >
                   <img
@@ -478,132 +458,74 @@ export function PhotoLightbox({
                     alt="Hasil foto"
                     className="
                       block
-                      max-w-full
-                      max-h-[calc(92vh-120px)]
                       w-auto
                       h-auto
+                      max-w-full
+                      max-h-[34vh]
+                      sm:max-h-[38vh]
+                      md:max-h-[48vh]
+                      lg:max-h-[68vh]
                       object-contain
-                      rounded-xl
-                      shadow-[0_18px_45px_rgba(0,0,0,0.5)]
+                      rounded-lg
+                      shadow-[0_18px_45px_rgba(0,0,0,0.55)]
                     "
-                    style={{
-                      background: "transparent",
-                    }}
+                    draggable={false}
                   />
-
-                  {/* MAIN NAVIGATION */}
-                  {totalPhotos > 1 && (
-                    <>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onPrev?.();
-                        }}
-                        aria-label="Foto sebelumnya"
-                        className="
-                          absolute
-                          left-3 sm:left-5
-                          top-1/2
-                          -translate-y-1/2
-                          z-20
-                          flex
-                          h-9 w-9 sm:h-10 sm:w-10
-                          items-center justify-center
-                          rounded-full
-                          bg-[#2A1510]/90
-                          text-[#C9A87C]
-                          border border-[#C9A87C]/15
-                          shadow-lg
-                          backdrop-blur-md
-                          transition-all
-                          hover:bg-[#4A2A20]
-                          hover:scale-105
-                        "
-                      >
-                        <ChevronLeft
-                          size={21}
-                          strokeWidth={2.4}
-                        />
-                      </button>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onNext?.();
-                        }}
-                        aria-label="Foto berikutnya"
-                        className="
-                          absolute
-                          right-3 sm:right-5
-                          top-1/2
-                          -translate-y-1/2
-                          z-20
-                          flex
-                          h-9 w-9 sm:h-10 sm:w-10
-                          items-center justify-center
-                          rounded-full
-                          bg-[#2A1510]/90
-                          text-[#C9A87C]
-                          border border-[#C9A87C]/15
-                          shadow-lg
-                          backdrop-blur-md
-                          transition-all
-                          hover:bg-[#4A2A20]
-                          hover:scale-105
-                        "
-                      >
-                        <ChevronRight
-                          size={21}
-                          strokeWidth={2.4}
-                        />
-                      </button>
-                    </>
-                  )}
                 </div>
 
                 {/* =================================================
-                    RIGHT : INFORMATION
+                    RIGHT — INFORMATION
                 ================================================= */}
                 <div
                   className="
-                    w-full
-                    lg:w-[360px]
-                    xl:w-[390px]
-                    shrink-0
+                    min-w-0
                     min-h-0
-                    flex
-                    flex-col
+                    flex-1
+                    lg:flex-[0_0_46%]
                     bg-[#150907]
                     border-t
                     lg:border-t-0
                     lg:border-l
                     border-[#4A2A20]
-                    px-5 sm:px-6
-                    py-4 sm:py-5
+                    p-4
+                    sm:p-5
+                    lg:p-6
+                    flex
+                    flex-col
                     overflow-hidden
                   "
                 >
                   {/* FRAME NAME */}
                   <div className="shrink-0 mb-3">
-                    <p
+                    <h2
                       className="
                         font-serif
-                        text-xl sm:text-2xl
+                        text-xl
+                        sm:text-2xl
+                        lg:text-[28px]
+                        leading-tight
                         font-bold
                         text-[#F5EBE0]
                         truncate
                       "
                     >
                       {photo.frame_nama ?? "Frame"}
-                    </p>
+                    </h2>
                   </div>
 
                   {/* INFO */}
-                  <div className="shrink-0 space-y-2">
-                    <div className="flex items-center gap-3">
+                  <div
+                    className="
+                      shrink-0
+                      space-y-2
+                      sm:space-y-2.5
+                      mb-3
+                    "
+                  >
+                    <div className="flex items-center gap-2.5">
                       <Clock3
                         size={17}
-                        className="shrink-0 text-[#C9A87C]/65"
+                        className="shrink-0 text-[#C9A87C]/70"
                         strokeWidth={2}
                       />
 
@@ -611,7 +533,7 @@ export function PhotoLightbox({
                         className="
                           font-serif
                           text-xs sm:text-sm
-                          text-[#C9A87C]/80
+                          text-[#C9A87C]/85
                           truncate
                         "
                       >
@@ -620,10 +542,10 @@ export function PhotoLightbox({
                     </div>
 
                     {photo.whatsapp_number && (
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5">
                         <MessageCircle
                           size={17}
-                          className="shrink-0 text-[#C9A87C]/65"
+                          className="shrink-0 text-[#C9A87C]/70"
                           strokeWidth={2}
                         />
 
@@ -631,7 +553,7 @@ export function PhotoLightbox({
                           className="
                             font-serif
                             text-xs sm:text-sm
-                            text-[#C9A87C]/80
+                            text-[#C9A87C]/85
                             truncate
                           "
                         >
@@ -641,46 +563,65 @@ export function PhotoLightbox({
                     )}
                   </div>
 
-                  <div className="h-px w-full bg-[#4A2A20] my-4 shrink-0" />
+                  {/* DIVIDER */}
+                  <div className="h-px shrink-0 bg-[#4A2A20] mb-3" />
 
                   {/* =================================================
                       RAW PHOTOS
                   ================================================= */}
                   {hasRaw && (
-                    <div className="flex-1 min-h-0 flex flex-col">
+                    <div
+                      className="
+                        min-h-0
+                        shrink
+                        flex
+                        flex-col
+                      "
+                    >
                       {/* TITLE */}
-                      <div className="flex items-center justify-between mb-2 shrink-0">
-                        <div className="flex items-center gap-2">
+                      <div
+                        className="
+                          flex
+                          items-center
+                          justify-between
+                          shrink-0
+                          mb-2
+                        "
+                      >
+                        <div
+                          className="
+                            flex
+                            items-center
+                            gap-2
+                            text-[#C9A87C]
+                          "
+                        >
                           <Images
                             size={15}
-                            className="text-[#C9A87C]"
                             strokeWidth={2.2}
                           />
 
-                          <p
+                          <span
                             className="
                               font-serif
-                              text-[11px]
+                              text-[10px]
+                              sm:text-xs
                               font-bold
                               uppercase
-                              tracking-[0.12em]
-                              text-[#C9A87C]
+                              tracking-wider
                             "
                           >
                             Foto Asli
-                          </p>
+                          </span>
                         </div>
 
                         <span
                           className="
-                            rounded-full
-                            bg-[#2A1510]
-                            border border-[#C9A87C]/15
-                            px-2.5 py-1
                             font-serif
                             text-[10px]
+                            sm:text-xs
                             font-semibold
-                            text-[#C9A87C]/70
+                            text-[#C9A87C]/55
                           "
                         >
                           {rawActiveIndex + 1} /{" "}
@@ -688,16 +629,26 @@ export function PhotoLightbox({
                         </span>
                       </div>
 
-                      {/* RAW IMAGE */}
-                      <div className="relative flex-1 min-h-0">
+                      {/* RAW SLIDER */}
+                      <div
+                        className="
+                          relative
+                          w-full
+                          h-[145px]
+                          sm:h-[165px]
+                          md:h-[180px]
+                          lg:h-[190px]
+                          shrink-0
+                        "
+                      >
                         <div
                           ref={rawScrollerRef}
                           onScroll={handleRawScroll}
                           className="
                             no-scrollbar
                             flex
-                            h-full
                             w-full
+                            h-full
                             snap-x
                             snap-mandatory
                             overflow-x-auto
@@ -712,14 +663,14 @@ export function PhotoLightbox({
                                 key={`${url}-${i}`}
                                 className="
                                   relative
-                                  h-full
                                   w-full
+                                  h-full
                                   shrink-0
                                   snap-center
                                   flex
                                   items-center
                                   justify-center
-                                  p-2.5
+                                  p-2 sm:p-3
                                   cursor-pointer
                                   group
                                 "
@@ -733,8 +684,8 @@ export function PhotoLightbox({
                                     i + 1
                                   }`}
                                   className="
-                                    h-full
                                     w-full
+                                    h-full
                                     object-contain
                                     rounded-xl
                                   "
@@ -745,7 +696,7 @@ export function PhotoLightbox({
                                 <div
                                   className="
                                     absolute
-                                    inset-2.5
+                                    inset-2 sm:inset-3
                                     flex
                                     items-center
                                     justify-center
@@ -753,31 +704,29 @@ export function PhotoLightbox({
                                     bg-black/0
                                     group-hover:bg-black/35
                                     transition-all
-                                    duration-200
+                                    duration-300
                                   "
                                 >
                                   <div
                                     className="
-                                      flex
-                                      h-11 w-11
-                                      items-center justify-center
-                                      rounded-full
-                                      bg-[#1A0A08]/85
-                                      border border-[#C9A87C]/25
-                                      text-[#C9A87C]
                                       opacity-0
-                                      scale-90
+                                      scale-75
                                       group-hover:opacity-100
                                       group-hover:scale-100
                                       transition-all
-                                      duration-200
+                                      duration-300
+                                      rounded-full
+                                      bg-[#21100C]/90
+                                      p-3
+                                      border
+                                      border-[#C9A87C]/25
                                       shadow-xl
-                                      backdrop-blur-sm
                                     "
                                   >
                                     <Eye
-                                      size={20}
-                                      strokeWidth={1.9}
+                                      size={22}
+                                      className="text-[#C9A87C]"
+                                      strokeWidth={1.8}
                                     />
                                   </div>
                                 </div>
@@ -786,92 +735,94 @@ export function PhotoLightbox({
                           )}
                         </div>
 
-                        {/* RAW PREV */}
-                        {photo.raw_photos.length > 1 && (
-                          <>
-                            <button
-                              onClick={() =>
-                                scrollRawToIndex(
-                                  rawActiveIndex - 1
-                                )
-                              }
-                              disabled={
-                                rawActiveIndex === 0
-                              }
-                              className="
-                                absolute
-                                left-2
-                                top-1/2
-                                -translate-y-1/2
-                                flex
-                                h-8 w-8
-                                items-center justify-center
-                                rounded-full
-                                bg-[#1A0A08]/90
-                                text-[#C9A87C]
-                                border border-[#C9A87C]/15
-                                shadow-lg
-                                backdrop-blur-md
-                                transition-all
-                                hover:bg-[#4A2A20]
-                                disabled:opacity-0
-                              "
-                            >
-                              <ChevronLeft
-                                size={17}
-                                strokeWidth={2.5}
-                              />
-                            </button>
+                        {/* LEFT */}
+                        {photo.raw_photos.length >
+                          1 && (
+                          <button
+                            onClick={() =>
+                              scrollRawToIndex(
+                                rawActiveIndex - 1
+                              )
+                            }
+                            disabled={
+                              rawActiveIndex === 0
+                            }
+                            aria-label="Foto sebelumnya"
+                            className="
+                              absolute
+                              left-2
+                              top-1/2
+                              -translate-y-1/2
+                              flex
+                              h-8 w-8
+                              items-center
+                              justify-center
+                              rounded-full
+                              bg-[#21100C]/90
+                              text-[#C9A87C]
+                              shadow-lg
+                              transition-all
+                              hover:bg-[#3A2018]
+                              disabled:opacity-0
+                            "
+                          >
+                            <ChevronLeft
+                              size={18}
+                              strokeWidth={2.4}
+                            />
+                          </button>
+                        )}
 
-                            {/* RAW NEXT */}
-                            <button
-                              onClick={() =>
-                                scrollRawToIndex(
-                                  rawActiveIndex + 1
-                                )
-                              }
-                              disabled={
-                                rawActiveIndex ===
-                                photo.raw_photos.length -
-                                  1
-                              }
-                              className="
-                                absolute
-                                right-2
-                                top-1/2
-                                -translate-y-1/2
-                                flex
-                                h-8 w-8
-                                items-center justify-center
-                                rounded-full
-                                bg-[#1A0A08]/90
-                                text-[#C9A87C]
-                                border border-[#C9A87C]/15
-                                shadow-lg
-                                backdrop-blur-md
-                                transition-all
-                                hover:bg-[#4A2A20]
-                                disabled:opacity-0
-                              "
-                            >
-                              <ChevronRight
-                                size={17}
-                                strokeWidth={2.5}
-                              />
-                            </button>
-                          </>
+                        {/* RIGHT */}
+                        {photo.raw_photos.length >
+                          1 && (
+                          <button
+                            onClick={() =>
+                              scrollRawToIndex(
+                                rawActiveIndex + 1
+                              )
+                            }
+                            disabled={
+                              rawActiveIndex ===
+                              photo.raw_photos.length - 1
+                            }
+                            aria-label="Foto berikutnya"
+                            className="
+                              absolute
+                              right-2
+                              top-1/2
+                              -translate-y-1/2
+                              flex
+                              h-8 w-8
+                              items-center
+                              justify-center
+                              rounded-full
+                              bg-[#21100C]/90
+                              text-[#C9A87C]
+                              shadow-lg
+                              transition-all
+                              hover:bg-[#3A2018]
+                              disabled:opacity-0
+                            "
+                          >
+                            <ChevronRight
+                              size={18}
+                              strokeWidth={2.4}
+                            />
+                          </button>
                         )}
                       </div>
 
                       {/* DOTS */}
-                      {photo.raw_photos.length > 1 && (
+                      {photo.raw_photos.length >
+                        1 && (
                         <div
                           className="
                             flex
                             items-center
                             justify-center
                             gap-1.5
-                            mt-3
+                            mt-2
                             shrink-0
                           "
                         >
@@ -890,8 +841,9 @@ export function PhotoLightbox({
                                   rounded-full
                                   transition-all
                                   ${
-                                    i === rawActiveIndex
-                                      ? "w-6 bg-[#C9A87C]"
+                                    i ===
+                                    rawActiveIndex
+                                      ? "w-5 bg-[#C9A87C]"
                                       : "w-1.5 bg-[#C9A87C]/25"
                                   }
                                 `}
@@ -903,12 +855,13 @@ export function PhotoLightbox({
 
                       <p
                         className="
-                          mt-2
+                          mt-1.5
                           shrink-0
                           text-center
                           font-serif
                           text-[9px]
-                          text-[#C9A87C]/35
+                          sm:text-[10px]
+                          text-[#C9A87C]/40
                         "
                       >
                         Klik foto untuk melihat lebih besar
@@ -921,10 +874,10 @@ export function PhotoLightbox({
                   ================================================= */}
                   <div
                     className="
-                      mt-3
+                      mt-auto
                       pt-3
-                      border-t border-[#4A2A20]
                       shrink-0
+                      border-t border-[#4A2A20]
                     "
                   >
                     {photo.whatsapp_number && (
@@ -940,14 +893,17 @@ export function PhotoLightbox({
                           rounded-xl
                           bg-[#6B2D2C]
                           py-2.5
+                          sm:py-3
                           font-serif
                           text-sm
+                          sm:text-base
                           font-semibold
                           text-[#F5EBE0]
-                          shadow-md
+                          shadow-lg
                           transition-all
-                          hover:bg-[#783634]
-                          hover:-translate-y-0.5
+                          hover:bg-[#793532]
+                          hover:shadow-xl
+                          active:scale-[0.99]
                           disabled:opacity-60
                         "
                       >
@@ -971,7 +927,7 @@ export function PhotoLightbox({
                         ) : (
                           <>
                             <MessageCircle
-                              size={18}
+                              size={19}
                               strokeWidth={2.3}
                             />
 
@@ -983,7 +939,18 @@ export function PhotoLightbox({
                       </button>
                     )}
 
-                    <div className="grid grid-cols-2 gap-2 mt-2">
+                    <div
+                      className={`
+                        grid
+                        grid-cols-2
+                        gap-2
+                        ${
+                          photo.whatsapp_number
+                            ? "mt-2"
+                            : ""
+                        }
+                      `}
+                    >
                       {/* PRINT */}
                       <button
                         onClick={() => {
@@ -1002,20 +969,21 @@ export function PhotoLightbox({
                           justify-center
                           gap-2
                           rounded-xl
-                          bg-[#2A1510]
+                          bg-[#21100C]
                           border border-[#4A2A20]
                           py-2.5
                           font-serif
-                          text-sm
+                          text-xs sm:text-sm
                           font-medium
                           text-[#C9A87C]
                           transition-all
                           hover:border-[#6B2D2C]
-                          hover:bg-[#321A14]
+                          hover:bg-[#2A1510]
+                          active:scale-[0.99]
                         "
                       >
                         <Printer
-                          size={16}
+                          size={17}
                           strokeWidth={2.3}
                         />
                         Print
@@ -1032,20 +1000,21 @@ export function PhotoLightbox({
                           justify-center
                           gap-2
                           rounded-xl
-                          bg-[#2A1510]
+                          bg-[#21100C]
                           border border-[#4A2A20]
                           py-2.5
                           font-serif
-                          text-sm
+                          text-xs sm:text-sm
                           font-medium
                           text-[#A0524A]
                           transition-all
                           hover:border-[#A0524A]
-                          hover:bg-[#351B17]
+                          hover:bg-[#2A1510]
+                          active:scale-[0.99]
                         "
                       >
                         <Trash2
-                          size={16}
+                          size={17}
                           strokeWidth={2.3}
                         />
                         Hapus
@@ -1059,9 +1028,10 @@ export function PhotoLightbox({
         )}
       </AnimatePresence>
 
-      {/* ============================================================
-          FOTO ASLI FULLSCREEN VIEWER
-      ============================================================ */}
+      {/* =========================================================
+          RAW PHOTO VIEWER
+          BUKAN FULL SCREEN PANEL LAGI
+      ========================================================= */}
       <AnimatePresence>
         {lightboxRawOpen &&
           photo &&
@@ -1071,7 +1041,6 @@ export function PhotoLightbox({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
               className="
                 fixed
                 inset-0
@@ -1079,9 +1048,10 @@ export function PhotoLightbox({
                 flex
                 items-center
                 justify-center
-                bg-[#080403]/96
-                backdrop-blur-xl
-                overflow-hidden
+                bg-black/80
+                backdrop-blur-md
+                p-3
+                sm:p-5
               "
               onClick={() =>
                 setLightboxRawOpen(false)
@@ -1090,20 +1060,23 @@ export function PhotoLightbox({
               <motion.div
                 initial={{
                   opacity: 0,
-                  scale: 0.97,
+                  scale: 0.94,
+                  y: 10,
                 }}
                 animate={{
                   opacity: 1,
                   scale: 1,
+                  y: 0,
                 }}
                 exit={{
                   opacity: 0,
-                  scale: 0.97,
+                  scale: 0.94,
+                  y: 8,
                 }}
                 transition={{
                   type: "spring",
                   stiffness: 300,
-                  damping: 30,
+                  damping: 28,
                 }}
                 onClick={(e) =>
                   e.stopPropagation()
@@ -1111,130 +1084,175 @@ export function PhotoLightbox({
                 className="
                   relative
                   flex
-                  h-full
+                  flex-col
                   w-full
-                  items-center
-                  justify-center
+                  max-w-[900px]
+                  max-h-[90vh]
                   overflow-hidden
+                  rounded-[20px]
+                  bg-[#120604]
+                  border border-[#4A2A20]
+                  shadow-[0_30px_90px_rgba(0,0,0,0.7)]
                 "
               >
-                {/* ================================================
-                    TOP BAR
-                ================================================= */}
+                {/* RAW HEADER */}
                 <div
                   className="
-                    absolute
-                    top-0
-                    left-0
-                    right-0
-                    z-30
                     flex
+                    shrink-0
                     items-center
                     justify-between
-                    px-4 sm:px-6
-                    py-4
-                    bg-gradient-to-b
-                    from-black/60
-                    to-transparent
+                    px-3
+                    sm:px-4
+                    py-2.5
+                    sm:py-3
+                    bg-[#2A1510]
+                    border-b border-[#4A2A20]
                   "
                 >
                   {/* COUNTER */}
                   <div
                     className="
-                      flex
-                      items-center
-                      gap-2
                       rounded-full
-                      bg-[#1A0A08]/85
+                      bg-[#21100C]
                       border border-[#C9A87C]/15
-                      px-3.5
-                      py-1.5
-                      shadow-lg
-                      backdrop-blur-md
+                      px-3
+                      py-1
                     "
                   >
-                    <Images
-                      size={15}
-                      className="text-[#C9A87C]"
-                      strokeWidth={2}
-                    />
-
                     <span
                       className="
                         font-serif
-                        text-xs
+                        text-[10px]
+                        sm:text-xs
                         font-semibold
                         text-[#C9A87C]
                       "
                     >
-                      {lightboxRawIndex + 1}
-                      {" / "}
-                      {photo.raw_photos.length}
+                      Foto {lightboxRawIndex + 1}{" "}
+                      dari {photo.raw_photos.length}
                     </span>
                   </div>
 
-                  {/* CLOSE */}
-                  <button
-                    onClick={() =>
-                      setLightboxRawOpen(false)
-                    }
-                    aria-label="Tutup foto"
-                    className="
-                      flex
-                      h-10 w-10
-                      items-center justify-center
-                      rounded-full
-                      bg-[#1A0A08]/85
-                      border border-[#C9A87C]/15
-                      text-[#C9A87C]
-                      shadow-lg
-                      backdrop-blur-md
-                      transition-all
-                      hover:bg-[#4A2A20]
-                      hover:rotate-90
-                    "
-                  >
-                    <X
-                      size={20}
-                      strokeWidth={2.3}
-                    />
-                  </button>
+                  {/* ACTIONS */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const url =
+                          photo.raw_photos?.[
+                            lightboxRawIndex
+                          ];
+
+                        if (url) {
+                          handleDownloadRaw(
+                            url,
+                            lightboxRawIndex
+                          );
+                        }
+                      }}
+                      className="
+                        flex
+                        items-center
+                        justify-center
+                        gap-2
+                        rounded-xl
+                        bg-[#21100C]
+                        border border-[#4A2A20]
+                        px-3
+                        sm:px-4
+                        py-2
+                        font-serif
+                        text-xs
+                        sm:text-sm
+                        font-medium
+                        text-[#C9A87C]
+                        transition-all
+                        hover:bg-[#3A2018]
+                        active:scale-95
+                      "
+                    >
+                      <Download
+                        size={16}
+                        strokeWidth={2.2}
+                      />
+
+                      <span className="hidden sm:inline">
+                        Download
+                      </span>
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        setLightboxRawOpen(false)
+                      }
+                      aria-label="Tutup foto"
+                      className="
+                        flex
+                        h-9
+                        w-9
+                        items-center
+                        justify-center
+                        rounded-xl
+                        bg-[#21100C]
+                        border border-[#4A2A20]
+                        text-[#C9A87C]
+                        transition-all
+                        hover:bg-[#3A2018]
+                        active:scale-95
+                      "
+                    >
+                      <X
+                        size={18}
+                        strokeWidth={2.3}
+                      />
+                    </button>
+                  </div>
                 </div>
 
-                {/* ================================================
-                    IMAGE
-                ================================================= */}
-                {photo.raw_photos[
-                  lightboxRawIndex
-                ] && (
-                  <img
-                    src={
-                      photo.raw_photos[
-                        lightboxRawIndex
-                      ]
-                    }
-                    alt={`Foto asli #${
-                      lightboxRawIndex + 1
-                    }`}
-                    className="
-                      max-h-[calc(100vh-150px)]
-                      max-w-[calc(100vw-120px)]
-                      w-auto
-                      h-auto
-                      object-contain
-                      rounded-2xl
-                      shadow-[0_25px_80px_rgba(0,0,0,0.65)]
-                      select-none
-                    "
-                    draggable={false}
-                  />
-                )}
+                {/* IMAGE AREA */}
+                <div
+                  className="
+                    relative
+                    flex
+                    min-h-0
+                    flex-1
+                    items-center
+                    justify-center
+                    bg-[#080302]
+                    p-3
+                    sm:p-5
+                    md:p-7
+                    overflow-hidden
+                  "
+                >
+                  {photo.raw_photos[
+                    lightboxRawIndex
+                  ] && (
+                    <img
+                      src={
+                        photo.raw_photos[
+                          lightboxRawIndex
+                        ]
+                      }
+                      alt={`Foto asli #${
+                        lightboxRawIndex + 1
+                      }`}
+                      className="
+                        block
+                        max-w-full
+                        max-h-[68vh]
+                        sm:max-h-[72vh]
+                        md:max-h-[74vh]
+                        object-contain
+                        rounded-xl
+                        shadow-[0_20px_60px_rgba(0,0,0,0.65)]
+                      "
+                      draggable={false}
+                    />
+                  )}
 
-                {/* ================================================
-                    LEFT NAV
-                ================================================= */}
-                {photo.raw_photos.length > 1 && (
-                  <>
+                  {/* PREVIOUS */}
+                  {photo.raw_photos.length > 1 && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1243,41 +1261,42 @@ export function PhotoLightbox({
                           (prev) =>
                             prev > 0
                               ? prev - 1
-                              : photo
-                                  .raw_photos
-                                  .length - 1
+                              : photo.raw_photos.length -
+                                1
                         );
                       }}
                       aria-label="Foto sebelumnya"
                       className="
                         absolute
-                        left-3 sm:left-6
+                        left-2
+                        sm:left-4
+                        md:left-5
                         top-1/2
                         -translate-y-1/2
-                        z-20
                         flex
-                        h-11 w-11
-                        sm:h-12 sm:w-12
+                        h-9 w-9
+                        sm:h-11 sm:w-11
                         items-center
                         justify-center
                         rounded-full
-                        bg-[#1A0A08]/85
+                        bg-[#21100C]/95
                         border border-[#C9A87C]/15
                         text-[#C9A87C]
                         shadow-xl
-                        backdrop-blur-md
                         transition-all
-                        hover:bg-[#4A2A20]
-                        hover:scale-105
+                        hover:bg-[#3A2018]
+                        active:scale-95
                       "
                     >
                       <ChevronLeft
-                        size={25}
-                        strokeWidth={2.3}
+                        size={22}
+                        strokeWidth={2.4}
                       />
                     </button>
+                  )}
 
-                    {/* RIGHT NAV */}
+                  {/* NEXT */}
+                  {photo.raw_photos.length > 1 && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1285,8 +1304,7 @@ export function PhotoLightbox({
                         setLightboxRawIndex(
                           (prev) =>
                             prev <
-                            photo.raw_photos
-                              .length -
+                            photo.raw_photos.length -
                               1
                               ? prev + 1
                               : 0
@@ -1295,162 +1313,91 @@ export function PhotoLightbox({
                       aria-label="Foto berikutnya"
                       className="
                         absolute
-                        right-3 sm:right-6
+                        right-2
+                        sm:right-4
+                        md:right-5
                         top-1/2
                         -translate-y-1/2
-                        z-20
                         flex
-                        h-11 w-11
-                        sm:h-12 sm:w-12
+                        h-9 w-9
+                        sm:h-11 sm:w-11
                         items-center
                         justify-center
                         rounded-full
-                        bg-[#1A0A08]/85
+                        bg-[#21100C]/95
                         border border-[#C9A87C]/15
                         text-[#C9A87C]
                         shadow-xl
-                        backdrop-blur-md
                         transition-all
-                        hover:bg-[#4A2A20]
-                        hover:scale-105
+                        hover:bg-[#3A2018]
+                        active:scale-95
                       "
                     >
                       <ChevronRight
-                        size={25}
-                        strokeWidth={2.3}
+                        size={22}
+                        strokeWidth={2.4}
                       />
                     </button>
-                  </>
-                )}
-
-                {/* ================================================
-                    BOTTOM BAR
-                ================================================= */}
-                <div
-                  className="
-                    absolute
-                    bottom-0
-                    left-0
-                    right-0
-                    z-30
-                    flex
-                    flex-col
-                    items-center
-                    gap-3
-                    px-4
-                    pb-5 sm:pb-6
-                    pt-10
-                    bg-gradient-to-t
-                    from-black/70
-                    to-transparent
-                  "
-                >
-                  {/* DOTS */}
-                  {photo.raw_photos.length > 1 && (
-                    <div
-                      className="
-                        flex
-                        items-center
-                        gap-1.5
-                        rounded-full
-                        bg-[#1A0A08]/75
-                        border border-[#C9A87C]/10
-                        px-3
-                        py-2
-                        backdrop-blur-md
-                      "
-                    >
-                      {photo.raw_photos.map(
-                        (_, i) => (
-                          <button
-                            key={i}
-                            onClick={(e) => {
-                              e.stopPropagation();
-
-                              setLightboxRawIndex(
-                                i
-                              );
-                            }}
-                            aria-label={`Lihat foto ${
-                              i + 1
-                            }`}
-                            className={`
-                              h-1.5
-                              rounded-full
-                              transition-all
-                              ${
-                                i ===
-                                lightboxRawIndex
-                                  ? "w-7 bg-[#C9A87C]"
-                                  : "w-1.5 bg-[#C9A87C]/30"
-                              }
-                            `}
-                          />
-                        )
-                      )}
-                    </div>
                   )}
+                </div>
 
-                  {/* DOWNLOAD */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-
-                      const url =
-                        photo.raw_photos?.[
-                          lightboxRawIndex
-                        ];
-
-                      if (url) {
-                        handleDownloadRaw(
-                          url,
-                          lightboxRawIndex
-                        );
-                      }
-                    }}
+                {/* RAW DOTS */}
+                {photo.raw_photos.length > 1 && (
+                  <div
                     className="
                       flex
+                      shrink-0
                       items-center
-                      gap-2
-                      rounded-xl
-                      bg-[#C9A87C]
-                      px-5
+                      justify-center
+                      gap-1.5
+                      bg-[#120604]
+                      px-4
                       py-2.5
-                      font-serif
-                      text-sm
-                      font-bold
-                      text-[#2A1510]
-                      shadow-xl
-                      transition-all
-                      hover:bg-[#DFC397]
-                      hover:-translate-y-0.5
+                      border-t border-[#4A2A20]
                     "
                   >
-                    <Download
-                      size={17}
-                      strokeWidth={2.4}
-                    />
-
-                    Download Foto
-                  </button>
-                </div>
+                    {photo.raw_photos.map(
+                      (_, i) => (
+                        <button
+                          key={i}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLightboxRawIndex(i);
+                          }}
+                          aria-label={`Lihat foto ${
+                            i + 1
+                          }`}
+                          className={`
+                            h-1.5
+                            rounded-full
+                            transition-all
+                            ${
+                              i ===
+                              lightboxRawIndex
+                                ? "w-7 bg-[#C9A87C]"
+                                : "w-1.5 bg-[#C9A87C]/25"
+                            }
+                          `}
+                        />
+                      )
+                    )}
+                  </div>
+                )}
               </motion.div>
             </motion.div>
           )}
       </AnimatePresence>
 
-      {/* ============================================================
+      {/* =========================================================
           DELETE CONFIRMATION
-      ============================================================ */}
+      ========================================================= */}
       <ConfirmModal
         open={confirmDelete}
         title="Hapus foto ini?"
         description="Foto akan dihapus permanen dari server dan tidak bisa dikembalikan."
         confirmLabel="Ya, hapus"
         danger
-        onCancel={() =>
-          setConfirmDelete(false)
-        }
+        onCancel={() => setConfirmDelete(false)}
         onConfirm={() => {
           if (photo) {
             onDelete(photo);

@@ -22,7 +22,7 @@ import { formatDateTimeFullID } from "@/lib/dateUtils";
 import type { Photo } from "@/types/photo";
 
 // ============================================
-// KONFIGURASI WHATSAPP ADMIN
+// KONFIGURASI WHATSAPP
 // ============================================
 const ADMIN_PHONE = "085800619612";
 
@@ -71,7 +71,7 @@ export function PhotoLightbox({
   const toast = useToast();
 
   // ============================================
-  // RESET RAW PHOTO SLIDER
+  // RESET RAW SLIDER
   // ============================================
   useEffect(() => {
     setRawActiveIndex(0);
@@ -85,7 +85,7 @@ export function PhotoLightbox({
   }, [photo?.id]);
 
   // ============================================
-  // ESCAPE KEY
+  // KEYBOARD
   // ============================================
   useEffect(() => {
     if (!photo) return;
@@ -108,13 +108,17 @@ export function PhotoLightbox({
       ) {
         if (e.key === "ArrowLeft") {
           setLightboxRawIndex((prev) =>
-            prev > 0 ? prev - 1 : photo.raw_photos.length - 1
+            prev > 0
+              ? prev - 1
+              : photo.raw_photos.length - 1
           );
         }
 
         if (e.key === "ArrowRight") {
           setLightboxRawIndex((prev) =>
-            prev < photo.raw_photos.length - 1 ? prev + 1 : 0
+            prev < photo.raw_photos.length - 1
+              ? prev + 1
+              : 0
           );
         }
       }
@@ -125,21 +129,30 @@ export function PhotoLightbox({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [photo, lightboxRawOpen, confirmDelete, onClose]);
+  }, [
+    photo,
+    lightboxRawOpen,
+    confirmDelete,
+    onClose,
+  ]);
 
   // ============================================
   // WHATSAPP
   // ============================================
   const handleSendWhatsApp = () => {
     if (!photo?.whatsapp_number) {
-      toast.push("Nomor WhatsApp tidak tersedia", "error");
+      toast.push(
+        "Nomor WhatsApp tidak tersedia",
+        "error"
+      );
       return;
     }
 
     setSending(true);
 
     try {
-      const cleanNumber = photo.whatsapp_number.replace(/[^0-9]/g, "");
+      const cleanNumber =
+        photo.whatsapp_number.replace(/[^0-9]/g, "");
 
       let formattedNumber = cleanNumber;
 
@@ -160,8 +173,12 @@ export function PhotoLightbox({
       const message = encodeURIComponent(
         `*${APP_NAME}*\n\n` +
           `Haii, terima kasih banyak ya udah mampir dan berfoto bareng kami hari ini! 🎞️\n\n` +
-          `🖼️ Frame: *${photo.frame_nama ?? "Frame"}*\n` +
-          `🗓️ Tanggal: ${formatTime(photo.created_at)}\n\n` +
+          `🖼️ Frame: *${
+            photo.frame_nama ?? "Frame"
+          }*\n` +
+          `🗓️ Tanggal: ${formatTime(
+            photo.created_at
+          )}\n\n` +
           `Yeay, hasil foto kamu udah jadi! Klik link di bawah ini buat lihat & download-nya ya:\n` +
           `${photoLink}\n\n` +
           `Di halaman itu ada 2 bagian:\n` +
@@ -174,9 +191,15 @@ export function PhotoLightbox({
           `_Salam hangat, tim ${APP_NAME}_`
       );
 
-      const whatsappUrl = `https://wa.me/${formattedNumber}?text=${message}`;
+      const whatsappUrl =
+        `https://wa.me/${formattedNumber}` +
+        `?text=${message}`;
 
-      window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+      window.open(
+        whatsappUrl,
+        "_blank",
+        "noopener,noreferrer"
+      );
 
       toast.push(
         "WhatsApp dibuka dengan link foto siap kirim!",
@@ -184,7 +207,11 @@ export function PhotoLightbox({
       );
     } catch (error) {
       console.error("WhatsApp error:", error);
-      toast.push("Gagal membuka WhatsApp", "error");
+
+      toast.push(
+        "Gagal membuka WhatsApp",
+        "error"
+      );
     } finally {
       setSending(false);
     }
@@ -208,7 +235,8 @@ export function PhotoLightbox({
 
       const blob = await response.blob();
 
-      const objectUrl = window.URL.createObjectURL(blob);
+      const objectUrl =
+        window.URL.createObjectURL(blob);
 
       const ext = blob.type.includes("webp")
         ? "webp"
@@ -220,13 +248,17 @@ export function PhotoLightbox({
       const link = document.createElement("a");
 
       link.href = objectUrl;
-      link.download = `foto_original_${photo.id.slice(
-        0,
-        8
-      )}_${index + 1}.${ext}`;
+
+      link.download =
+        `foto_original_${photo.id.slice(
+          0,
+          8
+        )}_${index + 1}.${ext}`;
 
       document.body.appendChild(link);
+
       link.click();
+
       document.body.removeChild(link);
 
       window.URL.revokeObjectURL(objectUrl);
@@ -237,6 +269,7 @@ export function PhotoLightbox({
       );
     } catch (error) {
       console.error("Download error:", error);
+
       toast.push(
         "Gagal mengunduh foto original",
         "error"
@@ -245,12 +278,16 @@ export function PhotoLightbox({
   };
 
   // ============================================
-  // RAW PHOTO SCROLL
+  // RAW SCROLL
   // ============================================
   const handleRawScroll = () => {
     const el = rawScrollerRef.current;
 
-    if (!el || !photo || !photo.raw_photos?.length) {
+    if (
+      !el ||
+      !photo ||
+      !photo.raw_photos?.length
+    ) {
       return;
     }
 
@@ -269,7 +306,11 @@ export function PhotoLightbox({
   const scrollRawToIndex = (index: number) => {
     const el = rawScrollerRef.current;
 
-    if (!el || !photo || !photo.raw_photos?.length) {
+    if (
+      !el ||
+      !photo ||
+      !photo.raw_photos?.length
+    ) {
       return;
     }
 
@@ -287,7 +328,7 @@ export function PhotoLightbox({
   };
 
   // ============================================
-  // OPEN RAW PHOTO LIGHTBOX
+  // OPEN RAW PHOTO
   // ============================================
   const openRawLightbox = (index: number) => {
     setLightboxRawIndex(index);
@@ -315,10 +356,17 @@ export function PhotoLightbox({
             className="
               fixed inset-0
               z-50
-              flex items-center justify-center
+
+              flex
+              items-center
+              justify-center
+
               bg-black/75
               backdrop-blur-md
-              p-3 sm:p-4
+
+              p-3
+              sm:p-4
+
               overflow-hidden
             "
             onClick={onClose}
@@ -326,7 +374,7 @@ export function PhotoLightbox({
             <motion.div
               initial={{
                 opacity: 0,
-                scale: 0.94,
+                scale: 0.95,
                 y: 12,
               }}
               animate={{
@@ -336,7 +384,7 @@ export function PhotoLightbox({
               }}
               exit={{
                 opacity: 0,
-                scale: 0.96,
+                scale: 0.97,
                 y: 8,
               }}
               transition={{
@@ -344,32 +392,33 @@ export function PhotoLightbox({
                 stiffness: 300,
                 damping: 28,
               }}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) =>
+                e.stopPropagation()
+              }
               className="
                 relative
 
-                /* MODAL TIDAK FULL WIDTH */
                 w-fit
+
                 max-w-[calc(100vw-24px)]
                 sm:max-w-[calc(100vw-40px)]
 
-                /* MODAL TIDAK FULL HEIGHT */
                 max-h-[calc(100vh-24px)]
-                sm:max-h-[calc(100vh-40px)]
+                sm:max-h-[calc(100vh-32px)]
 
                 flex
                 flex-col
 
                 overflow-hidden
 
-                rounded-2xl
+                rounded-[22px]
 
                 bg-[#1A0A08]
 
                 border
                 border-[#4A2A20]
 
-                shadow-[0_25px_80px_rgba(0,0,0,0.65)]
+                shadow-[0_30px_90px_rgba(0,0,0,0.65)]
               "
             >
               {/* =====================================================
@@ -377,10 +426,11 @@ export function PhotoLightbox({
               ===================================================== */}
               <div
                 className="
-                  flex
                   shrink-0
+
+                  flex
                   items-center
-                  justify-between
+                  justify-end
 
                   bg-[#2A1510]
 
@@ -395,74 +445,72 @@ export function PhotoLightbox({
                   border-[#4A2A20]
                 "
               >
-                <div className="flex items-center gap-2 sm:gap-3">
+                <div
+                  className="
+                    flex
+                    items-center
+                    gap-2
+                  "
+                >
+                  {/* STATUS */}
                   <span
                     className="
-                      font-serif
-                      text-[10px]
-                      sm:text-xs
-                      font-medium
-                      text-[#C9A87C]
-                    "
-                  >
-                    #{currentIndex + 1} / {totalPhotos}
-                  </span>
-
-                  <span className="h-4 w-px bg-[#4A2A20]" />
-
-                  <span
-                    className={`
                       rounded-full
-                      px-2.5
-                      sm:px-3
-                      py-0.5
+
+                      bg-[#C9A87C]
+
+                      px-3
+                      sm:px-3.5
+
+                      py-1
 
                       font-serif
+
                       text-[10px]
                       sm:text-xs
+
                       font-semibold
 
-                      ${
-                        photo.status === "printed"
-                          ? "bg-[#5B7F5C] text-[#F5EBE0]"
-                          : "bg-[#C9A87C] text-[#2A1510]"
-                      }
-                    `}
+                      tracking-wide
+
+                      text-[#2A1510]
+                    "
                   >
                     {photo.status === "printed"
                       ? "DICETAK"
                       : "PENDING"}
                   </span>
-                </div>
 
-                <div className="flex items-center gap-1.5 sm:gap-2">
+                  {/* DOWNLOAD */}
                   {onDownload && (
                     <button
-                      onClick={() => onDownload(photo)}
+                      onClick={() =>
+                        onDownload(photo)
+                      }
                       className="
                         flex
                         items-center
                         gap-1.5
-                        sm:gap-2
 
                         rounded-lg
 
                         bg-[#4A2A20]
 
-                        px-2.5
+                        px-3
                         sm:px-3.5
 
-                        py-1
-                        sm:py-1.5
+                        py-1.5
 
                         font-serif
+
                         text-[10px]
                         sm:text-xs
+
                         font-medium
 
                         text-[#C9A87C]
 
-                        transition-colors
+                        transition-all
 
                         hover:bg-[#5A3A30]
                       "
@@ -478,15 +526,15 @@ export function PhotoLightbox({
                     </button>
                   )}
 
+                  {/* CLOSE */}
                   <button
                     onClick={onClose}
                     aria-label="Tutup"
                     className="
                       flex
-                      h-7
-                      w-7
-                      sm:h-8
-                      sm:w-8
+
+                      h-8
+                      w-8
 
                       items-center
                       justify-center
@@ -497,13 +545,13 @@ export function PhotoLightbox({
 
                       text-[#C9A87C]
 
-                      transition-colors
+                      transition-all
 
                       hover:bg-[#5A3A30]
                     "
                   >
                     <X
-                      size={16}
+                      size={17}
                       strokeWidth={2.4}
                     />
                   </button>
@@ -512,11 +560,11 @@ export function PhotoLightbox({
 
               {/* =====================================================
                   BODY
-                  NO SCROLL
               ===================================================== */}
               <div
                 className="
                   flex
+
                   min-w-0
                   min-h-0
 
@@ -526,13 +574,10 @@ export function PhotoLightbox({
 
                   flex-col
                   lg:flex-row
-
-                  items-stretch
                 "
               >
                 {/* =====================================================
-                    KIRI — FRAME
-                    WIDTH MENGIKUTI FRAME
+                    LEFT — FRAME
                 ===================================================== */}
                 <div
                   className="
@@ -552,10 +597,7 @@ export function PhotoLightbox({
                     sm:p-4
                     md:p-5
 
-                    /* DESKTOP:
-                       area kiri dibuat compact */
-                    lg:w-auto
-                    lg:min-w-[300px]
+                    lg:min-w-[315px]
                     xl:min-w-[340px]
                   "
                 >
@@ -568,12 +610,13 @@ export function PhotoLightbox({
                       w-auto
                       h-auto
 
-                      max-h-[58vh]
-                      sm:max-h-[62vh]
-                      lg:max-h-[68vh]
+                      max-h-[56vh]
+                      sm:max-h-[60vh]
+                      lg:max-h-[64vh]
 
                       max-w-[calc(100vw-40px)]
-                      lg:max-w-[380px]
+                      lg:max-w-[350px]
+                      xl:max-w-[370px]
 
                       object-contain
 
@@ -586,7 +629,7 @@ export function PhotoLightbox({
                     }}
                   />
 
-                  {/* MAIN PHOTO NAVIGATION */}
+                  {/* MAIN PHOTO NAV */}
                   {totalPhotos > 1 && (
                     <>
                       <button
@@ -597,6 +640,7 @@ export function PhotoLightbox({
                         aria-label="Foto sebelumnya"
                         className="
                           absolute
+
                           left-2
                           sm:left-3
 
@@ -606,12 +650,11 @@ export function PhotoLightbox({
                           z-20
 
                           flex
+
                           h-8
                           w-8
                           sm:h-9
                           sm:w-9
-                          md:h-10
-                          md:w-10
 
                           items-center
                           justify-center
@@ -623,6 +666,7 @@ export function PhotoLightbox({
                           text-[#C9A87C]
 
                           shadow-lg
+
                           backdrop-blur-sm
 
                           transition-all
@@ -631,7 +675,7 @@ export function PhotoLightbox({
                         "
                       >
                         <ChevronLeft
-                          size={21}
+                          size={20}
                           strokeWidth={2.5}
                         />
                       </button>
@@ -644,6 +688,7 @@ export function PhotoLightbox({
                         aria-label="Foto berikutnya"
                         className="
                           absolute
+
                           right-2
                           sm:right-3
 
@@ -653,12 +698,11 @@ export function PhotoLightbox({
                           z-20
 
                           flex
+
                           h-8
                           w-8
                           sm:h-9
                           sm:w-9
-                          md:h-10
-                          md:w-10
 
                           items-center
                           justify-center
@@ -670,6 +714,7 @@ export function PhotoLightbox({
                           text-[#C9A87C]
 
                           shadow-lg
+
                           backdrop-blur-sm
 
                           transition-all
@@ -678,7 +723,7 @@ export function PhotoLightbox({
                         "
                       >
                         <ChevronRight
-                          size={21}
+                          size={20}
                           strokeWidth={2.5}
                         />
                       </button>
@@ -687,14 +732,14 @@ export function PhotoLightbox({
                 </div>
 
                 {/* =====================================================
-                    KANAN — INFO
+                    RIGHT — INFO
                 ===================================================== */}
                 <div
                   className="
                     w-full
 
                     lg:w-[350px]
-                    xl:w-[370px]
+                    xl:w-[365px]
 
                     shrink-0
 
@@ -708,9 +753,11 @@ export function PhotoLightbox({
 
                     bg-[#150907]
 
-                    p-3
-                    sm:p-4
-                    md:p-5
+                    px-4
+                    sm:px-5
+
+                    py-3
+                    sm:py-4
 
                     flex
                     flex-col
@@ -719,15 +766,17 @@ export function PhotoLightbox({
                   "
                 >
                   {/* FRAME NAME */}
-                  <div className="shrink-0 mb-1.5 sm:mb-2">
+                  <div className="shrink-0 mb-1">
                     <p
                       className="
                         font-serif
 
-                        text-lg
-                        sm:text-xl
+                        text-xl
+                        sm:text-2xl
 
                         font-bold
+
+                        leading-tight
 
                         text-[#F5EBE0]
 
@@ -744,18 +793,22 @@ export function PhotoLightbox({
                       shrink-0
 
                       space-y-1.5
-                      sm:space-y-2
 
-                      mb-2
-                      sm:mb-3
+                      mb-2.5
                     "
                   >
-                    <div className="flex items-center gap-2 sm:gap-3">
+                    <div
+                      className="
+                        flex
+                        items-center
+                        gap-2.5
+                      "
+                    >
                       <Clock3
-                        size={16}
+                        size={17}
                         className="
                           shrink-0
-                          text-[#C9A87C]/60
+                          text-[#C9A87C]/65
                         "
                         strokeWidth={2}
                       />
@@ -763,25 +816,33 @@ export function PhotoLightbox({
                       <span
                         className="
                           font-serif
-                          text-xs
-                          sm:text-sm
 
-                          text-[#C9A87C]/80
+                          text-sm
+
+                          text-[#C9A87C]/85
 
                           truncate
                         "
                       >
-                        {formatTime(photo.created_at)}
+                        {formatTime(
+                          photo.created_at
+                        )}
                       </span>
                     </div>
 
                     {photo.whatsapp_number && (
-                      <div className="flex items-center gap-2 sm:gap-3">
+                      <div
+                        className="
+                          flex
+                          items-center
+                          gap-2.5
+                        "
+                      >
                         <MessageCircle
-                          size={16}
+                          size={17}
                           className="
                             shrink-0
-                            text-[#C9A87C]/60
+                            text-[#C9A87C]/65
                           "
                           strokeWidth={2}
                         />
@@ -789,10 +850,10 @@ export function PhotoLightbox({
                         <span
                           className="
                             font-serif
-                            text-xs
-                            sm:text-sm
 
-                            text-[#C9A87C]/80
+                            text-sm
+
+                            text-[#C9A87C]/85
 
                             truncate
                           "
@@ -808,12 +869,12 @@ export function PhotoLightbox({
                     className="
                       h-px
                       w-full
+
                       shrink-0
 
                       bg-[#4A2A20]
 
-                      mb-2
-                      sm:mb-3
+                      mb-2.5
                     "
                   />
 
@@ -838,29 +899,27 @@ export function PhotoLightbox({
                           justify-between
 
                           mb-1.5
-                          sm:mb-2
                         "
                       >
                         <div
                           className="
                             flex
                             items-center
-                            gap-1.5
-                            sm:gap-2
+                            gap-2
 
                             text-[#C9A87C]
                           "
                         >
                           <Images
-                            size={14}
+                            size={15}
                             strokeWidth={2.2}
                           />
 
                           <p
                             className="
                               font-serif
-                              text-[10px]
-                              sm:text-xs
+
+                              text-xs
 
                               font-semibold
 
@@ -872,17 +931,17 @@ export function PhotoLightbox({
                           </p>
                         </div>
 
-                        {photo.raw_photos.length > 1 && (
+                        {photo.raw_photos.length >
+                          1 && (
                           <span
                             className="
                               font-serif
 
-                              text-[10px]
-                              sm:text-[11px]
+                              text-[11px]
 
                               font-semibold
 
-                              text-[#C9A87C]/50
+                              text-[#C9A87C]/55
                             "
                           >
                             {rawActiveIndex + 1} /{" "}
@@ -891,14 +950,14 @@ export function PhotoLightbox({
                         )}
                       </div>
 
-                      {/* SLIDER */}
+                      {/* RAW SLIDER */}
                       <div
                         className="
                           relative
 
-                          h-[155px]
-                          sm:h-[175px]
-                          md:h-[185px]
+                          h-[135px]
+                          sm:h-[145px]
+                          md:h-[150px]
 
                           shrink-0
                         "
@@ -947,7 +1006,6 @@ export function PhotoLightbox({
                                   justify-center
 
                                   p-2
-                                  sm:p-3
 
                                   cursor-pointer
 
@@ -973,7 +1031,7 @@ export function PhotoLightbox({
                                   draggable={false}
                                 />
 
-                                {/* EYE OVERLAY */}
+                                {/* EYE */}
                                 <div
                                   className="
                                     absolute
@@ -1014,7 +1072,6 @@ export function PhotoLightbox({
                                         bg-[#2A1510]/85
 
                                         p-2.5
-                                        sm:p-3
 
                                         backdrop-blur-sm
 
@@ -1023,8 +1080,10 @@ export function PhotoLightbox({
                                       "
                                     >
                                       <Eye
-                                        size={24}
-                                        className="text-[#C9A87C]"
+                                        size={22}
+                                        className="
+                                          text-[#C9A87C]
+                                        "
                                         strokeWidth={1.8}
                                       />
                                     </div>
@@ -1035,8 +1094,9 @@ export function PhotoLightbox({
                           )}
                         </div>
 
-                        {/* RAW PREVIOUS */}
-                        {photo.raw_photos.length > 1 && (
+                        {/* RAW NAVIGATION */}
+                        {photo.raw_photos.length >
+                          1 && (
                           <>
                             <button
                               onClick={() =>
@@ -1050,8 +1110,8 @@ export function PhotoLightbox({
                               aria-label="Foto asli sebelumnya"
                               className="
                                 absolute
-                                left-1
-                                sm:left-2
+
+                                left-1.5
 
                                 top-1/2
                                 -translate-y-1/2
@@ -1059,10 +1119,9 @@ export function PhotoLightbox({
                                 z-10
 
                                 flex
+
                                 h-7
                                 w-7
-                                sm:h-8
-                                sm:w-8
 
                                 items-center
                                 justify-center
@@ -1085,12 +1144,11 @@ export function PhotoLightbox({
                               "
                             >
                               <ChevronLeft
-                                size={18}
+                                size={17}
                                 strokeWidth={2.4}
                               />
                             </button>
 
-                            {/* RAW NEXT */}
                             <button
                               onClick={() =>
                                 scrollRawToIndex(
@@ -1099,13 +1157,14 @@ export function PhotoLightbox({
                               }
                               disabled={
                                 rawActiveIndex ===
-                                photo.raw_photos.length - 1
+                                photo.raw_photos.length -
+                                  1
                               }
                               aria-label="Foto asli berikutnya"
                               className="
                                 absolute
-                                right-1
-                                sm:right-2
+
+                                right-1.5
 
                                 top-1/2
                                 -translate-y-1/2
@@ -1113,10 +1172,9 @@ export function PhotoLightbox({
                                 z-10
 
                                 flex
+
                                 h-7
                                 w-7
-                                sm:h-8
-                                sm:w-8
 
                                 items-center
                                 justify-center
@@ -1139,7 +1197,7 @@ export function PhotoLightbox({
                               "
                             >
                               <ChevronRight
-                                size={18}
+                                size={17}
                                 strokeWidth={2.4}
                               />
                             </button>
@@ -1148,10 +1206,11 @@ export function PhotoLightbox({
                       </div>
 
                       {/* DOTS */}
-                      {photo.raw_photos.length > 1 && (
+                      {photo.raw_photos.length >
+                        1 && (
                         <div
                           className="
-                            mt-2
+                            mt-1.5
 
                             flex
                             items-center
@@ -1167,7 +1226,7 @@ export function PhotoLightbox({
                                 onClick={() =>
                                   scrollRawToIndex(i)
                                 }
-                                aria-label={`Lihat foto asli ${
+                                aria-label={`Foto asli ${
                                   i + 1
                                 }`}
                                 className={`
@@ -1178,7 +1237,8 @@ export function PhotoLightbox({
                                   transition-all
 
                                   ${
-                                    i === rawActiveIndex
+                                    i ===
+                                    rawActiveIndex
                                       ? "w-5 bg-[#C9A87C]"
                                       : "w-1.5 bg-[#C9A87C]/30"
                                   }
@@ -1191,14 +1251,13 @@ export function PhotoLightbox({
 
                       <p
                         className="
-                          mt-1.5
+                          mt-1
 
                           text-center
 
                           font-serif
 
-                          text-[8px]
-                          sm:text-[10px]
+                          text-[9px]
 
                           text-[#C9A87C]/40
                         "
@@ -1213,11 +1272,9 @@ export function PhotoLightbox({
                   ===================================================== */}
                   <div
                     className="
-                      mt-2
-                      sm:mt-3
+                      mt-auto
 
-                      pt-2
-                      sm:pt-3
+                      pt-2.5
 
                       border-t
                       border-[#4A2A20]
@@ -1230,7 +1287,9 @@ export function PhotoLightbox({
                     {/* WHATSAPP */}
                     {photo.whatsapp_number && (
                       <button
-                        onClick={handleSendWhatsApp}
+                        onClick={
+                          handleSendWhatsApp
+                        }
                         disabled={sending}
                         className="
                           w-full
@@ -1246,7 +1305,6 @@ export function PhotoLightbox({
                           bg-[#6B2D2C]
 
                           py-2.5
-                          sm:py-3
 
                           font-serif
 
@@ -1262,6 +1320,8 @@ export function PhotoLightbox({
 
                           hover:shadow-lg
 
+                          hover:bg-[#743331]
+
                           disabled:opacity-60
                         "
                       >
@@ -1269,10 +1329,8 @@ export function PhotoLightbox({
                           <>
                             <span
                               className="
-                                h-3.5
-                                w-3.5
-                                sm:h-4
-                                sm:w-4
+                                h-4
+                                w-4
 
                                 animate-spin
 
@@ -1285,7 +1343,7 @@ export function PhotoLightbox({
                               "
                             />
 
-                            <span className="text-xs sm:text-sm">
+                            <span className="text-xs">
                               Membuka...
                             </span>
                           </>
@@ -1296,7 +1354,7 @@ export function PhotoLightbox({
                               strokeWidth={2.3}
                             />
 
-                            <span className="text-xs sm:text-sm">
+                            <span>
                               Kirim WhatsApp
                             </span>
                           </>
@@ -1305,13 +1363,21 @@ export function PhotoLightbox({
                     )}
 
                     {/* PRINT + DELETE */}
-                    <div className="grid grid-cols-2 gap-2">
+                    <div
+                      className="
+                        grid
+                        grid-cols-2
+
+                        gap-2
+                      "
+                    >
                       <button
                         onClick={() => {
                           onPrint(photo);
 
                           if (
-                            photo.status !== "printed"
+                            photo.status !==
+                            "printed"
                           ) {
                             onMarkPrinted(photo);
                           }
@@ -1321,20 +1387,17 @@ export function PhotoLightbox({
                           items-center
                           justify-center
 
-                          gap-1.5
-                          sm:gap-2
+                          gap-2
 
                           rounded-xl
 
                           bg-[#2A1510]
 
-                          py-2
-                          sm:py-2.5
+                          py-2.5
 
                           font-serif
 
-                          text-xs
-                          sm:text-sm
+                          text-sm
 
                           font-medium
 
@@ -1346,6 +1409,7 @@ export function PhotoLightbox({
                           transition-all
 
                           hover:border-[#6B2D2C]
+                          hover:bg-[#321A14]
                         "
                       >
                         <Printer
@@ -1365,20 +1429,17 @@ export function PhotoLightbox({
                           items-center
                           justify-center
 
-                          gap-1.5
-                          sm:gap-2
+                          gap-2
 
                           rounded-xl
 
                           bg-[#2A1510]
 
-                          py-2
-                          sm:py-2.5
+                          py-2.5
 
                           font-serif
 
-                          text-xs
-                          sm:text-sm
+                          text-sm
 
                           font-medium
 
@@ -1390,6 +1451,7 @@ export function PhotoLightbox({
                           transition-all
 
                           hover:border-[#A0524A]
+                          hover:bg-[#321A14]
                         "
                       >
                         <Trash2
@@ -1409,7 +1471,7 @@ export function PhotoLightbox({
       </AnimatePresence>
 
       {/* ============================================================
-          RAW PHOTO LIGHTBOX
+          RAW PHOTO DETAIL MODAL
       ============================================================ */}
       <AnimatePresence>
         {lightboxRawOpen &&
@@ -1420,16 +1482,18 @@ export function PhotoLightbox({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
               className="
                 fixed
                 inset-0
+
                 z-[60]
 
                 flex
                 items-center
                 justify-center
 
-                bg-black/90
+                bg-black/88
                 backdrop-blur-md
 
                 p-4
@@ -1441,18 +1505,24 @@ export function PhotoLightbox({
                 setLightboxRawOpen(false)
               }
             >
+              {/* =====================================================
+                  FOTO CARD
+              ===================================================== */}
               <motion.div
                 initial={{
                   opacity: 0,
                   scale: 0.92,
+                  y: 10,
                 }}
                 animate={{
                   opacity: 1,
                   scale: 1,
+                  y: 0,
                 }}
                 exit={{
                   opacity: 0,
-                  scale: 0.94,
+                  scale: 0.95,
+                  y: 8,
                 }}
                 transition={{
                   type: "spring",
@@ -1470,111 +1540,140 @@ export function PhotoLightbox({
                   justify-center
 
                   w-fit
+                  h-fit
 
                   max-w-[calc(100vw-32px)]
                   sm:max-w-[calc(100vw-80px)]
 
                   max-h-[calc(100vh-32px)]
-                  sm:max-h-[calc(100vh-80px)]
+                  sm:max-h-[calc(100vh-60px)]
 
                   rounded-2xl
 
-                  bg-[#120604]/80
+                  bg-[#120604]
 
                   border
                   border-[#4A2A20]
 
                   p-2
-                  sm:p-4
+                  sm:p-3
 
-                  shadow-[0_30px_100px_rgba(0,0,0,0.8)]
+                  shadow-[0_30px_100px_rgba(0,0,0,0.85)]
+
+                  overflow-hidden
                 "
               >
-                {/* CLOSE */}
-                <button
-                  onClick={() =>
-                    setLightboxRawOpen(false)
-                  }
-                  aria-label="Tutup foto"
-                  className="
-                    absolute
-
-                    top-2
-                    right-2
-                    sm:top-3
-                    sm:right-3
-
-                    z-30
-
-                    flex
-
-                    h-8
-                    w-8
-                    sm:h-9
-                    sm:w-9
-
-                    items-center
-                    justify-center
-
-                    rounded-full
-
-                    bg-[#2A1510]/90
-
-                    text-[#C9A87C]
-
-                    backdrop-blur-sm
-
-                    transition-all
-
-                    hover:bg-[#4A2A20]
-                  "
-                >
-                  <X
-                    size={20}
-                    strokeWidth={2.4}
-                  />
-                </button>
-
-                {/* COUNTER */}
+                {/* =====================================================
+                    TOP TOOLBAR — NEMPEL DI FOTO
+                ===================================================== */}
                 <div
                   className="
                     absolute
 
                     top-2
                     left-2
+                    right-2
+
                     sm:top-3
                     sm:left-3
+                    sm:right-3
 
                     z-30
+
+                    flex
+                    items-center
+                    justify-between
+
+                    pointer-events-none
                   "
                 >
-                  <span
+                  {/* COUNTER */}
+                  <div
                     className="
+                      pointer-events-auto
+
+                      flex
+                      items-center
+
                       rounded-full
 
-                      bg-[#2A1510]/90
+                      bg-[#1A0A08]/90
 
                       px-3
                       py-1.5
 
-                      font-serif
+                      border
+                      border-[#C9A87C]/20
 
-                      text-[10px]
-                      sm:text-xs
+                      shadow-lg
 
-                      font-medium
+                      backdrop-blur-md
+                    "
+                  >
+                    <span
+                      className="
+                        font-serif
+
+                        text-[10px]
+                        sm:text-xs
+
+                        font-medium
+
+                        text-[#C9A87C]
+                      "
+                    >
+                      {lightboxRawIndex + 1} /{" "}
+                      {photo.raw_photos.length}
+                    </span>
+                  </div>
+
+                  {/* CLOSE */}
+                  <button
+                    onClick={() =>
+                      setLightboxRawOpen(false)
+                    }
+                    aria-label="Tutup foto"
+                    className="
+                      pointer-events-auto
+
+                      flex
+
+                      h-8
+                      w-8
+                      sm:h-9
+                      sm:w-9
+
+                      items-center
+                      justify-center
+
+                      rounded-full
+
+                      bg-[#1A0A08]/90
 
                       text-[#C9A87C]
 
-                      backdrop-blur-sm
+                      border
+                      border-[#C9A87C]/20
+
+                      shadow-lg
+
+                      backdrop-blur-md
+
+                      transition-all
+
+                      hover:bg-[#4A2A20]
                     "
                   >
-                    {lightboxRawIndex + 1} /{" "}
-                    {photo.raw_photos.length}
-                  </span>
+                    <X
+                      size={18}
+                      strokeWidth={2.4}
+                    />
+                  </button>
                 </div>
 
-                {/* IMAGE */}
+                {/* =====================================================
+                    IMAGE
+                ===================================================== */}
                 <img
                   src={
                     photo.raw_photos[
@@ -1590,21 +1689,23 @@ export function PhotoLightbox({
                     w-auto
                     h-auto
 
-                    max-h-[calc(100vh-100px)]
+                    max-h-[calc(100vh-105px)]
 
                     max-w-[calc(100vw-70px)]
-                    sm:max-w-[calc(100vw-140px)]
+                    sm:max-w-[calc(100vw-120px)]
 
                     object-contain
 
-                    rounded-lg
+                    rounded-xl
 
                     shadow-2xl
                   "
                   draggable={false}
                 />
 
-                {/* PREVIOUS */}
+                {/* =====================================================
+                    PREVIOUS
+                ===================================================== */}
                 {photo.raw_photos.length > 1 && (
                   <>
                     <button
@@ -1623,7 +1724,7 @@ export function PhotoLightbox({
                       className="
                         absolute
 
-                        left-1
+                        left-2
                         sm:left-3
 
                         top-1/2
@@ -1643,11 +1744,16 @@ export function PhotoLightbox({
 
                         rounded-full
 
-                        bg-[#2A1510]/90
+                        bg-[#1A0A08]/90
 
                         text-[#C9A87C]
 
-                        backdrop-blur-sm
+                        border
+                        border-[#C9A87C]/15
+
+                        shadow-lg
+
+                        backdrop-blur-md
 
                         transition-all
 
@@ -1655,7 +1761,7 @@ export function PhotoLightbox({
                       "
                     >
                       <ChevronLeft
-                        size={24}
+                        size={23}
                         strokeWidth={2.5}
                       />
                     </button>
@@ -1678,7 +1784,7 @@ export function PhotoLightbox({
                       className="
                         absolute
 
-                        right-1
+                        right-2
                         sm:right-3
 
                         top-1/2
@@ -1698,11 +1804,16 @@ export function PhotoLightbox({
 
                         rounded-full
 
-                        bg-[#2A1510]/90
+                        bg-[#1A0A08]/90
 
                         text-[#C9A87C]
 
-                        backdrop-blur-sm
+                        border
+                        border-[#C9A87C]/15
+
+                        shadow-lg
+
+                        backdrop-blur-md
 
                         transition-all
 
@@ -1710,135 +1821,141 @@ export function PhotoLightbox({
                       "
                     >
                       <ChevronRight
-                        size={24}
+                        size={23}
                         strokeWidth={2.5}
                       />
                     </button>
                   </>
                 )}
 
-                {/* DOWNLOAD */}
-                <button
-                  onClick={() => {
-                    const url =
-                      photo.raw_photos?.[
-                        lightboxRawIndex
-                      ];
-
-                    if (url) {
-                      handleDownloadRaw(
-                        url,
-                        lightboxRawIndex
-                      );
-                    }
-                  }}
+                {/* =====================================================
+                    BOTTOM TOOLBAR
+                ===================================================== */}
+                <div
                   className="
                     absolute
 
-                    bottom-3
-                    sm:bottom-4
+                    bottom-2
+                    left-1/2
 
-                    right-3
-                    sm:right-4
+                    -translate-x-1/2
 
                     z-30
 
                     flex
                     items-center
 
-                    gap-1.5
-                    sm:gap-2
-
-                    rounded-xl
-
-                    bg-[#2A1510]/95
-
-                    px-3
-                    sm:px-4
-
-                    py-2
-                    sm:py-2.5
-
-                    text-[#C9A87C]
-
-                    border
-                    border-[#4A2A20]
-
-                    backdrop-blur-sm
-
-                    transition-all
-
-                    hover:bg-[#4A2A20]
+                    gap-2
                   "
                 >
-                  <Download
-                    size={17}
-                    strokeWidth={2.3}
-                  />
+                  {/* DOTS */}
+                  {photo.raw_photos.length > 1 && (
+                    <div
+                      className="
+                        flex
+                        items-center
+                        gap-1.5
 
-                  <span
+                        rounded-full
+
+                        bg-[#1A0A08]/90
+
+                        px-3
+                        py-2
+
+                        border
+                        border-[#C9A87C]/15
+
+                        shadow-lg
+
+                        backdrop-blur-md
+                      "
+                    >
+                      {photo.raw_photos.map(
+                        (_, i) => (
+                          <button
+                            key={i}
+                            onClick={(e) => {
+                              e.stopPropagation();
+
+                              setLightboxRawIndex(
+                                i
+                              );
+                            }}
+                            aria-label={`Lihat foto ${
+                              i + 1
+                            }`}
+                            className={`
+                              h-1.5
+
+                              rounded-full
+
+                              transition-all
+
+                              ${
+                                i ===
+                                lightboxRawIndex
+                                  ? "w-6 bg-[#C9A87C]"
+                                  : "w-1.5 bg-[#C9A87C]/35"
+                              }
+                            `}
+                          />
+                        )
+                      )}
+                    </div>
+                  )}
+
+                  {/* DOWNLOAD */}
+                  <button
+                    onClick={() => {
+                      const url =
+                        photo.raw_photos?.[
+                          lightboxRawIndex
+                        ];
+
+                      if (url) {
+                        handleDownloadRaw(
+                          url,
+                          lightboxRawIndex
+                        );
+                      }
+                    }}
+                    aria-label="Download foto"
                     className="
-                      font-serif
-                      text-xs
-                      sm:text-sm
-                      font-medium
-                    "
-                  >
-                    Download
-                  </span>
-                </button>
-
-                {/* DOTS */}
-                {photo.raw_photos.length > 1 && (
-                  <div
-                    className="
-                      absolute
-
-                      bottom-4
-                      sm:bottom-5
-
-                      left-1/2
-
-                      -translate-x-1/2
-
-                      z-30
-
                       flex
-                      items-center
 
-                      gap-1.5
+                      h-9
+                      w-9
+                      sm:h-10
+                      sm:w-10
+
+                      items-center
+                      justify-center
+
+                      rounded-full
+
+                      bg-[#1A0A08]/95
+
+                      text-[#C9A87C]
+
+                      border
+                      border-[#C9A87C]/15
+
+                      shadow-lg
+
+                      backdrop-blur-md
+
+                      transition-all
+
+                      hover:bg-[#4A2A20]
                     "
                   >
-                    {photo.raw_photos.map(
-                      (_, i) => (
-                        <button
-                          key={i}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setLightboxRawIndex(i);
-                          }}
-                          aria-label={`Lihat foto ${
-                            i + 1
-                          }`}
-                          className={`
-                            h-1.5
-
-                            rounded-full
-
-                            transition-all
-
-                            ${
-                              i ===
-                              lightboxRawIndex
-                                ? "w-6 bg-[#C9A87C]"
-                                : "w-1.5 bg-[#C9A87C]/30"
-                            }
-                          `}
-                        />
-                      )
-                    )}
-                  </div>
-                )}
+                    <Download
+                      size={17}
+                      strokeWidth={2.3}
+                    />
+                  </button>
+                </div>
               </motion.div>
             </motion.div>
           )}

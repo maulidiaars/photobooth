@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, MessageCircle, Printer, Trash2, Clock3, Download, ChevronLeft, ChevronRight, Images, Zap } from "lucide-react";
+import { X, MessageCircle, Printer, Trash2, Clock3, Download, ChevronLeft, ChevronRight, Images, Zap, Eye } from "lucide-react";
 import { ConfirmModal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { APP_NAME, APP_URL } from "@/lib/constants";
@@ -10,13 +10,10 @@ import { formatDateTimeFullID } from "@/lib/dateUtils";
 import type { Photo } from "@/types/photo";
 
 // ============================================
-// 🔥 KONFIGURASI WHATSAPP — ganti nomor di bawah ini
-// dengan nomor WhatsApp admin/pengirim yang kamu mau
-// (pakai format 08xxx atau +62xxx).
+// 🔥 KONFIGURASI WHATSAPP
 // ============================================
 const ADMIN_PHONE = "085800619612";
 
-/** "085800619612" -> "0858-0061-9612", cuma buat teks pesan WhatsApp. */
 function formatPhoneDisplay(raw: string) {
   const d = raw.replace(/[^\d]/g, "");
   return d.replace(/(\d{4})(\d{4})(\d+)/, "$1-$2-$3");
@@ -51,13 +48,13 @@ export function PhotoLightbox({
 }: PhotoLightboxProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [sending, setSending] = useState(false);
-  const [frameAspect, setFrameAspect] = useState<number | null>(null);
   const [rawActiveIndex, setRawActiveIndex] = useState(0);
+  const [lightboxRawOpen, setLightboxRawOpen] = useState(false);
+  const [lightboxRawIndex, setLightboxRawIndex] = useState(0);
   const rawScrollerRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
 
   useEffect(() => {
-    setFrameAspect(null);
     setRawActiveIndex(0);
     rawScrollerRef.current?.scrollTo({ left: 0 });
   }, [photo?.id]);
@@ -159,12 +156,18 @@ export function PhotoLightbox({
     setRawActiveIndex(clamped);
   };
 
+  const openRawLightbox = (index: number) => {
+    setLightboxRawIndex(index);
+    setLightboxRawOpen(true);
+  };
+
   if (!photo) return null;
 
   const hasRaw = photo.raw_photos && photo.raw_photos.length > 0;
 
   return (
     <>
+      {/* MAIN LIGHTBOX */}
       <AnimatePresence>
         {photo && (
           <motion.div
@@ -214,132 +217,29 @@ export function PhotoLightbox({
                 </div>
               </div>
 
-              {/* Main Content */}
+              {/* Body: 2 Kolom (Kiri: Frame, Kanan: Info + Raw Photos) */}
               <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-y-auto">
-                {/* Left: Frame */}
+                {/* KIRI: Frame */}
                 <div className="flex-1 flex items-center justify-center bg-[#0D0503] p-4 lg:p-6 min-h-[300px]">
                   <img
                     src={photo.image_result}
                     alt="Hasil foto"
-                    onLoad={(e) =>
-                      setFrameAspect(e.currentTarget.naturalWidth / e.currentTarget.naturalHeight)
-                    }
                     className="max-h-[55vh] lg:max-h-[70vh] w-auto max-w-full object-contain shadow-2xl rounded-lg"
-                    style={{
-                      background: "transparent",
-                    }}
+                    style={{ background: "transparent" }}
                   />
                 </div>
 
-                {/* Middle: Raw Photos */}
-                {hasRaw && (
-                  <div className="w-full lg:w-80 xl:w-96 shrink-0 border-t lg:border-t-0 lg:border-x border-[#4A2A20] bg-[#150907] p-5 flex flex-col">
-                    <div className="mb-3 flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-[#C9A87C]">
-                        <Images size={14} strokeWidth={2.2} />
-                        <p className="font-serif text-xs font-semibold uppercase tracking-wide">
-                          Foto Asli
-                        </p>
-                      </div>
-                      {photo.raw_photos.length > 1 && (
-                        <span className="font-serif text-[11px] font-semibold text-[#C9A87C]/50">
-                          {rawActiveIndex + 1} / {photo.raw_photos.length}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="relative flex-1">
-                      <div
-                        ref={rawScrollerRef}
-                        onScroll={handleRawScroll}
-                        className="no-scrollbar flex w-full snap-x snap-mandatory overflow-x-auto rounded-xl border border-[#C9A87C]/25 bg-[#0D0503] shadow-inner"
-                        style={{ height: '100%', minHeight: '200px' }}
-                      >
-                        {photo.raw_photos.map((url, i) => {
-                          const rect = photo.frame_slot_layout?.[i];
-                          const slideAspect =
-                            rect && frameAspect ? (rect.w / rect.h) * frameAspect : null;
-                          return (
-                            <div
-                              key={`${url}-${i}`}
-                              className="relative w-full shrink-0 snap-center p-3 flex items-center justify-center"
-                            >
-                              <img
-                                src={url}
-                                alt={`Foto asli #${i + 1}`}
-                                className="w-full h-auto max-h-[300px] rounded-lg bg-[#0D0503] object-contain"
-                                style={{ aspectRatio: slideAspect ? `${slideAspect}` : "auto" }}
-                                draggable={false}
-                              />
-                              <button
-                                onClick={() => handleDownloadRaw(url, i)}
-                                aria-label={`Download foto asli ${i + 1}`}
-                                className="absolute bottom-5 right-5 flex h-9 w-9 items-center justify-center rounded-full bg-[#2A1510] text-[#F5EBE0] shadow-lg transition-all hover:scale-105 hover:bg-[#3A2018] active:scale-95"
-                              >
-                                <Download size={15} strokeWidth={2.3} />
-                              </button>
-                              <span className="absolute left-4 top-4 flex h-5 min-w-5 items-center justify-center rounded-full bg-black/60 px-1.5 font-serif text-[10px] font-medium text-white/85">
-                                {i + 1}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {photo.raw_photos.length > 1 && (
-                        <>
-                          <button
-                            onClick={() => scrollRawToIndex(rawActiveIndex - 1)}
-                            disabled={rawActiveIndex === 0}
-                            aria-label="Foto asli sebelumnya"
-                            className="absolute left-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-[#2A1510]/90 text-[#C9A87C] shadow-md backdrop-blur-sm transition-all hover:bg-[#3A2018] disabled:opacity-0"
-                          >
-                            <ChevronLeft size={16} strokeWidth={2.4} />
-                          </button>
-                          <button
-                            onClick={() => scrollRawToIndex(rawActiveIndex + 1)}
-                            disabled={rawActiveIndex === photo.raw_photos.length - 1}
-                            aria-label="Foto asli berikutnya"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-[#2A1510]/90 text-[#C9A87C] shadow-md backdrop-blur-sm transition-all hover:bg-[#3A2018] disabled:opacity-0"
-                          >
-                            <ChevronRight size={16} strokeWidth={2.4} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-
-                    {photo.raw_photos.length > 1 && (
-                      <div className="mt-3 flex items-center justify-center gap-1.5">
-                        {photo.raw_photos.map((_, i) => (
-                          <button
-                            key={i}
-                            onClick={() => scrollRawToIndex(i)}
-                            aria-label={`Ke foto asli #${i + 1}`}
-                            className={`h-1.5 rounded-full transition-all ${
-                              i === rawActiveIndex ? "w-5 bg-[#C9A87C]" : "w-1.5 bg-[#C9A87C]/30"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    )}
-
-                    <p className="mt-2 text-center font-serif text-[10px] text-[#C9A87C]/40">
-                      Geser untuk foto lain &middot; tekan ikon unduh untuk simpan
-                    </p>
-                  </div>
-                )}
-
-                {/* Right: Info & Actions */}
-                <div className="w-full lg:w-80 xl:w-96 bg-[#1A0A08] border-t lg:border-t-0 lg:border-l border-[#4A2A20] p-5 flex flex-col gap-4">
+                {/* KANAN: Info + Raw Photos Slider */}
+                <div className="w-full lg:w-96 xl:w-[420px] shrink-0 border-t lg:border-t-0 lg:border-l border-[#4A2A20] bg-[#150907] p-5 flex flex-col">
                   {/* Frame Name */}
-                  <div>
+                  <div className="mb-2">
                     <p className="font-serif text-xl font-bold text-[#F5EBE0]">
                       {photo.frame_nama ?? "Frame"}
                     </p>
                   </div>
 
                   {/* Detail Info */}
-                  <div className="space-y-2.5">
+                  <div className="space-y-2 mb-3">
                     <div className="flex items-center gap-3">
                       <Clock3 size={16} className="text-[#C9A87C]/60 shrink-0" strokeWidth={2} />
                       <span className="font-serif text-sm text-[#C9A87C]/80">
@@ -357,47 +257,118 @@ export function PhotoLightbox({
                     )}
                   </div>
 
-                  {/* Quick Download */}
+                  {/* Divider */}
+                  <div className="h-px w-full bg-[#4A2A20] mb-3" />
+
+                  {/* RAW PHOTOS SLIDER - FULL SIZE */}
                   {hasRaw && (
-                    <div>
-                      <div className="mb-2 flex items-center gap-1.5 text-[#C9A87C]/60">
-                        <Zap size={12} strokeWidth={2.2} />
-                        <p className="font-serif text-[11px] font-semibold uppercase tracking-wide">
-                          Unduh Cepat
-                        </p>
+                    <div className="flex-1 flex flex-col min-h-0">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2 text-[#C9A87C]">
+                          <Images size={14} strokeWidth={2.2} />
+                          <p className="font-serif text-xs font-semibold uppercase tracking-wide">
+                            Foto Asli
+                          </p>
+                        </div>
+                        {photo.raw_photos.length > 1 && (
+                          <span className="font-serif text-[11px] font-semibold text-[#C9A87C]/50">
+                            {rawActiveIndex + 1} / {photo.raw_photos.length}
+                          </span>
+                        )}
                       </div>
-                      <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
-                        {photo.raw_photos.map((url, i) => (
-                          <button
-                            key={`${url}-mini-${i}`}
-                            onClick={() => handleDownloadRaw(url, i)}
-                            title={`Download foto asli #${i + 1}`}
-                            className="group/mini relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-[#4A2A20] transition-transform hover:scale-105"
-                          >
-                            <img
-                              src={url}
-                              alt={`Foto asli mini #${i + 1}`}
-                              className="h-full w-full object-cover"
+
+                      <div className="relative flex-1 min-h-[200px]">
+                        <div
+                          ref={rawScrollerRef}
+                          onScroll={handleRawScroll}
+                          className="no-scrollbar flex w-full h-full snap-x snap-mandatory overflow-x-auto rounded-xl border border-[#C9A87C]/25 bg-[#0D0503]"
+                        >
+                          {photo.raw_photos.map((url, i) => (
+                            <div
+                              key={`${url}-${i}`}
+                              className="relative w-full h-full shrink-0 snap-center flex items-center justify-center p-3 cursor-pointer group"
+                              onClick={() => openRawLightbox(i)}
+                            >
+                              <img
+                                src={url}
+                                alt={`Foto asli #${i + 1}`}
+                                className="w-full h-full object-contain rounded-lg"
+                                draggable={false}
+                              />
+                              
+                              {/* HOVER OVERLAY - EYE ICON */}
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/50 transition-all duration-300 rounded-lg">
+                                <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 transform scale-90 group-hover:scale-100">
+                                  <div className="flex flex-col items-center gap-2">
+                                    <div className="bg-[#2A1510]/90 p-3 rounded-full backdrop-blur-sm">
+                                      <Eye size={28} className="text-[#C9A87C]" strokeWidth={2} />
+                                    </div>
+                                    <span className="text-white text-xs font-serif bg-black/60 px-3 py-1 rounded-full">
+                                      Klik untuk lihat
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <span className="absolute left-3 top-3 flex h-6 min-w-6 items-center justify-center rounded-full bg-black/70 px-1.5 font-serif text-[10px] font-medium text-white/90">
+                                {i + 1}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Navigation Arrows for Raw Slider */}
+                        {photo.raw_photos.length > 1 && (
+                          <>
+                            <button
+                              onClick={() => scrollRawToIndex(rawActiveIndex - 1)}
+                              disabled={rawActiveIndex === 0}
+                              aria-label="Foto asli sebelumnya"
+                              className="absolute left-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-[#2A1510]/90 text-[#C9A87C] shadow-md backdrop-blur-sm transition-all hover:bg-[#3A2018] disabled:opacity-0 z-10"
+                            >
+                              <ChevronLeft size={18} strokeWidth={2.4} />
+                            </button>
+                            <button
+                              onClick={() => scrollRawToIndex(rawActiveIndex + 1)}
+                              disabled={rawActiveIndex === photo.raw_photos.length - 1}
+                              aria-label="Foto asli berikutnya"
+                              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-[#2A1510]/90 text-[#C9A87C] shadow-md backdrop-blur-sm transition-all hover:bg-[#3A2018] disabled:opacity-0 z-10"
+                            >
+                              <ChevronRight size={18} strokeWidth={2.4} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Dots Indicator */}
+                      {photo.raw_photos.length > 1 && (
+                        <div className="mt-3 flex items-center justify-center gap-1.5">
+                          {photo.raw_photos.map((_, i) => (
+                            <button
+                              key={i}
+                              onClick={() => scrollRawToIndex(i)}
+                              aria-label={`Ke foto asli #${i + 1}`}
+                              className={`h-1.5 rounded-full transition-all ${
+                                i === rawActiveIndex ? "w-5 bg-[#C9A87C]" : "w-1.5 bg-[#C9A87C]/30"
+                              }`}
                             />
-                            <span className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all group-hover/mini:bg-black/55 group-hover/mini:opacity-100">
-                              <Download size={14} className="text-white" strokeWidth={2.4} />
-                            </span>
-                          </button>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <p className="mt-2 text-center font-serif text-[10px] text-[#C9A87C]/40">
+                        Hover & klik foto untuk lihat detail • Geser untuk foto lain
+                      </p>
                     </div>
                   )}
 
-                  {/* Divider */}
-                  <div className="h-px w-full bg-[#4A2A20]" />
-
-                  {/* Actions */}
-                  <div className="mt-auto space-y-2.5">
+                  {/* Actions - di bawah slider */}
+                  <div className="mt-3 space-y-2.5 pt-3 border-t border-[#4A2A20]">
                     {photo.whatsapp_number && (
                       <button
                         onClick={handleSendWhatsApp}
                         disabled={sending}
-                        className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-[#6B2D2C] py-3.5 font-serif font-semibold text-[#F5EBE0] shadow-md hover:shadow-lg disabled:opacity-60 transition-all"
+                        className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-[#6B2D2C] py-3 font-serif font-semibold text-[#F5EBE0] shadow-md hover:shadow-lg disabled:opacity-60 transition-all"
                       >
                         {sending ? (
                           <>
@@ -421,7 +392,7 @@ export function PhotoLightbox({
                             onMarkPrinted(photo);
                           }
                         }}
-                        className="flex items-center justify-center gap-2 rounded-xl bg-[#2A1510] py-3 font-serif text-sm font-medium text-[#C9A87C] border border-[#4A2A20] hover:border-[#6B2D2C] transition-all"
+                        className="flex items-center justify-center gap-2 rounded-xl bg-[#2A1510] py-2.5 font-serif text-sm font-medium text-[#C9A87C] border border-[#4A2A20] hover:border-[#6B2D2C] transition-all"
                       >
                         <Printer size={16} strokeWidth={2.3} />
                         Print
@@ -429,7 +400,7 @@ export function PhotoLightbox({
 
                       <button
                         onClick={() => setConfirmDelete(true)}
-                        className="flex items-center justify-center gap-2 rounded-xl bg-[#2A1510] py-3 font-serif text-sm font-medium text-[#A0524A] border border-[#4A2A20] hover:border-[#A0524A] transition-all"
+                        className="flex items-center justify-center gap-2 rounded-xl bg-[#2A1510] py-2.5 font-serif text-sm font-medium text-[#A0524A] border border-[#4A2A20] hover:border-[#A0524A] transition-all"
                       >
                         <Trash2 size={16} strokeWidth={2.3} />
                         Hapus
@@ -439,7 +410,7 @@ export function PhotoLightbox({
                 </div>
               </div>
 
-              {/* Navigation Arrows */}
+              {/* Navigation Arrows for Main Photos */}
               {totalPhotos > 1 && (
                 <>
                   <button
@@ -455,6 +426,106 @@ export function PhotoLightbox({
                     <ChevronRight size={22} strokeWidth={2.5} />
                   </button>
                 </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL LIGHTBOX FOTO ASLI (FULLSCREEN) */}
+      <AnimatePresence>
+        {lightboxRawOpen && photo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-lg"
+            onClick={() => setLightboxRawOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full h-full flex items-center justify-center p-4 md:p-8"
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setLightboxRawOpen(false)}
+                className="absolute top-4 right-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm"
+              >
+                <X size={22} strokeWidth={2.4} />
+              </button>
+
+              {/* Download Button */}
+              <button
+                onClick={() => handleDownloadRaw(photo.raw_photos[lightboxRawIndex], lightboxRawIndex)}
+                className="absolute bottom-8 right-8 z-20 flex items-center gap-2 rounded-xl bg-[#2A1510]/90 px-5 py-3 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm border border-[#4A2A20]"
+              >
+                <Download size={18} strokeWidth={2.3} />
+                <span className="font-serif text-sm font-medium">Download</span>
+              </button>
+
+              {/* Counter */}
+              <div className="absolute top-4 left-4 z-20">
+                <span className="font-serif text-sm font-medium text-[#C9A87C] bg-[#2A1510]/80 px-4 py-2 rounded-full backdrop-blur-sm">
+                  {lightboxRawIndex + 1} / {photo.raw_photos.length}
+                </span>
+              </div>
+
+              {/* Image */}
+              <img
+                src={photo.raw_photos[lightboxRawIndex]}
+                alt={`Foto asli #${lightboxRawIndex + 1}`}
+                className="max-h-[85vh] max-w-[90vw] object-contain rounded-xl shadow-2xl"
+                draggable={false}
+              />
+
+              {/* Navigation Arrows for Modal */}
+              {photo.raw_photos.length > 1 && (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLightboxRawIndex((prev) => 
+                        prev > 0 ? prev - 1 : photo.raw_photos.length - 1
+                      );
+                    }}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm"
+                  >
+                    <ChevronLeft size={26} strokeWidth={2.5} />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLightboxRawIndex((prev) => 
+                        prev < photo.raw_photos.length - 1 ? prev + 1 : 0
+                      );
+                    }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-[#2A1510]/80 text-[#C9A87C] hover:bg-[#4A2A20] transition-all backdrop-blur-sm"
+                  >
+                    <ChevronRight size={26} strokeWidth={2.5} />
+                  </button>
+                </>
+              )}
+
+              {/* Dots Indicator for Modal */}
+              {photo.raw_photos.length > 1 && (
+                <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-2">
+                  {photo.raw_photos.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLightboxRawIndex(i);
+                      }}
+                      className={`h-2 rounded-full transition-all ${
+                        i === lightboxRawIndex ? "w-8 bg-[#C9A87C]" : "w-2 bg-[#C9A87C]/30"
+                      }`}
+                    />
+                  ))}
+                </div>
               )}
             </motion.div>
           </motion.div>

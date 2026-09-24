@@ -12,6 +12,12 @@ export const ADMIN_COOKIE_NAME = "clay_admin_token";
 
 export const COUNTDOWN_SECONDS = 3;
 
+/** Total durasi sesi foto (dari klik "mulai sesi foto" sampai waktu
+ *  habis) — timer ini tampil di pojok kiri atas setiap halaman sesi
+ *  (pilih frame, kamera, hasil) sampai pengguna selesai atau waktunya
+ *  habis. */
+export const SESSION_DURATION_MS = 5 * 60 * 1000;
+
 export const CANVAS_OUTPUT_WIDTH = 1200;
 
 export const PASTEL_ACCENTS = [

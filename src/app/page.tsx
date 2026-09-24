@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { FloatingBackground } from "@/components/ui/FloatingBackground";
 import { PhotoFrameWallDesktop, PhotoFrameRow } from "@/components/landing/PhotoFrameWall";
+import { useSessionStore } from "@/store/sessionStore";
 import { APP_NAME, ROUTES } from "@/lib/constants";
 
 const STEPS = [
@@ -14,6 +15,8 @@ const STEPS = [
 ];
 
 export default function LandingPage() {
+  const startSessionTimer = useSessionStore((s) => s.startSessionTimer);
+
   return (
     <main className="landing-shell relative flex flex-col items-center justify-center px-6 py-10 lg:overflow-hidden lg:py-6">
       {/* deep-maroon textured backdrop, specific to this page */}
@@ -62,7 +65,7 @@ export default function LandingPage() {
           transition={{ delay: 0.55, type: "spring", stiffness: 160 }}
           className="mt-7"
         >
-          <Link href={ROUTES.frame}>
+          <Link href={ROUTES.frame} onClick={() => startSessionTimer()}>
             <motion.div
               whileHover={{ y: -3, rotate: -1 }}
               whileTap={{ y: 1, scale: 0.98 }}

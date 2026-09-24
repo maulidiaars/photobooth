@@ -7,6 +7,7 @@ import { ArrowRight, Sparkles } from "lucide-react";
 import { FloatingBackground } from "@/components/ui/FloatingBackground";
 import { FrameCarousel } from "@/components/frame/FrameCarousel";
 import { StepTracker } from "@/components/ui/StepTracker";
+import { SessionTimer } from "@/components/ui/SessionTimer";
 import { getFrames } from "@/services/frameService";
 import { useSessionStore } from "@/store/sessionStore";
 import { useFrameContentBox } from "@/hooks/useFrameContentBox";
@@ -46,8 +47,17 @@ export default function FramePage() {
     if (selectedFrame) router.push(ROUTES.camera);
   };
 
+  // Timer sesi habis sementara pengguna masih di halaman ini — kalau
+  // sudah sempat pilih frame, langsung lanjutkan ke kamera; kalau
+  // belum, biarkan saja (nggak ada yang bisa disimpan/dilanjutkan).
+  const handleTimerExpire = () => {
+    if (selectedFrame) router.push(ROUTES.camera);
+  };
+
   return (
     <main className="app-shell relative flex w-full flex-col overflow-hidden lg:flex-row">
+      <SessionTimer onExpire={handleTimerExpire} />
+
       {/* LEFT — deep-maroon textured half */}
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4 sm:px-8 sm:py-5 lg:px-12 lg:py-7">
         <div className="landing-maroon-bg" />
@@ -77,30 +87,32 @@ export default function FramePage() {
               Pilih frame favoritmu
             </h1>
             <p className="text-paper-light/75 font-body mt-1 text-sm sm:text-lg">
-              Geser untuk lihat semua pilihan, lalu ketuk untuk memilih.
+              Scroll ke bawah untuk lihat semua pilihan, lalu ketuk untuk memilih.
             </p>
           </motion.div>
 
-          <div className="bg-clay-gradient shadow-print-sm min-h-0 w-full rounded-[22px] px-1 py-2.5 sm:rounded-[26px] sm:py-3">
-            <div className="sprockets h-2.5 w-full opacity-70" />
+          <div className="bg-clay-gradient shadow-print-sm flex min-h-0 w-full max-h-[54vh] flex-col rounded-[22px] px-1 py-2.5 sm:max-h-[60vh] sm:rounded-[26px] sm:py-3">
+            <div className="sprockets h-2.5 w-full shrink-0 opacity-70" />
 
-            {loading && (
-              <div className="flex flex-col items-center gap-3 py-8">
-                <div className="border-garnet/20 border-t-garnet h-9 w-9 animate-spin rounded-full border-4" />
-                <p className="text-muted font-body text-sm">Memuat frame...</p>
-              </div>
-            )}
-            {error && <p className="text-garnet font-body py-6 text-center">{error}</p>}
-            {!loading && !error && frames.length === 0 && (
-              <p className="text-muted font-body py-6 text-center">
-                Belum ada frame. Silakan hubungi admin untuk menambahkan frame.
-              </p>
-            )}
-            {!loading && frames.length > 0 && (
-              <FrameCarousel frames={frames} selectedId={selectedFrame?.id ?? null} onSelect={setFrame} />
-            )}
+            <div className="min-h-0 flex-1">
+              {loading && (
+                <div className="flex flex-col items-center gap-3 py-8">
+                  <div className="border-garnet/20 border-t-garnet h-9 w-9 animate-spin rounded-full border-4" />
+                  <p className="text-muted font-body text-sm">Memuat frame...</p>
+                </div>
+              )}
+              {error && <p className="text-garnet font-body py-6 text-center">{error}</p>}
+              {!loading && !error && frames.length === 0 && (
+                <p className="text-muted font-body py-6 text-center">
+                  Belum ada frame. Silakan hubungi admin untuk menambahkan frame.
+                </p>
+              )}
+              {!loading && frames.length > 0 && (
+                <FrameCarousel frames={frames} selectedId={selectedFrame?.id ?? null} onSelect={setFrame} />
+              )}
+            </div>
 
-            <div className="sprockets h-2.5 w-full opacity-70" />
+            <div className="sprockets h-2.5 w-full shrink-0 opacity-70" />
           </div>
 
           <motion.div

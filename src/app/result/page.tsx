@@ -8,6 +8,7 @@ import { FloatingBackground } from "@/components/ui/FloatingBackground";
 import { ResultFrameWallDesktop, ResultFrameRow } from "@/components/result/ResultFrameWall";
 import { WhatsappModal } from "@/components/result/WhatsappModal";
 import { StepTracker } from "@/components/ui/StepTracker";
+import { SessionTimer } from "@/components/ui/SessionTimer";
 import { useSessionStore } from "@/store/sessionStore";
 import { mergePhotosIntoFrame } from "@/lib/canvas";
 import { savePhoto } from "@/services/photoService";
@@ -24,10 +25,15 @@ export default function ResultPage() {
   const resultImage = useSessionStore((s) => s.resultImage);
   const setResultImage = useSessionStore((s) => s.setResultImage);
   const setWhatsappNumber = useSessionStore((s) => s.setWhatsappNumber);
+  const clearSessionTimer = useSessionStore((s) => s.clearSessionTimer);
 
   const [status, setStatus] = useState<Status>("generating");
   const [error, setError] = useState<string | null>(null);
   const [waModalOpen, setWaModalOpen] = useState(false);
+  // Kalau timer sesi habis pas hasilnya masih digabungkan (belum
+  // "ready"), tandai dulu di sini — begitu status jadi "ready", efek
+  // di bawah yang akan otomatis membuka form nomor WhatsApp-nya.
+  const [autoFinishPending, setAutoFinishPending] = useState(false);
 
   useEffect(() => {
     if (!selectedFrame || capturedPhotos.length === 0) {
@@ -55,6 +61,26 @@ export default function ResultPage() {
     setWaModalOpen(true);
   };
 
+  // Timer sesi habis di halaman ini. Kalau hasilnya sudah siap,
+  // langsung buka form nomor WhatsApp seolah pengguna menekan tombol
+  // "SELESAI & SIMPAN"; kalau masih dalam proses digabungkan, tunggu
+  // sampai siap dulu (lihat useEffect di bawah).
+  const handleTimerExpire = () => {
+    if (status === "ready") {
+      handleFinishClick();
+    } else {
+      setAutoFinishPending(true);
+    }
+  };
+
+  useEffect(() => {
+    if (autoFinishPending && status === "ready") {
+      setAutoFinishPending(false);
+      handleFinishClick();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFinishPending, status]);
+
   const handleWhatsappSubmit = async (number: string) => {
     if (!resultImage || !selectedFrame) return;
     setStatus("saving");
@@ -66,6 +92,7 @@ export default function ResultPage() {
           whatsappNumber: number,
         });
       setWhatsappNumber(number);
+      clearSessionTimer();
       setWaModalOpen(false);
       // Go straight to /finish — that page is already the one big
       // "success" moment (confetti + "Yeay, selesai!"), so we don't
@@ -80,6 +107,8 @@ export default function ResultPage() {
 
   return (
     <main className="landing-shell relative flex flex-col items-center justify-center px-6 py-10 lg:overflow-hidden lg:py-6">
+      <SessionTimer onExpire={handleTimerExpire} />
+
       {/* same deep-maroon textured backdrop + floating dust as the
           landing page, so the last step reads as the same booth as the
           first instead of switching to a different layout language. */}

@@ -1,12 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Pencil, Trash2, Grid3x3 } from "lucide-react";
 import type { Frame } from "@/types/frame";
 import { ConfirmModal } from "@/components/ui/Modal";
-import { useDragScroll } from "@/hooks/useDragScroll";
 
 interface FrameTableProps {
   frames: Frame[];
@@ -16,8 +15,6 @@ interface FrameTableProps {
 
 export function FrameTable({ frames, onEdit, onDelete }: FrameTableProps) {
   const [pendingDelete, setPendingDelete] = useState<Frame | null>(null);
-  const scrollerRef = useRef<HTMLDivElement>(null);
-  useDragScroll(scrollerRef);
 
   if (frames.length === 0) {
     return (
@@ -33,15 +30,13 @@ export function FrameTable({ frames, onEdit, onDelete }: FrameTableProps) {
 
   return (
     <>
-      {/* Satu baris terus (flex-nowrap), scroll ke samping kalau
-          frame-nya banyak — TIDAK di-wrap ke bawah. Sengaja tanpa
+      {/* Wrap ke bawah (flex-wrap) kalau frame-nya banyak — TIDAK lagi
+          scroll ke samping, halaman admin-nya sendiri yang di-scroll
+          ke bawah (lihat <main> di admin/layout.tsx). Sengaja tanpa
           card/border/bg pembungkus: cuma PNG frame (transparan) yang
           "mengambang" langsung di atas halaman, ukurannya juga
           dibesarkan supaya jelas kelihatan. */}
-      <div
-        ref={scrollerRef}
-        className="no-scrollbar drag-slider -mx-1 flex select-none gap-8 overflow-x-auto scroll-smooth px-1 pb-4"
-      >
+      <div className="flex flex-wrap gap-8 pb-4">
         <AnimatePresence>
           {frames.map((frame) => (
             <motion.div

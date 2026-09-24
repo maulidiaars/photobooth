@@ -10,6 +10,7 @@ import { ShutterFlash } from "@/components/camera/ShutterFlash";
 import { FramePreviewLive } from "@/components/camera/FramePreviewLive";
 import { FloatingBackground } from "@/components/ui/FloatingBackground";
 import { ConfirmModal } from "@/components/ui/Modal";
+import { SessionTimer } from "@/components/ui/SessionTimer";
 import { usePhotoSession } from "@/hooks/usePhotoSession";
 import { useFrameContentBox } from "@/hooks/useFrameContentBox";
 import { useFramePreviewLayout } from "@/hooks/useFramePreviewLayout";
@@ -65,8 +66,19 @@ export default function CameraPage() {
     setRetakeCandidate(null);
   };
 
+  // Timer sesi habis di halaman ini — biasanya sambil retake foto.
+  // Kalau sudah ada foto yang tersimpan, langsung anggap selesai dan
+  // lanjut ke halaman hasil (foto yang belum sempat diambil ulang ya
+  // tetap dipakai yang terakhir). Kalau belum ada foto sama sekali,
+  // dibiarkan saja karena halaman hasil butuh minimal satu foto.
+  const handleTimerExpire = () => {
+    if (capturedPhotos.length > 0) router.push(ROUTES.result);
+  };
+
   return (
     <main className="app-shell relative flex w-full flex-col overflow-hidden lg:flex-row">
+      <SessionTimer onExpire={handleTimerExpire} />
+
       {/* LEFT — Camera Section */}
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
         <div className="landing-maroon-bg" />

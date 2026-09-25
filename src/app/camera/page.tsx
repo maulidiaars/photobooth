@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { CheckCircle2, RotateCcw, Sparkles } from "lucide-react";
+import { CheckCircle2, RotateCcw, Sparkles, SlidersHorizontal } from "lucide-react";
 import { WebcamView } from "@/components/camera/WebcamView";
 import { CountdownOverlay } from "@/components/camera/CountdownOverlay";
 import { ShutterFlash } from "@/components/camera/ShutterFlash";
@@ -14,10 +14,16 @@ import { SessionTimer } from "@/components/ui/SessionTimer";
 import { usePhotoSession } from "@/hooks/usePhotoSession";
 import { useFrameContentBox } from "@/hooks/useFrameContentBox";
 import { useFramePreviewLayout } from "@/hooks/useFramePreviewLayout";
+import { FilterPicker } from "@/components/camera/FilterPicker";
+import type { PhotoFilterId } from "@/lib/photoFilters";
 import { ROUTES } from "@/lib/constants";
 
 export default function CameraPage() {
   const router = useRouter();
+  const [retakeCandidate, setRetakeCandidate] = useState<number | null>(null);
+  const [photoFilter, setPhotoFilter] = useState<PhotoFilterId>("original");
+  const [showFilters, setShowFilters] = useState(false);
+
   const {
     webcamRef,
     videoConstraints,
@@ -34,9 +40,7 @@ export default function CameraPage() {
     totalSlots,
     isComplete,
     selectedFrame,
-  } = usePhotoSession();
-
-  const [retakeCandidate, setRetakeCandidate] = useState<number | null>(null);
+  } = usePhotoSession(photoFilter);
 
   // Right column width (desktop only) is derived from the selected
   // frame's own trimmed content box + the panel's available height — see
@@ -85,7 +89,11 @@ export default function CameraPage() {
         <FloatingBackground />
 
         <section className="relative z-10 min-h-0 flex-1 overflow-hidden rounded-clay-lg bg-black sm:rounded-[28px]">
-          <WebcamView webcamRef={webcamRef} videoConstraints={videoConstraints} />
+          <WebcamView
+            webcamRef={webcamRef}
+            videoConstraints={videoConstraints}
+            filter={photoFilter}
+          />
           <CountdownOverlay count={count} />
           <ShutterFlash show={showFlash} />
 
@@ -101,7 +109,45 @@ export default function CameraPage() {
           </div>
 
           {!isComplete && (
-            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 sm:bottom-7">
+            <>
+              <div className="absolute bottom-5 left-4 z-30 sm:bottom-7 sm:left-6">
+                <motion.button
+                  type="button"
+                  onClick={() => setShowFilters((value) => !value)}
+                  disabled={busy}
+                  whileHover={!busy ? { scale: 1.04 } : undefined}
+                  whileTap={!busy ? { scale: 0.94 } : undefined}
+                  className={`flex items-center gap-2 rounded-full border px-3.5 py-2.5 font-body text-xs font-semibold shadow-lg backdrop-blur-xl transition-all sm:px-4 sm:py-3 sm:text-sm ${
+                    showFilters
+                      ? "border-white/70 bg-white/20 text-white"
+                      : "border-white/20 bg-black/45 text-white/80 hover:bg-black/60"
+                  } disabled:opacity-50`}
+                  aria-expanded={showFilters}
+                  aria-controls="photo-filter-picker"
+                >
+                  <SlidersHorizontal size={15} strokeWidth={2.3} />
+                  Efek
+                </motion.button>
+              </div>
+
+              {showFilters && (
+                <motion.div
+                  id="photo-filter-picker"
+                  initial={{ opacity: 0, y: 12, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 12, scale: 0.97 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 24 }}
+                  className="absolute bottom-[4.9rem] left-1/2 z-30 -translate-x-1/2 sm:bottom-[5.8rem]"
+                >
+                  <FilterPicker
+                    value={photoFilter}
+                    onChange={setPhotoFilter}
+                    disabled={busy}
+                  />
+                </motion.div>
+              )}
+
+              <div className="absolute bottom-5 left-1/2 -translate-x-1/2 sm:bottom-7">
               <motion.button
                 onClick={takeAllShots}
                 disabled={busy}
@@ -123,7 +169,8 @@ export default function CameraPage() {
                   className="bg-garnet-gradient h-[86%] w-[86%] rounded-full transition-transform group-active:scale-90"
                 />
               </motion.button>
-            </div>
+              </div>
+            </>
           )}
         </section>
 

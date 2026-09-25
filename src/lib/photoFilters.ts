@@ -75,6 +75,6 @@ export const DEFAULT_PHOTO_FILTER: PhotoFilterId = "original";
 
 export function getPhotoFilter(id: PhotoFilterId): PhotoFilter {
   return (
-    PHOTO_FILTERS.find((item) => item.id === id) ?? PHOTO_FILTERS[0]
+    PHOTO_FILTERS.find((item) => item.id === id) ?? PHOTO_FILTERS[0]!
   );
 }

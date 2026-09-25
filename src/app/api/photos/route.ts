@@ -36,13 +36,7 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as CreatePhotoPayload;
     const { frame_id, imageResultBase64, rawPhotosBase64, whatsappNumber } = body;
 
-    if (
-      !frame_id ||
-      !imageResultBase64 ||
-      !whatsappNumber ||
-      !Array.isArray(rawPhotosBase64) ||
-      rawPhotosBase64.length === 0
-    ) {
+    if (!frame_id || !imageResultBase64 || !whatsappNumber || !Array.isArray(rawPhotosBase64)) {
       return NextResponse.json({ message: "Data foto tidak lengkap" }, { status: 400 });
     }
 

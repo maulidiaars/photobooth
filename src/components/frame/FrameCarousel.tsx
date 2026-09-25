@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { useRef } from "react";
 import type { Frame } from "@/types/frame";
 import { FrameCard } from "./FrameCard";
+import { useDragScroll } from "@/hooks/useDragScroll";
 
 interface FrameCarouselProps {
   frames: Frame[];
@@ -11,67 +11,29 @@ interface FrameCarouselProps {
   onSelect: (frame: Frame) => void;
 }
 
-// Grid yang mengisi kartu frame sebaris penuh dulu (sesuai lebar
-// container cream-nya) sebelum baru pindah ke baris berikutnya —
-// jumlah kolom per baris otomatis menyesuaikan lebar container lewat
-// `repeat(auto-fill, minmax(...))`. Kalau barisnya lebih banyak dari
-// yang muat, area ini sendiri yang di-scroll ke bawah; kotak
-// pembungkus di luar (frame/page.tsx) tampilannya tidak diubah.
+// Grid selalu 4 kartu per baris — pas dengan lebar container cream-nya
+// — bukan sejumlah kolom yang berubah-ubah menurut lebar layar. Kalau
+// framenya lebih dari satu baris, area ini sendiri yang di-scroll ke
+// bawah lewat drag (mouse/pen) atau swipe (touchscreen, bawaan
+// browser); tidak ada tombol panah lagi.
 export function FrameCarousel({ frames, selectedId, onSelect }: FrameCarouselProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const [canUp, setCanUp] = useState(false);
-  const [canDown, setCanDown] = useState(true);
-
-  const updateArrows = () => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    setCanUp(el.scrollTop > 8);
-    setCanDown(el.scrollTop < el.scrollHeight - el.clientHeight - 8);
-  };
-
-  useEffect(() => {
-    updateArrows();
-  }, [frames]);
-
-  const scrollBy = (dir: 1 | -1) => {
-    scrollerRef.current?.scrollBy({ top: dir * 240, behavior: "smooth" });
-  };
+  useDragScroll(scrollerRef, "y");
 
   return (
-    <div className="relative flex h-full w-full flex-col">
-      <button
-        aria-label="Geser ke atas"
-        onClick={() => scrollBy(-1)}
-        disabled={!canUp}
-        className="hidden sm:flex absolute left-1/2 top-0 z-10 h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full bg-cream-light shadow-clay hover:shadow-clay-lg disabled:opacity-0 font-display text-sm text-ink transition-opacity"
-      >
-        ▲
-      </button>
-
-      <motion.div
-        ref={scrollerRef}
-        onScroll={updateArrows}
-        className="no-scrollbar grid h-full min-h-0 flex-1 select-none content-start items-start justify-items-center gap-3 overflow-y-auto scroll-smooth px-2 py-6 sm:gap-4"
-        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(112px, 1fr))" }}
-      >
-        {frames.map((frame) => (
-          <FrameCard
-            key={frame.id}
-            frame={frame}
-            selected={frame.id === selectedId}
-            onSelect={onSelect}
-          />
-        ))}
-      </motion.div>
-
-      <button
-        aria-label="Geser ke bawah"
-        onClick={() => scrollBy(1)}
-        disabled={!canDown}
-        className="hidden sm:flex absolute bottom-0 left-1/2 z-10 h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full bg-cream-light shadow-clay hover:shadow-clay-lg disabled:opacity-0 font-display text-sm text-ink transition-opacity"
-      >
-        ▼
-      </button>
+    <div
+      ref={scrollerRef}
+      className="no-scrollbar drag-slider-y grid h-full min-h-0 w-full select-none content-start items-start gap-2 overflow-y-auto scroll-smooth px-2 py-4 sm:gap-4 sm:py-6"
+      style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}
+    >
+      {frames.map((frame) => (
+        <FrameCard
+          key={frame.id}
+          frame={frame}
+          selected={frame.id === selectedId}
+          onSelect={onSelect}
+        />
+      ))}
     </div>
   );
 }

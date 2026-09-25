@@ -3,19 +3,28 @@
 import { useEffect, useRef, type RefObject } from "react";
 
 /**
- * Turns a horizontally-scrollable container into a "grab and drag"
- * slider for mouse/pen users, on top of the native touch swipe
- * touchscreens already get for free (left alone here so it stays
- * buttery-smooth with momentum). Pair the target element with the
- * `.no-scrollbar` class so nothing but the drag itself hints that
- * it's scrollable — no visible track/thumb.
+ * Turns a scrollable container into a "grab and drag" slider for
+ * mouse/pen users, on top of the native touch swipe touchscreens
+ * already get for free (left alone here so it stays buttery-smooth
+ * with momentum). Pair the target element with the `.no-scrollbar`
+ * class so nothing but the drag itself hints that it's scrollable —
+ * no visible track/thumb.
+ *
+ * `axis` picks which direction gets dragged: "x" (default) reads/
+ * writes `scrollLeft` off horizontal pointer movement — the original
+ * behaviour every existing call site still gets unchanged. "y" reads/
+ * writes `scrollTop` off vertical pointer movement instead, for
+ * vertical lists like the frame picker grid.
  *
  * Also swallows the click that would otherwise fire right after a
  * real drag, so dragging across a card doesn't accidentally select
  * it (only a "clean" tap/click does).
  */
-export function useDragScroll<T extends HTMLElement>(ref: RefObject<T | null>) {
-  const state = useRef({ isDown: false, dragged: false, startX: 0, startScroll: 0 });
+export function useDragScroll<T extends HTMLElement>(
+  ref: RefObject<T | null>,
+  axis: "x" | "y" = "x"
+) {
+  const state = useRef({ isDown: false, dragged: false, startPos: 0, startScroll: 0 });
 
   useEffect(() => {
     const el = ref.current;
@@ -23,9 +32,14 @@ export function useDragScroll<T extends HTMLElement>(ref: RefObject<T | null>) {
 
     const onPointerMove = (e: PointerEvent) => {
       if (!state.current.isDown) return;
-      const delta = e.clientX - state.current.startX;
+      const pos = axis === "x" ? e.clientX : e.clientY;
+      const delta = pos - state.current.startPos;
       if (Math.abs(delta) > 4) state.current.dragged = true;
-      el.scrollLeft = state.current.startScroll - delta;
+      if (axis === "x") {
+        el.scrollLeft = state.current.startScroll - delta;
+      } else {
+        el.scrollTop = state.current.startScroll - delta;
+      }
     };
 
     const onPointerUp = () => {
@@ -51,8 +65,8 @@ export function useDragScroll<T extends HTMLElement>(ref: RefObject<T | null>) {
 
       state.current.isDown = true;
       state.current.dragged = false;
-      state.current.startX = e.clientX;
-      state.current.startScroll = el.scrollLeft;
+      state.current.startPos = axis === "x" ? e.clientX : e.clientY;
+      state.current.startScroll = axis === "x" ? el.scrollLeft : el.scrollTop;
 
       // Deliberately NOT using el.setPointerCapture here — that
       // would retarget the eventual "click" event to this container
@@ -83,5 +97,6 @@ export function useDragScroll<T extends HTMLElement>(ref: RefObject<T | null>) {
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("pointercancel", onPointerUp);
     };
-  }, [ref]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ref, axis]);
 }

@@ -72,19 +72,9 @@ export function FilterPicker({
                     }}
                   />
 
-                  {filter.kind === "sticker" && (
-                    <span className="relative z-10 text-[14px] drop-shadow-md">
-                      {filter.id === "love" || filter.id === "hearts"
-                        ? "♥"
-                        : filter.id === "sparkle"
-                          ? "✦"
-                          : filter.id === "dreamy"
-                            ? "✧"
-                            : filter.id === "sweet"
-                              ? "♡"
-                              : filter.id === "retro-pop"
-                                ? "★"
-                                : "♡"}
+                  {filter.icon && (
+                    <span className="relative z-10 text-[16px] drop-shadow-md">
+                      {filter.icon}
                     </span>
                   )}
 

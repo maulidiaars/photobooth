@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { Check, SlidersHorizontal } from "lucide-react";
 import { PHOTO_FILTERS, type PhotoFilterId } from "@/lib/photoFilters";
@@ -10,11 +11,87 @@ interface FilterPickerProps {
   disabled?: boolean;
 }
 
+/** Pixels the pointer has to move before a mousedown counts as a drag
+ *  instead of a click — keeps tapping a filter chip feeling snappy while
+ *  still letting a mouse click-and-hold pan the strip. */
+const DRAG_THRESHOLD = 6;
+
 export function FilterPicker({
   value,
   onChange,
   disabled = false,
 }: FilterPickerProps) {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const dragState = useRef({
+    active: false,
+    dragging: false,
+    startX: 0,
+    startScrollLeft: 0,
+  });
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      // Only hijack the mouse — touch/pen already get native scrolling.
+      if (e.pointerType !== "mouse" || disabled) return;
+      const el = scrollRef.current;
+      if (!el) return;
+
+      dragState.current = {
+        active: true,
+        dragging: false,
+        startX: e.clientX,
+        startScrollLeft: el.scrollLeft,
+      };
+      el.setPointerCapture(e.pointerId);
+    },
+    [disabled]
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const state = dragState.current;
+      const el = scrollRef.current;
+      if (!state.active || !el) return;
+
+      const delta = e.clientX - state.startX;
+
+      if (!state.dragging) {
+        if (Math.abs(delta) < DRAG_THRESHOLD) return;
+        state.dragging = true;
+        el.classList.add("cursor-grabbing");
+      }
+
+      e.preventDefault();
+      el.scrollLeft = state.startScrollLeft - delta;
+    },
+    []
+  );
+
+  const endDrag = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const state = dragState.current;
+    const el = scrollRef.current;
+    if (el) {
+      el.classList.remove("cursor-grabbing");
+      if (el.hasPointerCapture(e.pointerId)) {
+        el.releasePointerCapture(e.pointerId);
+      }
+    }
+    state.active = false;
+    // Leave `dragging` set for this tick so the click that follows a real
+    // drag gets swallowed; it's cleared right after on the next pointer down.
+  }, []);
+
+  const handleFilterClick = useCallback(
+    (id: PhotoFilterId) => {
+      if (dragState.current.dragging) {
+        dragState.current.dragging = false;
+        return;
+      }
+      onChange(id);
+    },
+    [onChange]
+  );
+
   return (
     <div
       className="filter-toolbar pointer-events-auto min-w-0 flex-1 overflow-hidden rounded-[20px] border border-white/10 bg-black/28 px-2 py-2 shadow-xl backdrop-blur-xl sm:rounded-[22px] sm:px-2.5"
@@ -26,11 +103,17 @@ export function FilterPicker({
         </span>
 
         <div
-          className="filter-toolbar-scroll no-scrollbar flex min-w-0 flex-1 gap-1.5 overflow-x-auto overscroll-contain scroll-smooth pb-0.5 sm:gap-2"
+          ref={scrollRef}
+          className="filter-toolbar-scroll no-scrollbar flex min-w-0 flex-1 cursor-grab gap-1.5 overflow-x-auto overscroll-contain scroll-smooth pb-0.5 select-none sm:gap-2"
           style={{
             scrollbarWidth: "none",
             WebkitOverflowScrolling: "touch",
           }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={endDrag}
+          onPointerLeave={endDrag}
+          onPointerCancel={endDrag}
         >
           {PHOTO_FILTERS.map((filter) => {
             const active = value === filter.id;
@@ -40,7 +123,7 @@ export function FilterPicker({
                 key={filter.id}
                 type="button"
                 disabled={disabled}
-                onClick={() => onChange(filter.id)}
+                onClick={() => handleFilterClick(filter.id)}
                 whileTap={!disabled ? { scale: 0.92 } : undefined}
                 transition={{
                   type: "spring",
@@ -71,12 +154,6 @@ export function FilterPicker({
                       backgroundSize: "4px 4px",
                     }}
                   />
-
-                  {filter.icon && (
-                    <span className="relative z-10 text-[16px] drop-shadow-md">
-                      {filter.icon}
-                    </span>
-                  )}
 
                   {active && (
                     <motion.span

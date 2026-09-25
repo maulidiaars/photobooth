@@ -40,11 +40,20 @@ export function FrameCard({ frame, selected, onSelect }: FrameCardProps) {
 
         {selected && (
           <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-garnet text-paper-light shadow-clay-sm sm:h-8 sm:w-8"
+            key="check"
+            initial={{ scale: 0, rotate: -25 }}
+            animate={{ scale: 1, rotate: -8 }}
+            // Spring "keras" (stiffness tinggi, damping rendah) supaya
+            // badge-nya kerasa "nempel" langsung — nge-pop tegas, bukan
+            // fade/scale halus.
+            transition={{ type: "spring", stiffness: 700, damping: 16, mass: 0.6 }}
+            // Ditaruh bener-bener di ujung/pojok frame (nongol keluar
+            // dikit lewat offset negatif) + ring putih supaya kelihatan
+            // jelas nempel di ujung kertas foto, bukan ngambang di
+            // tengah area transparan gambar.
+            className="absolute -right-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full border-[2.5px] border-paper-light bg-garnet-gradient text-paper-light shadow-clay-sm sm:-right-2.5 sm:-top-2.5 sm:h-9 sm:w-9"
           >
-            <Check size={16} strokeWidth={3} />
+            <Check size={16} strokeWidth={3.4} />
           </motion.div>
         )}
       </div>

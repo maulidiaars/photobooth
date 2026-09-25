@@ -12,13 +12,16 @@ interface SessionTimerProps {
 }
 
 /**
- * Tab hitung-mundur sesi foto — "menempel" flush di tepi atas layar
- * (bukan pil melayang dengan bayangan) supaya jelas kebaca sebagai
- * bagian dari halaman, bukan elemen ngambang yang terpisah. Dipasang
- * di halaman pilih frame & kamera saja — bacanya dari `sessionDeadline`
- * di sessionStore supaya waktunya tetap konsisten walau pengguna
- * berpindah halaman. Kalau belum ada sesi aktif (`sessionDeadline`
- * null), tidak render apa-apa.
+ * Kotak hitung-mundur sesi foto — sengaja ditaruh sebagai kotak yang
+ * jelas dan rapi di pojok kiri atas layar (bukan pil melayang di
+ * tengah), dengan sedikit jarak dari tepi supaya kebaca sebagai kotak
+ * tersendiri. Efek "timbul"-nya didapat lewat garis bevel tajam
+ * (highlight terang di atas, garis gelap di bawah) — bukan box-shadow
+ * blur — jadi tetap terlihat tegas & bersih, tanpa bayangan yang
+ * mengambang. Dipasang di halaman pilih frame & kamera saja — bacanya
+ * dari `sessionDeadline` di sessionStore supaya waktunya tetap
+ * konsisten walau pengguna berpindah halaman. Kalau belum ada sesi
+ * aktif (`sessionDeadline` null), tidak render apa-apa.
  */
 export function SessionTimer({ onExpire }: SessionTimerProps) {
   const deadline = useSessionStore((s) => s.sessionDeadline);
@@ -60,18 +63,20 @@ export function SessionTimer({ onExpire }: SessionTimerProps) {
   const isLow = totalSeconds <= 30;
 
   return (
-    <div className="fixed inset-x-0 top-0 z-50 flex justify-center sm:justify-start sm:left-6">
-      {/* Flush dengan tepi atas layar (top: 0, tanpa jarak & tanpa
-          shadow) supaya kebaca sebagai tab yang nempel/menyatu dengan
-          halaman — bukan kartu yang melayang terpisah. Warna solid +
-          border bawah tipis dipakai buat kasih batas yang jelas,
-          gantinya bayangan. */}
+    <div className="fixed left-4 top-4 z-50 sm:left-6 sm:top-6">
       <div
-        className={`flex items-center gap-2 rounded-b-2xl border-b-2 border-x px-4 py-2 sm:px-5 sm:py-2.5 ${
+        className={`flex items-center gap-2 rounded-2xl border-2 px-4 py-2.5 sm:gap-2.5 sm:px-5 sm:py-3 ${
           isLow
-            ? "border-garnet-light/70 bg-garnet-gradient text-paper-light animate-pulse"
-            : "border-paper-light/25 bg-maroon-gradient text-paper-light"
+            ? "border-garnet-dark bg-garnet-gradient text-paper-light animate-pulse"
+            : "border-maroon-dark bg-maroon-gradient text-paper-light"
         }`}
+        style={{
+          // Bevel tegas (bukan blur) untuk kesan "timbul" yang bersih —
+          // garis terang tipis di tepi atas, garis gelap tipis di tepi
+          // bawah, tanpa penyebaran/soft shadow sama sekali.
+          boxShadow:
+            "inset 0 1.5px 0 rgba(255,255,255,0.35), inset 0 -2px 0 rgba(0,0,0,0.3)",
+        }}
       >
         <Timer size={16} strokeWidth={2.6} className="shrink-0" />
         <span className="font-display text-sm font-bold tabular-nums tracking-wide sm:text-base">

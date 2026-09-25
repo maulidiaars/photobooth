@@ -16,11 +16,15 @@ export function WebcamView({
   videoConstraints,
   filter = "original",
 }: WebcamViewProps) {
-  const selected = getPhotoFilter(filter);
-  const filterStyle = selected.filter;
+  const selectedFilter = getPhotoFilter(filter);
+
+  const filterStyle =
+    selectedFilter.filter === "none"
+      ? "none"
+      : selectedFilter.filter;
 
   return (
-    <div className="absolute inset-0 overflow-hidden">
+    <div className="absolute inset-0 overflow-hidden bg-black">
       <Webcam
         ref={webcamRef}
         audio={false}
@@ -30,7 +34,9 @@ export function WebcamView({
         videoConstraints={videoConstraints}
         className="absolute inset-0 h-full w-full object-cover"
         style={{
-          filter: filterStyle === "none" ? undefined : filterStyle,
+          filter: filterStyle,
+          WebkitFilter: filterStyle,
+          transition: "filter 180ms ease",
         }}
       />
     </div>

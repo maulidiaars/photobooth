@@ -11,10 +11,12 @@ interface FrameCarouselProps {
   onSelect: (frame: Frame) => void;
 }
 
-// Dulu ini list horizontal (geser ke samping). Sekarang jadi list
-// vertikal — kartu frame ditumpuk ke bawah dan area ini yang di-scroll
-// ke bawah kalau frame-nya banyak; kotak pembungkus di luar
-// (frame/page.tsx) tampilannya tidak diubah.
+// Grid yang mengisi kartu frame sebaris penuh dulu (sesuai lebar
+// container cream-nya) sebelum baru pindah ke baris berikutnya —
+// jumlah kolom per baris otomatis menyesuaikan lebar container lewat
+// `repeat(auto-fill, minmax(...))`. Kalau barisnya lebih banyak dari
+// yang muat, area ini sendiri yang di-scroll ke bawah; kotak
+// pembungkus di luar (frame/page.tsx) tampilannya tidak diubah.
 export function FrameCarousel({ frames, selectedId, onSelect }: FrameCarouselProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [canUp, setCanUp] = useState(false);
@@ -49,7 +51,8 @@ export function FrameCarousel({ frames, selectedId, onSelect }: FrameCarouselPro
       <motion.div
         ref={scrollerRef}
         onScroll={updateArrows}
-        className="no-scrollbar flex h-full min-h-0 flex-1 select-none flex-col items-center gap-4 overflow-y-auto scroll-smooth px-2 py-6"
+        className="no-scrollbar grid h-full min-h-0 flex-1 select-none content-start items-start justify-items-center gap-3 overflow-y-auto scroll-smooth px-2 py-6 sm:gap-4"
+        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(112px, 1fr))" }}
       >
         {frames.map((frame) => (
           <FrameCard

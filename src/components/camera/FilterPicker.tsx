@@ -11,9 +11,10 @@ interface FilterPickerProps {
   disabled?: boolean;
 }
 
-/** Pixels the pointer has to move before a mousedown counts as a drag
- *  instead of a click — keeps tapping a filter chip feeling snappy while
- *  still letting a mouse click-and-hold pan the strip. */
+/**
+ * Minimum pointer movement before a mouse interaction
+ * is considered a drag instead of a click.
+ */
 const DRAG_THRESHOLD = 6;
 
 export function FilterPicker({
@@ -22,6 +23,7 @@ export function FilterPicker({
   disabled = false,
 }: FilterPickerProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
   const dragState = useRef({
     active: false,
     dragging: false,
@@ -31,8 +33,8 @@ export function FilterPicker({
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
-      // Only hijack the mouse — touch/pen already get native scrolling.
       if (e.pointerType !== "mouse" || disabled) return;
+
       const el = scrollRef.current;
       if (!el) return;
 
@@ -42,6 +44,7 @@ export function FilterPicker({
         startX: e.clientX,
         startScrollLeft: el.scrollLeft,
       };
+
       el.setPointerCapture(e.pointerId);
     },
     [disabled]
@@ -51,45 +54,62 @@ export function FilterPicker({
     (e: React.PointerEvent<HTMLDivElement>) => {
       const state = dragState.current;
       const el = scrollRef.current;
+
       if (!state.active || !el) return;
 
       const delta = e.clientX - state.startX;
 
       if (!state.dragging) {
         if (Math.abs(delta) < DRAG_THRESHOLD) return;
+
         state.dragging = true;
         el.classList.add("cursor-grabbing");
       }
 
       e.preventDefault();
+
       el.scrollLeft = state.startScrollLeft - delta;
     },
     []
   );
 
-  const endDrag = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    const state = dragState.current;
-    const el = scrollRef.current;
-    if (el) {
-      el.classList.remove("cursor-grabbing");
-      if (el.hasPointerCapture(e.pointerId)) {
-        el.releasePointerCapture(e.pointerId);
+  const endDrag = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const state = dragState.current;
+      const el = scrollRef.current;
+
+      if (el) {
+        el.classList.remove("cursor-grabbing");
+
+        if (el.hasPointerCapture(e.pointerId)) {
+          el.releasePointerCapture(e.pointerId);
+        }
       }
-    }
-    state.active = false;
-    // Leave `dragging` set for this tick so the click that follows a real
-    // drag gets swallowed; it's cleared right after on the next pointer down.
-  }, []);
+
+      state.active = false;
+    },
+    []
+  );
 
   const handleFilterClick = useCallback(
     (id: PhotoFilterId) => {
+      if (disabled) return;
+
       if (dragState.current.dragging) {
         dragState.current.dragging = false;
         return;
       }
+
+      /*
+       * This is the important part:
+       *
+       * Selecting an effect immediately updates the parent state.
+       * The parent passes the new filter to WebcamView,
+       * so the live camera changes immediately.
+       */
       onChange(id);
     },
-    [onChange]
+    [disabled, onChange]
   );
 
   return (
@@ -99,7 +119,10 @@ export function FilterPicker({
     >
       <div className="flex min-w-0 items-center gap-2">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/75 sm:h-9 sm:w-9">
-          <SlidersHorizontal size={14} strokeWidth={2.3} />
+          <SlidersHorizontal
+            size={14}
+            strokeWidth={2.3}
+          />
         </span>
 
         <div
@@ -108,6 +131,7 @@ export function FilterPicker({
           style={{
             scrollbarWidth: "none",
             WebkitOverflowScrolling: "touch",
+            touchAction: "pan-x",
           }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
@@ -123,8 +147,14 @@ export function FilterPicker({
                 key={filter.id}
                 type="button"
                 disabled={disabled}
-                onClick={() => handleFilterClick(filter.id)}
-                whileTap={!disabled ? { scale: 0.92 } : undefined}
+                onClick={() =>
+                  handleFilterClick(filter.id)
+                }
+                whileTap={
+                  !disabled
+                    ? { scale: 0.92 }
+                    : undefined
+                }
                 transition={{
                   type: "spring",
                   stiffness: 420,
@@ -144,7 +174,9 @@ export function FilterPicker({
                       ? "scale-[1.06] border-white shadow-[0_0_0_2px_rgba(255,255,255,.13),0_7px_18px_rgba(0,0,0,.25)]"
                       : "border-white/15"
                   }`}
-                  style={{ background: filter.swatch }}
+                  style={{
+                    background: filter.swatch,
+                  }}
                 >
                   <span
                     className="absolute inset-0 opacity-25"
@@ -157,11 +189,20 @@ export function FilterPicker({
 
                   {active && (
                     <motion.span
-                      initial={{ opacity: 0, scale: 0.7 }}
-                      animate={{ opacity: 1, scale: 1 }}
+                      initial={{
+                        opacity: 0,
+                        scale: 0.7,
+                      }}
+                      animate={{
+                        opacity: 1,
+                        scale: 1,
+                      }}
                       className="absolute right-0.5 top-0.5 z-20 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[#4A1A1A] shadow-lg"
                     >
-                      <Check size={9} strokeWidth={3.2} />
+                      <Check
+                        size={9}
+                        strokeWidth={3.2}
+                      />
                     </motion.span>
                   )}
                 </span>

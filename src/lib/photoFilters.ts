@@ -1,5 +1,3 @@
-import type { FaceEffectId } from "./faceEffects";
-
 export type PhotoFilterId =
   | "original"
   | "warm"
@@ -14,19 +12,13 @@ export type PhotoFilterId =
   | "night"
   | "vivid"
   | "matte"
-  | "sunset"
-  | FaceEffectId;
-
-export type PhotoEffectKind = "filter" | "ar";
+  | "sunset";
 
 export interface PhotoFilter {
   id: PhotoFilterId;
   label: string;
   filter: string;
   swatch: string;
-  kind?: PhotoEffectKind;
-  /** Emoji shown on the filter's thumbnail chip. */
-  icon?: string;
 }
 
 export const PHOTO_FILTERS: PhotoFilter[] = [
@@ -113,89 +105,6 @@ export const PHOTO_FILTERS: PhotoFilter[] = [
     label: "Sunset",
     filter: "sepia(.2) saturate(1.22) contrast(1.03) brightness(1.02) hue-rotate(-9deg)",
     swatch: "linear-gradient(135deg,#7c2937,#df714d,#f3c17a)",
-  },
-
-  // Real AR face-tracking effects — these follow the head (position,
-  // tilt, distance) live, and get baked into the captured photo too.
-  {
-    id: "love-hearts",
-    label: "Love",
-    kind: "ar",
-    icon: "❤️",
-    filter: "saturate(1.08) brightness(1.03)",
-    swatch: "linear-gradient(135deg,#4b1726,#d85d78,#ffd1db)",
-  },
-  {
-    id: "ghost-love",
-    label: "Ghost",
-    kind: "ar",
-    icon: "👻",
-    filter: "contrast(1.05) saturate(.94) brightness(1.02)",
-    swatch: "linear-gradient(135deg,#1b1b24,#4b3b55,#cfc8e8)",
-  },
-  {
-    id: "cool-glasses",
-    label: "Cool",
-    kind: "ar",
-    icon: "😎",
-    filter: "contrast(1.06) saturate(1.03)",
-    swatch: "linear-gradient(135deg,#111318,#3a3f47,#9aa3ad)",
-  },
-  {
-    id: "bunny",
-    label: "Bunny",
-    kind: "ar",
-    icon: "🐰",
-    filter: "saturate(1.06) brightness(1.05)",
-    swatch: "linear-gradient(135deg,#c46a86,#f7c9d8,#fff5f8)",
-  },
-  {
-    id: "cat",
-    label: "Cat",
-    kind: "ar",
-    icon: "🐱",
-    filter: "sepia(.05) saturate(1.05)",
-    swatch: "linear-gradient(135deg,#3a2a26,#8a6a58,#e8c9b8)",
-  },
-  {
-    id: "princess",
-    label: "Princess",
-    kind: "ar",
-    icon: "👑",
-    filter: "saturate(1.1) brightness(1.04)",
-    swatch: "linear-gradient(135deg,#8c6a1f,#e8b84b,#fff3c4)",
-  },
-  {
-    id: "kiss",
-    label: "Kiss",
-    kind: "ar",
-    icon: "💋",
-    filter: "saturate(1.1) brightness(1.03)",
-    swatch: "linear-gradient(135deg,#8d203b,#ef7187,#ffd6df)",
-  },
-  {
-    id: "sparkle",
-    label: "Sparkle",
-    kind: "ar",
-    icon: "✨",
-    filter: "saturate(1.12) contrast(1.03) brightness(1.05)",
-    swatch: "linear-gradient(135deg,#6b5a9e,#b8a6e4,#fff8cf)",
-  },
-  {
-    id: "devil",
-    label: "Devil",
-    kind: "ar",
-    icon: "😈",
-    filter: "contrast(1.12) saturate(1.05) brightness(.97)",
-    swatch: "linear-gradient(135deg,#3d0b0b,#a31f1f,#e0645a)",
-  },
-  {
-    id: "flowers",
-    label: "Cute",
-    kind: "ar",
-    icon: "🌸",
-    filter: "saturate(1.08) brightness(1.05)",
-    swatch: "linear-gradient(135deg,#7d4a63,#e8a8c9,#fdf0f7)",
   },
 ];
 

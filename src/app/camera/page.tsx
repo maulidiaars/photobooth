@@ -30,7 +30,6 @@ export default function CameraPage() {
   const {
     webcamRef,
     videoConstraints,
-    landmarksRef,
     count,
     isRunning,
     isPausing,
@@ -119,7 +118,6 @@ export default function CameraPage() {
             webcamRef={webcamRef}
             videoConstraints={videoConstraints}
             filter={photoFilter}
-            landmarksRef={landmarksRef}
           />
 
           <CountdownOverlay count={count} />

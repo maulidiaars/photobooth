@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Sparkles, Timer } from "lucide-react";
+import clsx from "clsx";
 import { FloatingBackground } from "@/components/ui/FloatingBackground";
 import { FrameCarousel } from "@/components/frame/FrameCarousel";
 import { StepTracker } from "@/components/ui/StepTracker";
@@ -213,10 +214,11 @@ export default function FramePage() {
           </AnimatePresence>
         </div>
 
-        {/* CTA — centered and sized to its own content (not full column
-            width), so it reads as a compact button sitting under the
-            frame rather than a big full-width bar. */}
-        <div className="relative z-10 flex w-full shrink-0 justify-center px-4 pb-4 pt-3 sm:px-6">
+        {/* CTA — fills the entire remaining width/height of the white
+            panel edge-to-edge (no padding, no border-radius), so it
+            reads as a docked action bar built into the panel itself
+            rather than a small floating pill sitting under the frame. */}
+        <div className="relative z-10 flex h-24 w-full shrink-0 sm:h-28">
           <ContinueOutline selectedFrame={selectedFrame} onClick={handleContinue} />
         </div>
       </div>
@@ -281,8 +283,12 @@ function ContinueTicket({
 }
 
 /**
- * Desktop CTA — compact, content-sized (not full-width): smaller than the
- * frame above it, never wider than it.
+ * Desktop CTA — a full-bleed action bar that fills every leftover
+ * pixel of the white panel (no border-radius, no gap on any side), so
+ * it reads as a docked part of the panel instead of a floating pill.
+ * Pressing it flashes the whole bar green with white text — a short,
+ * deliberate "confirmed" beat — before actually moving to the camera
+ * page, so the feedback is never cut off by the navigation.
  */
 function ContinueOutline({
   selectedFrame,
@@ -291,20 +297,38 @@ function ContinueOutline({
   selectedFrame: Frame | null;
   onClick: () => void;
 }) {
+  const [pressed, setPressed] = useState(false);
+
+  const handleClick = () => {
+    if (!selectedFrame || pressed) return;
+    setPressed(true);
+    window.setTimeout(onClick, 180);
+  };
+
   return (
-    <motion.button
-      onClick={onClick}
+    <button
+      onClick={handleClick}
       disabled={!selectedFrame}
-      whileHover={selectedFrame ? { y: -3, rotate: -1 } : undefined}
-      whileTap={selectedFrame ? { y: 1, scale: 0.98 } : undefined}
-      transition={{ type: "spring", stiffness: 420, damping: 22 }}
-      className="ticket ticket-on-cream rounded-clay bg-maroon-gradient shadow-clay hover:shadow-clay-lg text-paper-light flex w-fit max-w-full shrink-0 items-center gap-2 whitespace-nowrap px-4 py-2 shadow-[0_4px_24px_rgba(0,0,0,0.35)] transition-opacity disabled:opacity-20 disabled:hover:shadow-clay sm:gap-2.5 sm:px-5 sm:py-2.5"
+      className={clsx(
+        "flex h-full w-full items-center justify-center gap-3 border-t transition-colors duration-150 disabled:cursor-not-allowed",
+        pressed
+          ? "border-forest-dark bg-forest-gradient text-paper-light"
+          : selectedFrame
+            ? "border-ink/10 bg-cream-light text-ink hover:bg-cream"
+            : "border-ink/10 bg-cream-light text-ink/30"
+      )}
+      style={{
+        // Bevel tegas (bukan blur) di tepi atas panel supaya area
+        // tombol kebaca "timbul" dari panel foto di atasnya.
+        boxShadow: pressed
+          ? "inset 0 2px 0 rgba(255,255,255,0.25)"
+          : "inset 0 1px 0 rgba(255,255,255,0.9)",
+      }}
     >
-      <span className="font-display text-xs font-bold tracking-wide sm:text-sm">
+      <span className="font-display text-base font-bold tracking-[0.2em] sm:text-lg">
         NEXT
       </span>
-      <div className="ticket-divider h-4 sm:h-5" />
-      <ArrowRight size={14} strokeWidth={2.4} className="shrink-0 sm:size-4" />
-    </motion.button>
+      <ArrowRight size={20} strokeWidth={2.6} className="shrink-0" />
+    </button>
   );
 }

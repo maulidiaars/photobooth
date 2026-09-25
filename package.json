@@ -11,7 +11,6 @@
     "db:init": "node -r dotenv/config scripts/init-db.js"
   },
   "dependencies": {
-    "@mediapipe/tasks-vision": "^0.10.14",
     "@vercel/blob": "^2.8.0",
     "autoprefixer": "10.4.20",
     "bcryptjs": "2.4.3",

@@ -192,6 +192,17 @@ body::after {
   cursor: grabbing;
 }
 
+/* Same as `.drag-slider` above but for a vertically-dragged list (the
+   frame picker grid) — native touch scroll stays untouched (pan-y),
+   only mouse/pen gets the grab cursor + useDragScroll(axis: "y"). */
+.drag-slider-y {
+  cursor: grab;
+  touch-action: pan-y;
+}
+.drag-slider-y:active {
+  cursor: grabbing;
+}
+
 
 /* Corner-ribbon badges for the admin photo strip — a compact
    folded-ribbon tag draped diagonally across each corner, sitting

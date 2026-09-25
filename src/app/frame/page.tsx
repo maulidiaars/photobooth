@@ -10,7 +10,6 @@ import { FrameCarousel } from "@/components/frame/FrameCarousel";
 import { StepTracker } from "@/components/ui/StepTracker";
 import { SessionTimer } from "@/components/ui/SessionTimer";
 import { Modal } from "@/components/ui/Modal";
-import { ClayButton } from "@/components/ui/ClayButton";
 import { getFrames } from "@/services/frameService";
 import { useSessionStore } from "@/store/sessionStore";
 import { useFrameContentBox } from "@/hooks/useFrameContentBox";
@@ -230,11 +229,13 @@ export default function FramePage() {
         </div>
       </div>
 
-      <Modal open={showStartModal} onClose={handleStartSession} title="Sesi fotomu segera dimulai">
+      <Modal
+        open={showStartModal}
+        onClose={handleStartSession}
+        title="Sesi fotomu segera dimulai"
+        icon={<Timer size={26} strokeWidth={2.4} />}
+      >
         <div className="flex flex-col items-start gap-4">
-          <div className="bg-garnet/10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full">
-            <Timer size={22} strokeWidth={2.4} className="text-garnet" />
-          </div>
           <p className="font-body text-sm leading-relaxed text-ink/70">
             Begitu kamu klik <span className="font-semibold text-ink">&quot;Mengerti, mulai!&quot;</span>,
             hitungan mundur <span className="font-semibold text-ink">{Math.round(SESSION_DURATION_MS / 60000)} menit</span> mulai
@@ -244,19 +245,44 @@ export default function FramePage() {
             Kalau waktunya habis, apa pun yang sudah kamu lakukan sejauh itu otomatis jadi hasil
             akhir — jadi pastikan foto-fotonya sempat diambil semua ya!
           </p>
-          <ClayButton
-            type="button"
-            variant="garnet"
-            size="sm"
-            fullWidth
-            className="mt-1"
-            onClick={handleStartSession}
-          >
-            Mengerti, mulai!
-          </ClayButton>
+          <StartSessionButton onClick={handleStartSession} />
         </div>
       </Modal>
     </main>
+  );
+}
+
+/**
+ * Tombol "Mengerti, mulai!" di dalam modal — pill 3D: bevel tajam
+ * (terang di atas, gelap di bawah, senada trik di kotak timer) supaya
+ * kerasa timbul & bisa ditekan, bukan cuma tombol flat.
+ */
+function StartSessionButton({ onClick }: { onClick: () => void }) {
+  const [pressed, setPressed] = useState(false);
+
+  const handleClick = () => {
+    if (pressed) return;
+    setPressed(true);
+    window.setTimeout(onClick, 150);
+  };
+
+  return (
+    <motion.button
+      type="button"
+      onClick={handleClick}
+      whileTap={{ y: 2 }}
+      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+      className="bg-garnet-gradient text-paper-light mt-1 flex w-full items-center justify-center rounded-full py-3.5 font-body font-semibold"
+      style={{
+        boxShadow: pressed
+          ? "inset 0 5px 10px rgba(0,0,0,0.4)"
+          : "inset 0 1.5px 0 rgba(255,255,255,0.4), inset 0 -3px 0 rgba(0,0,0,0.28), 0 8px 16px -6px rgba(156,43,60,0.5)",
+      }}
+    >
+      <span className={clsx("transition-transform duration-150", pressed && "translate-y-[1px]")}>
+        Mengerti, mulai!
+      </span>
+    </motion.button>
   );
 }
 

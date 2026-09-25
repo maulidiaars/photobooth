@@ -182,15 +182,17 @@ function drawArcGlyphs(
 ) {
   const n = glyphs.length;
   for (let i = 0; i < n; i++) {
+    const glyph = glyphs[i];
+    if (!glyph) continue;
     const f = n > 1 ? (i - (n - 1) / 2) / ((n - 1) / 2) : 0;
     const bob = Math.sin(t / 450 + i * 0.7) * g.faceHeight * 0.015;
     const up = g.faceHeight * (0.55 + (1 - Math.abs(f)) * 0.14) + bob;
     const side = f * g.faceWidth * spanFactor;
     const p = alongHead(g, side, up);
-    const isBig = bigGlyph && glyphs[i] === bigGlyph;
+    const isBig = bigGlyph && glyph === bigGlyph;
     drawEmoji(
       ctx,
-      glyphs[i],
+      glyph,
       p.x,
       p.y,
       g.faceWidth * (isBig ? sizeFactor * 1.2 : sizeFactor),
@@ -215,6 +217,7 @@ function drawOrbitGlyphs(
     const up = Math.sin(a) * ry * 0.5 + g.faceHeight * 0.25;
     const p = alongHead(g, side, up);
     const glyph = glyphs[i % glyphs.length];
+    if (!glyph) continue;
     const twinkle = 0.85 + 0.25 * Math.sin(t / 300 + i * 2);
     drawEmoji(ctx, glyph, p.x, p.y, g.faceWidth * 0.11 * twinkle, 0);
   }
@@ -387,7 +390,7 @@ function drawCrown(ctx: CanvasRenderingContext2D, g: FaceGeometry) {
   [-0.25, 0, 0.25].forEach((f, i) => {
     ctx.beginPath();
     ctx.arc(w * f, h * 0.05, w * 0.045, 0, Math.PI * 2);
-    ctx.fillStyle = jewelColors[i];
+    ctx.fillStyle = jewelColors[i] ?? "#e0507a";
     ctx.fill();
   });
 

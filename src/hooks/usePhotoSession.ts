@@ -15,7 +15,7 @@ type SessionMode = "idle" | "auto" | "retake";
 
 export function usePhotoSession(filterId: PhotoFilterId = "original") {
   const router = useRouter();
-  const { webcamRef, capture, videoConstraints } = useCamera();
+  const { webcamRef, capture, videoConstraints, landmarksRef } = useCamera();
   const [showFlash, setShowFlash] = useState(false);
   const [mode, setMode] = useState<SessionMode>("idle");
   const [isPausing, setIsPausing] = useState(false);
@@ -121,6 +121,7 @@ export function usePhotoSession(filterId: PhotoFilterId = "original") {
   return {
     webcamRef,
     videoConstraints,
+    landmarksRef,
     count,
     isRunning,
     isPausing,

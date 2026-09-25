@@ -66,13 +66,13 @@ export default function CameraPage() {
     setRetakeCandidate(null);
   };
 
-  // Timer sesi habis di halaman ini — biasanya sambil retake foto.
-  // Kalau sudah ada foto yang tersimpan, langsung anggap selesai dan
-  // lanjut ke halaman hasil (foto yang belum sempat diambil ulang ya
-  // tetap dipakai yang terakhir). Kalau belum ada foto sama sekali,
-  // dibiarkan saja karena halaman hasil butuh minimal satu foto.
+  // Timer sesi habis di halaman ini. Mau gimanapun kondisinya saat
+  // itu — baru dapat sebagian foto, atau bahkan belum motret sama
+  // sekali — langsung diarahin ke halaman hasil dan itu yang kesimpen
+  // apa adanya. Slot yang belum sempat difoto tetap kosong di hasil
+  // akhirnya.
   const handleTimerExpire = () => {
-    if (capturedPhotos.length > 0) router.push(ROUTES.result);
+    router.push(ROUTES.result);
   };
 
   return (

@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { CheckCircle2, RotateCcw, Sparkles } from "lucide-react";
+import { CheckCircle2, Sparkles } from "lucide-react";
+
 import { WebcamView } from "@/components/camera/WebcamView";
 import { CountdownOverlay } from "@/components/camera/CountdownOverlay";
 import { ShutterFlash } from "@/components/camera/ShutterFlash";
@@ -12,18 +13,36 @@ import { FilterPicker } from "@/components/camera/FilterPicker";
 import { FloatingBackground } from "@/components/ui/FloatingBackground";
 import { ConfirmModal } from "@/components/ui/Modal";
 import { SessionTimer } from "@/components/ui/SessionTimer";
+
 import { usePhotoSession } from "@/hooks/usePhotoSession";
 import { useFrameContentBox } from "@/hooks/useFrameContentBox";
 import { useFramePreviewLayout } from "@/hooks/useFramePreviewLayout";
+
 import type { PhotoFilterId } from "@/lib/photoFilters";
 import { ROUTES } from "@/lib/constants";
 
 export default function CameraPage() {
   const router = useRouter();
 
+  /*
+   * Index foto yang sedang dipilih untuk diambil ulang.
+   */
   const [retakeCandidate, setRetakeCandidate] =
     useState<number | null>(null);
 
+  /*
+   * Effect aktif selama SATU sesi foto.
+   *
+   * Penting:
+   * State ini tidak di-reset ketika foto selesai.
+   *
+   * Jadi:
+   *
+   * Original → Warm → B&W → Vintage
+   *
+   * pilihan terakhir tetap aktif walaupun semua slot sudah
+   * terisi dan user ingin melakukan retake.
+   */
   const [photoFilter, setPhotoFilter] =
     useState<PhotoFilterId>("original");
 
@@ -36,7 +55,6 @@ export default function CameraPage() {
     showFlash,
     takeAllShots,
     confirmRetake,
-    retakeAll,
     activeIndex,
     goToResult,
     capturedPhotos,
@@ -66,17 +84,36 @@ export default function CameraPage() {
 
   if (!selectedFrame) return null;
 
+  /*
+   * Kamera sedang melakukan countdown / jeda antar foto.
+   */
   const busy = isRunning || isPausing;
 
+  /*
+   * User klik salah satu foto yang sudah ada.
+   *
+   * Ini tidak langsung melakukan retake.
+   * Kita tampilkan confirmation modal terlebih dahulu.
+   */
   const handleSlotClick = (index: number) => {
     if (busy) return;
+
     setRetakeCandidate(index);
   };
 
+  /*
+   * User menekan "Ya, ambil ulang".
+   *
+   * photoFilter TIDAK diubah di sini.
+   *
+   * Jadi filter yang sedang dipilih tetap digunakan
+   * untuk foto retake.
+   */
   const handleConfirmRetake = () => {
     if (retakeCandidate !== null) {
       confirmRetake(retakeCandidate);
     }
+
     setRetakeCandidate(null);
   };
 
@@ -84,18 +121,51 @@ export default function CameraPage() {
     router.push(ROUTES.result);
   };
 
+  /*
+   * Tombol utama di dalam kamera.
+   *
+   * Sebelum semua foto selesai:
+   *     → tombol berfungsi sebagai tombol jepret
+   *
+   * Setelah semua foto selesai:
+   *     → tombol berubah menjadi Simpan & Lanjut
+   *
+   * Dengan begini tidak ada lagi tombol yang mengambil ruang
+   * di bawah kamera.
+   */
+  const handleMainCameraButton = () => {
+    if (busy) return;
+
+    if (isComplete) {
+      goToResult();
+      return;
+    }
+
+    takeAllShots();
+  };
+
   return (
     <main className="app-shell relative flex w-full flex-col overflow-hidden lg:flex-row">
+      {/* =========================================================
+          CAMERA AREA
+          ========================================================= */}
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3 pt-3 sm:px-5 sm:pb-5 sm:pt-4 lg:px-8 lg:pb-6 lg:pt-5">
         <div className="landing-maroon-bg" />
         <FloatingBackground />
 
-        {/*
-          Toolbar sits above the camera.
-          Timer stays on the left; effects sit directly beside it.
-          On small screens the toolbar wraps cleanly instead of
-          squeezing the camera.
-        */}
+        {/* =====================================================
+            TOP TOOLBAR
+            Effect picker SELALU tampil selama sesi.
+            
+            Sebelumnya:
+              !isComplete && <FilterPicker />
+
+            Sekarang:
+              FilterPicker SELALU tampil.
+
+            Jadi ketika semua foto sudah selesai pun user masih
+            bisa memilih effect baru sebelum melakukan retake.
+            ===================================================== */}
         <div className="relative z-20 mb-3 flex w-full min-w-0 items-center gap-2 sm:mb-4 sm:gap-3">
           <div className="shrink-0">
             <SessionTimer
@@ -104,15 +174,16 @@ export default function CameraPage() {
             />
           </div>
 
-          {!isComplete && (
-            <FilterPicker
-              value={photoFilter}
-              onChange={setPhotoFilter}
-              disabled={busy}
-            />
-          )}
+          <FilterPicker
+            value={photoFilter}
+            onChange={setPhotoFilter}
+            disabled={busy}
+          />
         </div>
 
+        {/* =====================================================
+            LIVE CAMERA
+            ===================================================== */}
         <section className="relative z-10 min-h-0 flex-1 overflow-hidden rounded-clay-lg bg-black sm:rounded-[28px]">
           <WebcamView
             webcamRef={webcamRef}
@@ -121,8 +192,10 @@ export default function CameraPage() {
           />
 
           <CountdownOverlay count={count} />
+
           <ShutterFlash show={showFlash} />
 
+          {/* Camera corner guides */}
           <div className="pointer-events-none absolute inset-3 sm:inset-5">
             {(
               [
@@ -139,20 +212,91 @@ export default function CameraPage() {
             ))}
           </div>
 
-          {!isComplete && (
-            <div className="absolute bottom-5 left-1/2 z-30 -translate-x-1/2 sm:bottom-7">
+          {/* ===================================================
+              MAIN CAMERA BUTTON
+              
+              BUTTON TETAP DI DALAM CAMERA.
+
+              BELUM SELESAI:
+                → tombol shutter
+
+              SUDAH SELESAI:
+                → Simpan & Lanjut
+
+              Tidak ada lagi area tombol di bawah camera.
+              =================================================== */}
+          <div className="absolute bottom-5 left-1/2 z-30 -translate-x-1/2 sm:bottom-7">
+            {isComplete ? (
+              /*
+               * =================================================
+               * SIMPAN & LANJUT
+               * =================================================
+               */
               <motion.button
-                onClick={takeAllShots}
+                type="button"
+                onClick={handleMainCameraButton}
                 disabled={busy}
-                aria-label="Mulai ambil foto"
-                whileHover={!busy ? { scale: 1.05 } : undefined}
-                whileTap={!busy ? { scale: 0.9 } : undefined}
+                whileHover={
+                  !busy
+                    ? {
+                        y: -2,
+                        scale: 1.03,
+                      }
+                    : undefined
+                }
+                whileTap={
+                  !busy
+                    ? {
+                        y: 1,
+                        scale: 0.97,
+                      }
+                    : undefined
+                }
                 transition={{
                   type: "spring",
                   stiffness: 420,
                   damping: 22,
                 }}
-                className="group flex h-16 w-16 items-center justify-center rounded-full border-[3px] border-white/80 bg-white/10 backdrop-blur-sm transition-opacity disabled:opacity-50 sm:h-[4.5rem] sm:w-[4.5rem]"
+                className="bg-garnet-gradient flex min-h-12 items-center gap-2.5 rounded-full py-2.5 pl-3 pr-5 text-paper-light shadow-[0_12px_35px_rgba(0,0,0,.28)] backdrop-blur-md transition-opacity disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-14 sm:gap-3 sm:py-3 sm:pl-3.5 sm:pr-7"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 sm:h-9 sm:w-9">
+                  <CheckCircle2
+                    size={18}
+                    strokeWidth={2.6}
+                  />
+                </span>
+
+                <span className="font-display text-sm font-bold tracking-wide sm:text-base">
+                  Simpan &amp; Lanjut
+                </span>
+              </motion.button>
+            ) : (
+              /*
+               * =================================================
+               * SHUTTER
+               * =================================================
+               */
+              <motion.button
+                type="button"
+                onClick={handleMainCameraButton}
+                disabled={busy}
+                aria-label="Mulai ambil foto"
+                whileHover={
+                  !busy
+                    ? { scale: 1.05 }
+                    : undefined
+                }
+                whileTap={
+                  !busy
+                    ? { scale: 0.9 }
+                    : undefined
+                }
+                transition={{
+                  type: "spring",
+                  stiffness: 420,
+                  damping: 22,
+                }}
+                className="group flex h-16 w-16 items-center justify-center rounded-full border-[3px] border-white/80 bg-white/10 backdrop-blur-sm transition-opacity disabled:cursor-not-allowed disabled:opacity-50 sm:h-[4.5rem] sm:w-[4.5rem]"
               >
                 <motion.span
                   animate={
@@ -177,53 +321,31 @@ export default function CameraPage() {
                   className="bg-garnet-gradient h-[86%] w-[86%] rounded-full transition-transform group-active:scale-90"
                 />
               </motion.button>
-            </div>
-          )}
+            )}
+          </div>
         </section>
 
-        <div className="relative z-10 mt-3 flex shrink-0 flex-col items-center gap-2 sm:mt-4">
-          {isComplete ? (
-            <motion.div
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                type: "spring",
-                stiffness: 220,
-                damping: 22,
-              }}
-              className="flex flex-col items-center gap-2"
-            >
-              <motion.button
-                onClick={goToResult}
-                whileHover={{ y: -2, scale: 1.02 }}
-                whileTap={{ y: 1, scale: 0.97 }}
-                transition={{
-                  type: "spring",
-                  stiffness: 420,
-                  damping: 22,
-                }}
-                className="bg-garnet-gradient flex items-center gap-3 rounded-full py-2.5 pl-3 pr-6 text-paper-light sm:py-3 sm:pl-3.5 sm:pr-8"
-              >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 sm:h-9 sm:w-9">
-                  <CheckCircle2 size={18} strokeWidth={2.6} />
-                </span>
-                <span className="font-display text-sm font-bold tracking-wide sm:text-base">
-                  Simpan &amp; Lanjut
-                </span>
-              </motion.button>
-
-              <button
-                onClick={retakeAll}
-                className="font-body flex items-center gap-1.5 text-xs font-medium text-paper-light/55 transition-colors hover:text-paper-light sm:text-sm"
-              >
-                <RotateCcw size={13} strokeWidth={2.4} />
-                ambil ulang semua
-              </button>
-            </motion.div>
-          ) : null}
-        </div>
+        {/*
+         * =========================================================
+         * NO BUTTON AREA HERE
+         *
+         * Sebelumnya:
+         *
+         *   [Simpan & Lanjut]
+         *   ambil ulang semua
+         *
+         * berada di sini dan membuat layout kamera terdorong.
+         *
+         * Sekarang area ini sengaja DIHAPUS.
+         *
+         * Kamera mendapatkan seluruh ruang yang tersedia.
+         * =========================================================
+         */}
       </div>
 
+      {/* =========================================================
+          FRAME PREVIEW
+          ========================================================= */}
       <div
         className="frame-col-dynamic-width relative flex min-h-[54vh] w-full shrink-0 flex-col overflow-hidden bg-white lg:h-full lg:min-h-0 lg:flex-shrink-0"
         style={
@@ -257,6 +379,7 @@ export default function CameraPage() {
                 strokeWidth={2}
                 className="text-ink/25"
               />
+
               <p className="text-muted font-hand text-2xl">
                 frame ini belum punya slot
               </p>
@@ -265,6 +388,9 @@ export default function CameraPage() {
         </div>
       </div>
 
+      {/* =========================================================
+          RETAKE CONFIRMATION
+          ========================================================= */}
       <ConfirmModal
         open={retakeCandidate !== null}
         title="Ambil ulang foto ini?"
@@ -278,7 +404,9 @@ export default function CameraPage() {
         confirmLabel="Ya, ambil ulang"
         cancelLabel="Batal"
         onConfirm={handleConfirmRetake}
-        onCancel={() => setRetakeCandidate(null)}
+        onCancel={() =>
+          setRetakeCandidate(null)
+        }
       />
     </main>
   );

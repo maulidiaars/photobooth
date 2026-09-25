@@ -14,14 +14,11 @@ interface FramePreviewLiveProps {
   activeIndex: number | null;
   locked: boolean;
   onSlotClick: (index: number) => void;
-  /** Trimmed content box of frame.frame_png (see useFrameContentBox) —
-   *  used to crop the transparent PNG margin out of the rendered
-   *  background and to remap slot_layout rects (which are fractions of
-   *  the *full* PNG) into fractions of the visible content box. */
+
+  /** Trimmed content box of frame.frame_png. */
   contentBox: FrameContentBox | null;
-  /** Precomputed background-size/position for the current panel size
-   *  (see useFramePreviewLayout). Falls back to a plain `cover` render
-   *  for the single frame before this is available. */
+
+  /** Precomputed background-size/position for the current panel size. */
   previewLayout: FramePreviewLayout | null;
 }
 
@@ -39,57 +36,48 @@ export function FramePreviewLive({
 
   return (
     <div className="relative h-full w-full overflow-hidden">
-      {/* frame_png as a precisely-cropped background: sized/positioned so
-          the PNG's trimmed content box (its actual visible artwork) fills
-          this box edge-to-edge, cropping out the transparent margin baked
-          around it instead of leaving it as whitespace. Falls back to a
-          plain `cover` for one frame before the panel's height is known. */}
-      <div
-        className="absolute inset-0"
-        style={
-          previewLayout
-            ? {
-                backgroundImage: `url(${frame.frame_png})`,
-                backgroundSize: previewLayout.backgroundSize,
-                backgroundPosition: previewLayout.backgroundPosition,
-                backgroundRepeat: "no-repeat",
-              }
-            : {
-                backgroundImage: `url(${frame.frame_png})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                backgroundRepeat: "no-repeat",
-              }
-        }
-      />
-
       {frame.slot_layout.map((rawRect, i) => {
         const photo = photos[i];
         const isActive = activeIndex === i;
-        // slot_layout coordinates are fractions of the *full* frame_png
-        // canvas; remap them into fractions of the trimmed content box so
-        // they line up with the cropped background above instead of
-        // drifting off by the size of the cropped-away margin.
+
+        /*
+          slot_layout coordinates are fractions of the FULL frame PNG.
+          Convert them into the visible content box coordinates so the
+          photo slots stay aligned with the cropped frame artwork.
+        */
         const rect = contentBox
-          ? remapSlotToContentBox(rawRect, contentBox.naturalWidth, contentBox.naturalHeight, contentBox.box)
+          ? remapSlotToContentBox(
+              rawRect,
+              contentBox.naturalWidth,
+              contentBox.naturalHeight,
+              contentBox.box
+            )
           : rawRect;
 
-        // Position in real CSS px, not a plain "% of panel" — the panel
-        // isn't always exactly the content box scaled up (see
-        // useFramePreviewLayout's cover-fit for the stacked mobile
-        // layout, where the box is cropped/centered rather than filling
-        // the panel edge-to-edge). Using px anchored to the same
-        // scale+offset the background itself uses keeps every slot lined
-        // up with the artwork on any panel size. Falls back to plain %
-        // (assumes box == panel) for the one frame before layout/box are
-        // measured.
+        /*
+          Position the photo using the exact same scale + offset used
+          by the frame artwork itself.
+
+          This is important because the preview panel can have a
+          different size/aspect ratio depending on the device.
+        */
         const style =
           previewLayout && contentBox
             ? {
-                left: `${previewLayout.offsetX + rect.x * contentBox.box.w * previewLayout.scale}px`,
-                top: `${previewLayout.offsetY + rect.y * contentBox.box.h * previewLayout.scale}px`,
-                width: `${rect.w * contentBox.box.w * previewLayout.scale}px`,
-                height: `${rect.h * contentBox.box.h * previewLayout.scale}px`,
+                left: `${
+                  previewLayout.offsetX +
+                  rect.x * contentBox.box.w * previewLayout.scale
+                }px`,
+                top: `${
+                  previewLayout.offsetY +
+                  rect.y * contentBox.box.h * previewLayout.scale
+                }px`,
+                width: `${
+                  rect.w * contentBox.box.w * previewLayout.scale
+                }px`,
+                height: `${
+                  rect.h * contentBox.box.h * previewLayout.scale
+                }px`,
               }
             : {
                 left: `${rect.x * 100}%`,
@@ -99,7 +87,11 @@ export function FramePreviewLive({
               };
 
         return (
-          <div key={i} className="absolute overflow-hidden" style={style}>
+          <div
+            key={i}
+            className="absolute z-0 overflow-hidden"
+            style={style}
+          >
             <AnimatePresence mode="wait">
               {photo ? (
                 <motion.button
@@ -113,8 +105,12 @@ export function FramePreviewLive({
                   disabled={locked}
                   initial={{ opacity: 0, scale: 0.82 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                  className="group relative block h-full w-full disabled:cursor-default overflow-hidden"
+                  transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 20,
+                  }}
+                  className="group relative block h-full w-full overflow-hidden disabled:cursor-default"
                   aria-label={`Foto ${i + 1} — klik untuk ambil ulang`}
                 >
                   <img
@@ -133,13 +129,21 @@ export function FramePreviewLive({
               ) : (
                 <div
                   className={`flex h-full w-full items-center justify-center bg-white/35 transition-shadow ${
-                    isActive ? "ring-2 ring-garnet ring-inset" : ""
+                    isActive
+                      ? "ring-2 ring-garnet ring-inset"
+                      : ""
                   }`}
                 >
                   {isActive ? (
                     <motion.span
-                      animate={{ opacity: [0.4, 1, 0.4] }}
-                      transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
+                      animate={{
+                        opacity: [0.4, 1, 0.4],
+                      }}
+                      transition={{
+                        duration: 1.1,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
                       className="font-display text-sm font-semibold text-garnet sm:text-base"
                     >
                       {i + 1}
@@ -156,9 +160,56 @@ export function FramePreviewLive({
         );
       })}
 
+      {/*
+        ================================================================
+        IMPORTANT:
+        Frame artwork sekarang berada DI ATAS foto.
+
+        Sebelumnya:
+          FRAME
+            ↓
+          FOTO
+
+        Itu membuat foto tampil sebagai kotak/persegi di atas frame.
+
+        Sekarang:
+          FOTO
+            ↓
+          FRAME PNG
+
+        Karena lubang foto pada PNG frame bersifat transparan, foto hanya
+        terlihat melalui lubang tersebut. Kalau lubangnya oval/rounded/
+        bentuk lain, artwork frame otomatis menutup bagian foto yang
+        berada di luar lubang.
+
+        Ini membuat live camera preview mengikuti hasil merge di result.
+        ================================================================
+      */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-20"
+        style={
+          previewLayout
+            ? {
+                backgroundImage: `url(${frame.frame_png})`,
+                backgroundSize: previewLayout.backgroundSize,
+                backgroundPosition: previewLayout.backgroundPosition,
+                backgroundRepeat: "no-repeat",
+              }
+            : {
+                backgroundImage: `url(${frame.frame_png})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
+              }
+        }
+      />
+
       {slots.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white">
-          <p className="text-muted font-hand text-xl">frame tidak punya slot</p>
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-white">
+          <p className="text-muted font-hand text-xl">
+            frame tidak punya slot
+          </p>
         </div>
       )}
     </div>

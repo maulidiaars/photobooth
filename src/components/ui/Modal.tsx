@@ -3,12 +3,19 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
+import clsx from "clsx";
 import { ClayButton } from "./ClayButton";
 
 interface ModalProps {
   open: boolean;
   onClose: () => void;
   title?: string;
+  /** Ikon bulat kecil yang "melayang" separuh nongol di atas garis
+   *  modal — ini yang bikin modal kebaca sebagai notifikasi/peringatan
+   *  tanpa perlu strip warna tebal di dalam kartu. Opsional; kalau
+   *  tidak diisi, modal tampil polos seperti biasa (dipakai di
+   *  ConfirmModal misalnya). */
+  icon?: ReactNode;
   children: ReactNode;
   maxWidth?: string;
 }
@@ -19,14 +26,14 @@ interface ModalProps {
  * confirm()/alert()/prompt() (which look out of place and can't be
  * skinned, disabled, or made accessible to the flow's tone).
  *
- * Redesigned to read as a real "3D" card floating above the page —
- * a layered ambient shadow (so it looks lifted off the backdrop) plus
- * a sharp bevel line on the panel edge itself (bright top / dark
- * bottom, no blur — same trick as the session timer chip), a slim
- * garnet accent strip along the top as a "notice" cue, and a proper
- * embossed close button instead of a flat circle.
+ * Simple & clean by design on purpose: satu shadow lembut (bukan
+ * banyak layer/bevel yang malah keliatan berantakan), tombol close
+ * kecil & halus di pojok, dan (kalau dikasih `icon`) sebuah badge
+ * bundar yang melayang separuh keluar dari tepi atas kartu — ini pola
+ * umum untuk modal notifikasi/peringatan yang kebaca "penting" tanpa
+ * perlu elemen dekoratif tambahan.
  */
-export function Modal({ open, onClose, title, children, maxWidth = "max-w-md" }: ModalProps) {
+export function Modal({ open, onClose, title, icon, children, maxWidth = "max-w-md" }: ModalProps) {
   return (
     <AnimatePresence>
       {open && (
@@ -38,30 +45,40 @@ export function Modal({ open, onClose, title, children, maxWidth = "max-w-md" }:
           onClick={onClose}
         >
           <motion.div
-            initial={{ opacity: 0, y: 28, scale: 0.94 }}
+            initial={{ opacity: 0, y: 24, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 14, scale: 0.96 }}
+            exit={{ opacity: 0, y: 12, scale: 0.97 }}
             transition={{ type: "spring", stiffness: 340, damping: 28 }}
             onClick={(e) => e.stopPropagation()}
-            className={`bg-texture relative w-full ${maxWidth} overflow-hidden rounded-clay-lg bg-clay-gradient p-6 sm:p-7`}
+            className={`bg-texture relative w-full ${maxWidth} rounded-[28px] bg-clay-gradient p-6 sm:p-7`}
             style={{
-              boxShadow:
-                "0 30px 60px -14px rgba(58,40,31,0.48), 0 10px 24px -8px rgba(58,40,31,0.22), inset 0 1.5px 0 rgba(255,255,255,0.6), inset 0 -3px 0 rgba(58,40,31,0.12)",
+              // Satu shadow lembut & besar — kesan "mengambang" yang
+              // bersih, tanpa garis-garis bevel tambahan yang bikin
+              // ramai.
+              boxShadow: "0 28px 60px -16px rgba(58,40,31,0.42), 0 8px 20px -6px rgba(58,40,31,0.18)",
             }}
           >
-            {/* Slim accent strip di tepi atas — kesan "notifikasi", murni
-                dekoratif, ditaruh di belakang judul & tombol tutup. */}
-            <div className="bg-garnet-gradient absolute inset-x-0 top-0 z-0 h-2" />
-
             <button
               onClick={onClose}
               aria-label="Tutup"
-              className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-clay-gradient text-ink shadow-clay-sm transition-[box-shadow,transform] duration-150 hover:shadow-clay active:translate-y-[1px] active:shadow-clay-pressed"
+              className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/70 text-ink shadow-clay-sm transition-shadow hover:shadow-clay active:translate-y-[1px]"
             >
-              <X size={16} strokeWidth={2.5} />
+              <X size={15} strokeWidth={2.5} />
             </button>
+
+            {icon && (
+              <div className="bg-garnet-gradient text-paper-light shadow-clay -mt-14 mb-4 flex h-16 w-16 items-center justify-center rounded-full border-[3px] border-paper-light">
+                {icon}
+              </div>
+            )}
+
             {title && (
-              <h2 className="relative z-10 mb-4 pr-10 font-display text-xl font-semibold text-ink">
+              <h2
+                className={clsx(
+                  "relative z-10 mb-4 font-display text-xl font-semibold text-ink",
+                  icon ? "pr-6" : "pr-10"
+                )}
+              >
                 {title}
               </h2>
             )}

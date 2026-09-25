@@ -3,17 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles, Timer } from "lucide-react";
 import { FloatingBackground } from "@/components/ui/FloatingBackground";
 import { FrameCarousel } from "@/components/frame/FrameCarousel";
 import { StepTracker } from "@/components/ui/StepTracker";
 import { SessionTimer } from "@/components/ui/SessionTimer";
+import { Modal } from "@/components/ui/Modal";
 import { getFrames } from "@/services/frameService";
 import { useSessionStore } from "@/store/sessionStore";
 import { useFrameContentBox } from "@/hooks/useFrameContentBox";
 import { useFramePreviewLayout } from "@/hooks/useFramePreviewLayout";
 import type { Frame } from "@/types/frame";
-import { ROUTES } from "@/lib/constants";
+import { ROUTES, SESSION_DURATION_MS } from "@/lib/constants";
 
 // Static width for the right panel only while there's no frame selected
 // yet (nothing to size a preview around). The moment a frame is picked,
@@ -30,6 +31,19 @@ export default function FramePage() {
 
   const selectedFrame = useSessionStore((s) => s.selectedFrame);
   const setFrame = useSessionStore((s) => s.setFrame);
+  const sessionDeadline = useSessionStore((s) => s.sessionDeadline);
+  const startSessionTimer = useSessionStore((s) => s.startSessionTimer);
+
+  // Modal "mulai sesi" — muncul begitu masuk ke halaman ini kalau belum
+  // ada timer sesi yang jalan (baru datang dari landing page). Timer-nya
+  // baru benar-benar mulai begitu pengguna menutup modal ini (klik
+  // "mengerti"), bukan dari sejak klik "mulai sesi foto" di halaman awal.
+  const [showStartModal, setShowStartModal] = useState(sessionDeadline === null);
+
+  const handleStartSession = () => {
+    if (sessionDeadline === null) startSessionTimer();
+    setShowStartModal(false);
+  };
 
   const previewAreaRef = useRef<HTMLDivElement>(null);
   const contentBox = useFrameContentBox(selectedFrame?.thumbnail ?? null);
@@ -47,11 +61,14 @@ export default function FramePage() {
     if (selectedFrame) router.push(ROUTES.camera);
   };
 
-  // Timer sesi habis sementara pengguna masih di halaman ini — kalau
-  // sudah sempat pilih frame, langsung lanjutkan ke kamera; kalau
-  // belum, biarkan saja (nggak ada yang bisa disimpan/dilanjutkan).
+  // Timer sesi habis sementara pengguna masih di halaman ini. Apapun
+  // yang sudah terjadi itu yang kesimpen: kalau sudah sempat pilih
+  // frame, langsung diarahin ke halaman hasil — walau belum sempat
+  // motret sama sekali, hasilnya ya cuma frame kosong itu. Kalau
+  // belum sempat pilih frame sama sekali, tidak ada apa pun yang bisa
+  // disimpan jadi hasil, jadi dibiarkan saja.
   const handleTimerExpire = () => {
-    if (selectedFrame) router.push(ROUTES.camera);
+    if (selectedFrame) router.push(ROUTES.result);
   };
 
   return (
@@ -203,6 +220,29 @@ export default function FramePage() {
           <ContinueOutline selectedFrame={selectedFrame} onClick={handleContinue} />
         </div>
       </div>
+
+      <Modal open={showStartModal} onClose={handleStartSession} title="Sesi fotomu segera dimulai">
+        <div className="flex flex-col items-start gap-4">
+          <div className="bg-garnet/10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full">
+            <Timer size={22} strokeWidth={2.4} className="text-garnet" />
+          </div>
+          <p className="font-body text-sm leading-relaxed text-ink/70">
+            Begitu kamu klik <span className="font-semibold text-ink">&quot;Mengerti, mulai!&quot;</span>,
+            hitungan mundur <span className="font-semibold text-ink">{Math.round(SESSION_DURATION_MS / 60000)} menit</span> mulai
+            berjalan sampai halaman kamera — mulai dari milih frame sampai jepret foto.
+          </p>
+          <p className="font-body text-sm leading-relaxed text-ink/70">
+            Kalau waktunya habis, apa pun yang sudah kamu lakukan sejauh itu otomatis jadi hasil
+            akhir — jadi pastikan foto-fotonya sempat diambil semua ya!
+          </p>
+          <button
+            onClick={handleStartSession}
+            className="bg-garnet-gradient text-paper-light mt-1 w-full rounded-clay-sm py-3 font-body font-semibold shadow-clay-sm transition-shadow hover:shadow-clay"
+          >
+            Mengerti, mulai!
+          </button>
+        </div>
+      </Modal>
     </main>
   );
 }

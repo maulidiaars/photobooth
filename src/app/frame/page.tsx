@@ -10,6 +10,7 @@ import { FrameCarousel } from "@/components/frame/FrameCarousel";
 import { StepTracker } from "@/components/ui/StepTracker";
 import { SessionTimer } from "@/components/ui/SessionTimer";
 import { Modal } from "@/components/ui/Modal";
+import { ClayButton } from "@/components/ui/ClayButton";
 import { getFrames } from "@/services/frameService";
 import { useSessionStore } from "@/store/sessionStore";
 import { useFrameContentBox } from "@/hooks/useFrameContentBox";
@@ -74,8 +75,6 @@ export default function FramePage() {
 
   return (
     <main className="app-shell relative flex w-full flex-col overflow-hidden lg:flex-row">
-      <SessionTimer onExpire={handleTimerExpire} />
-
       {/* LEFT — deep-maroon textured half */}
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4 sm:px-8 sm:py-5 lg:px-12 lg:py-7">
         <div className="landing-maroon-bg" />
@@ -90,23 +89,31 @@ export default function FramePage() {
         </motion.div>
 
         <div className="relative z-10 flex min-h-0 flex-1 flex-col justify-center">
+          {/* Judul + subjudul "pilih frame" berbagi baris dengan timer
+              sesi — sengaja dipindah ke sini (bukan pojok layar yang
+              fixed lagi) supaya timer ikut scroll bareng konten
+              halaman, persis di sebelah tulisan ini. */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.08 }}
-            className="mb-3 shrink-0 text-center sm:mb-4 lg:text-left"
+            className="mb-3 flex shrink-0 flex-col items-center gap-3 text-center sm:mb-4 lg:flex-row lg:items-end lg:justify-between lg:text-left"
           >
-            <div className="washi-tape-solid mb-1.5 inline-block -rotate-2 rounded-[3px] px-3 py-0.5 shadow-clay-sm">
-              <span className="text-garnet-dark font-hand text-sm sm:text-base">
-                langkah satu dari tiga
-              </span>
+            <div>
+              <div className="washi-tape-solid mb-1.5 inline-block -rotate-2 rounded-[3px] px-3 py-0.5 shadow-clay-sm">
+                <span className="text-garnet-dark font-hand text-sm sm:text-base">
+                  langkah satu dari tiga
+                </span>
+              </div>
+              <h1 className="text-paper-light font-display text-2xl font-semibold italic leading-[1.05] drop-shadow-[0_2px_10px_rgba(0,0,0,0.35)] sm:text-4xl lg:text-5xl">
+                Pilih frame favoritmu
+              </h1>
+              <p className="text-paper-light/75 font-body mt-1 text-sm sm:text-lg">
+                Scroll ke bawah untuk lihat semua pilihan, lalu ketuk untuk memilih.
+              </p>
             </div>
-            <h1 className="text-paper-light font-display text-2xl font-semibold italic leading-[1.05] drop-shadow-[0_2px_10px_rgba(0,0,0,0.35)] sm:text-4xl lg:text-5xl">
-              Pilih frame favoritmu
-            </h1>
-            <p className="text-paper-light/75 font-body mt-1 text-sm sm:text-lg">
-              Scroll ke bawah untuk lihat semua pilihan, lalu ketuk untuk memilih.
-            </p>
+
+            <SessionTimer variant="inline" onExpire={handleTimerExpire} />
           </motion.div>
 
           <div className="bg-clay-gradient shadow-print-sm flex min-h-0 w-full max-h-[54vh] flex-col rounded-[22px] px-1 py-2.5 sm:max-h-[60vh] sm:rounded-[26px] sm:py-3">
@@ -237,12 +244,16 @@ export default function FramePage() {
             Kalau waktunya habis, apa pun yang sudah kamu lakukan sejauh itu otomatis jadi hasil
             akhir — jadi pastikan foto-fotonya sempat diambil semua ya!
           </p>
-          <button
+          <ClayButton
+            type="button"
+            variant="garnet"
+            size="sm"
+            fullWidth
+            className="mt-1"
             onClick={handleStartSession}
-            className="bg-garnet-gradient text-paper-light mt-1 w-full rounded-clay-sm py-3 font-body font-semibold shadow-clay-sm transition-shadow hover:shadow-clay"
           >
             Mengerti, mulai!
-          </button>
+          </ClayButton>
         </div>
       </Modal>
     </main>
@@ -286,9 +297,14 @@ function ContinueTicket({
  * Desktop CTA — a full-bleed action bar that fills every leftover
  * pixel of the white panel (no border-radius, no gap on any side), so
  * it reads as a docked part of the panel instead of a floating pill.
- * Pressing it flashes the whole bar green with white text — a short,
- * deliberate "confirmed" beat — before actually moving to the camera
- * page, so the feedback is never cut off by the navigation.
+ *
+ * Selalu hijau + teks putih dari awal (bukan nunggu diklik dulu baru
+ * berubah warna). "3D"-nya dibuat lewat trik bevel yang sama seperti
+ * kotak timer sesi — garis terang tajam di atas, garis gelap tajam di
+ * bawah, tanpa blur — supaya betul-betul kebaca sebagai tombol fisik
+ * yang timbul. Saat ditekan, bevel-nya dibalik jadi shadow inset yang
+ * dalam + teks & ikon turun sedikit, memberi efek "mendelep" (ke
+ * dalam) sebelum benar-benar pindah ke halaman kamera.
  */
 function ContinueOutline({
   selectedFrame,
@@ -306,29 +322,31 @@ function ContinueOutline({
   };
 
   return (
-    <button
+    <motion.button
       onClick={handleClick}
       disabled={!selectedFrame}
-      className={clsx(
-        "flex h-full w-full items-center justify-center gap-3 border-t transition-colors duration-150 disabled:cursor-not-allowed",
-        pressed
-          ? "border-forest-dark bg-forest-gradient text-paper-light"
-          : selectedFrame
-            ? "border-ink/10 bg-cream-light text-ink hover:bg-cream"
-            : "border-ink/10 bg-cream-light text-ink/30"
-      )}
+      whileTap={selectedFrame ? { y: 3 } : undefined}
+      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+      className="bg-forest-gradient relative flex h-full w-full items-center justify-center gap-3 border-t border-forest-dark text-paper-light disabled:cursor-not-allowed disabled:opacity-40"
       style={{
-        // Bevel tegas (bukan blur) di tepi atas panel supaya area
-        // tombol kebaca "timbul" dari panel foto di atasnya.
         boxShadow: pressed
-          ? "inset 0 2px 0 rgba(255,255,255,0.25)"
-          : "inset 0 1px 0 rgba(255,255,255,0.9)",
+          ? "inset 0 6px 14px rgba(0,0,0,0.45), inset 0 -1px 0 rgba(255,255,255,0.1)"
+          : "inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -4px 0 rgba(0,0,0,0.32)",
       }}
     >
-      <span className="font-display text-base font-bold tracking-[0.2em] sm:text-lg">
+      <span
+        className={clsx(
+          "font-display text-base font-bold tracking-[0.2em] transition-transform duration-150 sm:text-lg",
+          pressed && "translate-y-[2px]"
+        )}
+      >
         NEXT
       </span>
-      <ArrowRight size={20} strokeWidth={2.6} className="shrink-0" />
-    </button>
+      <ArrowRight
+        size={20}
+        strokeWidth={2.6}
+        className={clsx("shrink-0 transition-transform duration-150", pressed && "translate-y-[2px]")}
+      />
+    </motion.button>
   );
 }

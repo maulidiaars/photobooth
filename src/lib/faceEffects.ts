@@ -48,6 +48,7 @@ export function toMirroredPixelPoints(
   const pts: PixelPoint[] = new Array(landmarks.length);
   for (let i = 0; i < landmarks.length; i++) {
     const p = landmarks[i];
+    if (!p) continue;
     pts[i] = { x: width - p.x * width, y: p.y * height };
   }
   return pts;

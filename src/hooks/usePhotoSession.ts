@@ -14,10 +14,6 @@ import {
 } from "@/lib/constants";
 import type { PhotoFilterId } from "@/lib/photoFilters";
 
-/*
- * Jeda kecil setelah satu foto selesai sebelum countdown
- * foto berikutnya dimulai.
- */
 const AUTO_SHOT_GAP_MS = 1100;
 
 type SessionMode =
@@ -48,14 +44,6 @@ export function usePhotoSession(
   const [retakeIndex, setRetakeIndex] =
     useState<number | null>(null);
 
-  /*
-   * Simpan filter TERBARU di ref.
-
-   * Ini penting karena saat countdown berjalan,
-   * callback foto bisa berjalan beberapa saat kemudian.
-
-   * Ref selalu menunjuk ke filter terakhir yang dipilih.
-   */
   const filterRef =
     useRef<PhotoFilterId>(filterId);
 
@@ -118,31 +106,47 @@ export function usePhotoSession(
     };
   }, [clearGapTimer]);
 
-  /*
-   * Satu foto selesai diambil.
-   */
   const handleShot =
     useCallback(async () => {
-      /*
-       * SELALU ambil filter TERBARU.
-       *
-       * Jadi misalnya:
-       *
-       * Foto pertama = Original
-       *
-       * Setelah semua selesai:
-       * user pilih B&W
-       *
-       * klik slot 2
-       * → retake
-       *
-       * foto baru = B&W
-       */
       const activeFilter =
         filterRef.current;
 
+      /*
+       * Tentukan slot yang sedang diisi.
+       *
+       * Retake:
+       *   gunakan slot yang dipilih.
+       *
+       * Foto normal:
+       *   gunakan slot berikutnya.
+       */
+      const targetSlotIndex =
+        retakeIndex !== null
+          ? retakeIndex
+          : capturedPhotos.length;
+
+      const targetSlot =
+        selectedFrame?.slot_layout?.[
+          targetSlotIndex
+        ] ??
+        selectedFrame?.slot_layout?.[0];
+
+      /*
+       * Rasio slot menjadi rasio foto yang
+       * diambil dari kamera.
+       */
+      const captureAspectRatio =
+        targetSlot &&
+        targetSlot.h > 0
+          ? targetSlot.w /
+            targetSlot.h
+          : 4 / 5;
+
       const photo =
-        await capture(activeFilter);
+        await capture(
+          activeFilter,
+          captureAspectRatio
+        );
 
       if (!photo) return;
 
@@ -154,9 +158,6 @@ export function usePhotoSession(
 
       /*
        * RETAKE
-       *
-       * Foto hanya mengganti slot yang dipilih.
-       * Foto slot lainnya tidak disentuh.
        */
       if (retakeIndex !== null) {
         setPhotoAt(
@@ -179,8 +180,7 @@ export function usePhotoSession(
         capturedPhotos.length + 1;
 
       /*
-       * Kalau masih ada slot:
-       * lanjut ke countdown berikutnya.
+       * Masih ada slot berikutnya.
        */
       if (
         mode === "auto" &&
@@ -204,6 +204,7 @@ export function usePhotoSession(
       mode,
       capturedPhotos.length,
       totalSlots,
+      selectedFrame,
     ]);
 
   const {
@@ -215,9 +216,6 @@ export function usePhotoSession(
     onComplete: handleShot,
   });
 
-  /*
-   * Mulai sesi foto normal.
-   */
   const takeAllShots =
     useCallback(() => {
       if (
@@ -237,12 +235,6 @@ export function usePhotoSession(
       start,
     ]);
 
-  /*
-   * Mulai retake slot tertentu.
-   *
-   * Filter tidak disentuh sama sekali.
-   * Jadi filter yang sedang aktif akan digunakan.
-   */
   const confirmRetake =
     useCallback(
       (index: number) => {
@@ -265,13 +257,6 @@ export function usePhotoSession(
       ]
     );
 
-  /*
-   * Tetap dipertahankan untuk kompatibilitas
-   * dengan hook/store lainnya.
-   *
-   * Tombol "ambil ulang semua" sendiri sudah dihapus
-   * dari CameraPage.
-   */
   const retakeAll =
     useCallback(() => {
       clearGapTimer();
@@ -298,9 +283,6 @@ export function usePhotoSession(
       router,
     ]);
 
-  /*
-   * Menentukan slot yang sedang menunggu foto.
-   */
   const activeIndex =
     retakeIndex !== null
       ? retakeIndex

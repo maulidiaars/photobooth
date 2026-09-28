@@ -6,6 +6,14 @@ import type { Frame } from "@/types/frame";
 import type { FrameContentBox } from "@/hooks/useFrameContentBox";
 import type { FramePreviewLayout } from "@/hooks/useFramePreviewLayout";
 
+/*
+ * Foto dari kamera sudah dipotong dengan rasio PERSIS sama dengan
+ * lubang frame, jadi di sini TIDAK ada scale/zoom tambahan yang
+ * memotong komposisi lagi. Slot hanya dilebarkan 1px di tiap sisi
+ * supaya tidak ada garis tipis (hairline) di tepi lubang PNG.
+ */
+const SLOT_BLEED_PX = 1;
+
 interface FramePreviewLiveProps {
   frame: Frame;
   photos: string[];
@@ -105,26 +113,30 @@ export function FramePreviewLive({
                   frameLeft +
                   rect.x *
                     naturalWidth *
-                    previewLayout.scale
+                    previewLayout.scale -
+                  SLOT_BLEED_PX
                 }px`,
 
                 top: `${
                   frameTop +
                   rect.y *
                     naturalHeight *
-                    previewLayout.scale
+                    previewLayout.scale -
+                  SLOT_BLEED_PX
                 }px`,
 
                 width: `${
                   rect.w *
-                  naturalWidth *
-                  previewLayout.scale
+                    naturalWidth *
+                    previewLayout.scale +
+                  SLOT_BLEED_PX * 2
                 }px`,
 
                 height: `${
                   rect.h *
-                  naturalHeight *
-                  previewLayout.scale
+                    naturalHeight *
+                    previewLayout.scale +
+                  SLOT_BLEED_PX * 2
                 }px`,
               }
             : {
@@ -172,7 +184,7 @@ export function FramePreviewLive({
                   <img
                     src={photo}
                     alt={`Foto ${i + 1}`}
-                    className="block h-full w-full scale-[1.025] object-cover object-center"
+                    className="block h-full w-full object-cover object-center"
                   />
 
                   {!locked && (

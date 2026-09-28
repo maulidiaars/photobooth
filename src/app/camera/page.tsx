@@ -8,7 +8,7 @@ import {
 } from "react";
 
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   CheckCircle2,
   Sparkles,
@@ -56,6 +56,7 @@ export default function CameraPage() {
     count,
     isRunning,
     isPausing,
+    mode,
     showFlash,
     takeAllShots,
     confirmRetake,
@@ -108,6 +109,27 @@ export default function CameraPage() {
   const busy =
     isRunning ||
     isPausing;
+
+  /*
+   * Tombol shutter hilang (smooth) begitu sesi jepret berjalan
+   * (countdown 3-2-1 sampai semua foto selesai) dan tetap hilang
+   * setelah semua slot terisi.
+   */
+  const hideShutter =
+    busy ||
+    mode !== "idle" ||
+    isComplete;
+
+  /*
+   * Setelah semua foto selesai: kamera diburamkan + "kabut hitam",
+   * dan modal kecil "Simpan & Lanjut" muncul di tengah. Begitu
+   * pengguna memilih ambil ulang satu foto (mode retake / countdown
+   * jalan), layar kembali normal.
+   */
+  const showCompleteOverlay =
+    isComplete &&
+    mode === "idle" &&
+    !busy;
 
   /*
    * ============================================================
@@ -219,6 +241,10 @@ export default function CameraPage() {
             captureAspectRatio={
               captureAspectRatio
             }
+            zoomDisabled={
+              busy ||
+              isComplete
+            }
           />
 
           <CountdownOverlay
@@ -251,109 +277,166 @@ export default function CameraPage() {
           </div>
 
           <div className="absolute bottom-5 left-1/2 z-30 -translate-x-1/2 sm:bottom-7">
-            {isComplete ? (
-              <motion.button
-                type="button"
-                onClick={
-                  handleMainCameraButton
-                }
-                disabled={
-                  busy ||
-                  !slotsReady
-                }
-                whileHover={
-                  !busy
-                    ? {
-                        y: -2,
-                        scale: 1.03,
-                      }
-                    : undefined
-                }
-                whileTap={
-                  !busy
-                    ? {
-                        y: 1,
-                        scale: 0.97,
-                      }
-                    : undefined
-                }
-                transition={{
-                  type: "spring",
-                  stiffness: 420,
-                  damping: 22,
-                }}
-                className="bg-garnet-gradient flex min-h-12 items-center gap-2.5 rounded-full py-2.5 pl-3 pr-5 text-paper-light shadow-[0_12px_35px_rgba(0,0,0,.28)] backdrop-blur-md transition-opacity disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-14 sm:gap-3 sm:py-3 sm:pl-3.5 sm:pr-7"
-              >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 sm:h-9 sm:w-9">
-                  <CheckCircle2
-                    size={18}
-                    strokeWidth={2.6}
+            <AnimatePresence>
+              {!hideShutter && (
+                <motion.button
+                  key="shutter"
+                  type="button"
+                  onClick={
+                    handleMainCameraButton
+                  }
+                  disabled={
+                    !slotsReady
+                  }
+                  aria-label="Mulai ambil foto"
+                  initial={{
+                    opacity: 0,
+                    scale: 0.7,
+                  }}
+                  animate={{
+                    opacity: 1,
+                    scale: 1,
+                  }}
+                  exit={{
+                    opacity: 0,
+                    scale: 0.6,
+                    transition: {
+                      duration: 0.4,
+                      ease: "easeInOut",
+                    },
+                  }}
+                  whileHover={{
+                    scale: 1.05,
+                  }}
+                  whileTap={{
+                    scale: 0.9,
+                  }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 420,
+                    damping: 22,
+                  }}
+                  className="group flex h-16 w-16 items-center justify-center rounded-full border-[3px] border-white/80 bg-white/10 backdrop-blur-sm transition-opacity disabled:cursor-not-allowed disabled:opacity-50 sm:h-[4.5rem] sm:w-[4.5rem]"
+                >
+                  <motion.span
+                    animate={{
+                      boxShadow: [
+                        "0 0 0 0 rgba(194,71,89,.55)",
+                        "0 0 0 12px rgba(194,71,89,0)",
+                      ],
+                    }}
+                    transition={{
+                      duration: 1.6,
+                      repeat:
+                        Infinity,
+                      ease: "easeOut",
+                    }}
+                    className="bg-garnet-gradient h-[86%] w-[86%] rounded-full transition-transform group-active:scale-90"
                   />
-                </span>
-
-                <span className="font-display text-sm font-bold tracking-wide sm:text-base">
-                  Simpan &amp; Lanjut
-                </span>
-              </motion.button>
-            ) : (
-              <motion.button
-                type="button"
-                onClick={
-                  handleMainCameraButton
-                }
-                disabled={
-                  busy ||
-                  !slotsReady
-                }
-                aria-label="Mulai ambil foto"
-                whileHover={
-                  !busy
-                    ? {
-                        scale: 1.05,
-                      }
-                    : undefined
-                }
-                whileTap={
-                  !busy
-                    ? {
-                        scale: 0.9,
-                      }
-                    : undefined
-                }
-                transition={{
-                  type: "spring",
-                  stiffness: 420,
-                  damping: 22,
-                }}
-                className="group flex h-16 w-16 items-center justify-center rounded-full border-[3px] border-white/80 bg-white/10 backdrop-blur-sm transition-opacity disabled:cursor-not-allowed disabled:opacity-50 sm:h-[4.5rem] sm:w-[4.5rem]"
-              >
-                <motion.span
-                  animate={
-                    !busy
-                      ? {
-                          boxShadow: [
-                            "0 0 0 0 rgba(194,71,89,.55)",
-                            "0 0 0 12px rgba(194,71,89,0)",
-                          ],
-                        }
-                      : undefined
-                  }
-                  transition={
-                    !busy
-                      ? {
-                          duration: 1.6,
-                          repeat:
-                            Infinity,
-                          ease:
-                            "easeOut",
-                        }
-                      : undefined
-                  }
-                  className="bg-garnet-gradient h-[86%] w-[86%] rounded-full transition-transform group-active:scale-90"
-                />
-              </motion.button>
-            )}
+                </motion.button>
+              )}
+            </AnimatePresence>
           </div>
+
+          {/* Kabut hitam + blur + modal kecil setelah semua foto jadi */}
+          <AnimatePresence>
+            {showCompleteOverlay && (
+              <motion.div
+                key="complete-overlay"
+                initial={{
+                  opacity: 0,
+                }}
+                animate={{
+                  opacity: 1,
+                  transition: {
+                    duration: 0.7,
+                    delay: 0.3,
+                    ease: "easeOut",
+                  },
+                }}
+                exit={{
+                  opacity: 0,
+                  transition: {
+                    duration: 0.4,
+                    ease: "easeIn",
+                  },
+                }}
+                className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 px-5 backdrop-blur-xl"
+              >
+                <motion.div
+                  initial={{
+                    opacity: 0,
+                    y: 18,
+                    scale: 0.94,
+                  }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    scale: 1,
+                  }}
+                  exit={{
+                    opacity: 0,
+                    y: 10,
+                    scale: 0.96,
+                  }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 26,
+                    delay: 0.45,
+                  }}
+                  className="flex w-full max-w-[19rem] flex-col items-center gap-4 rounded-[26px] border border-white/15 bg-black/35 px-6 py-6 text-center shadow-[0_24px_60px_rgba(0,0,0,.45)] backdrop-blur-md"
+                >
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="font-display text-xl font-bold text-paper-light">
+                      Foto sudah lengkap!
+                    </span>
+
+                    <span className="font-body text-xs leading-relaxed text-white/70">
+                      Mau ganti? Klik salah
+                      satu foto di frame
+                      untuk ambil ulang.
+                    </span>
+                  </div>
+
+                  <motion.button
+                    type="button"
+                    onClick={
+                      goToResult
+                    }
+                    disabled={
+                      !slotsReady
+                    }
+                    whileHover={{
+                      y: -2,
+                      scale: 1.03,
+                    }}
+                    whileTap={{
+                      y: 1,
+                      scale: 0.97,
+                    }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 420,
+                      damping: 22,
+                    }}
+                    className="bg-garnet-gradient flex min-h-12 w-full items-center justify-center gap-2.5 rounded-full py-2.5 pl-3 pr-5 text-paper-light shadow-[0_12px_35px_rgba(0,0,0,.28)] transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20">
+                      <CheckCircle2
+                        size={18}
+                        strokeWidth={2.6}
+                      />
+                    </span>
+
+                    <span className="font-display text-sm font-bold tracking-wide sm:text-base">
+                      Simpan &amp; Lanjut
+                    </span>
+                  </motion.button>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </section>
       </div>
 

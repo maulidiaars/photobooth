@@ -11,10 +11,8 @@ import {
 } from "@/lib/photoFilters";
 import {
   CAMERA_PREVIEW_MIRRORED,
-  computeDigitalZoomFactor,
   computeSourceCrop,
 } from "@/lib/canvas";
-import { getZoomState } from "@/lib/cameraZoom";
 
 /*
  * Minta resolusi HD (Full HD 1920x1080). Kalau kamera tidak
@@ -65,8 +63,8 @@ export function useCamera() {
    *
    *   VIDEO SUMBER (piksel asli kamera)
    *        ↓
-   *   crop persis area guide  (computeSourceCrop — fungsi yang sama
-   *                            dengan yang menggambar guide)
+   *   crop persis area guide (computeSourceCrop — fungsi yang sama
+   *                           dengan yang menggambar guide)
    *        ↓
    *   CANVAS (rasio = rasio lubang frame, tanpa stretch)
    *        ↓
@@ -111,30 +109,17 @@ export function useCamera() {
         }
 
         /*
-         * Ukuran container preview = ukuran elemen <video>
-         * (absolute inset-0). Guide di WebcamView dihitung dari
-         * ukuran yang sama dengan fungsi yang sama.
+         * 0.5x TIDAK memakai pelebaran digital.
+         *
+         * Kalau 0.5x aktif, WebcamView sudah lebih dulu memilih:
+         *   - hardware zoom < 1x,
+         *   - kamera fisik Ultra Wide, atau
+         *   - stream sensor 4:3 sebagai fallback.
+         *
+         * Jadi crop capture harus memakai geometri video aktual
+         * tanpa `scale(<1)` tambahan. Ini membuat foto yang disimpan
+         * sama dengan area yang benar-benar terlihat di preview.
          */
-        const zoomState =
-          getZoomState();
-
-        const zoomFactor =
-          computeDigitalZoomFactor({
-            containerWidth:
-              video.clientWidth,
-            containerHeight:
-              video.clientHeight,
-            videoWidth:
-              video.videoWidth,
-            videoHeight:
-              video.videoHeight,
-            ratio:
-              captureAspectRatio,
-            zoom:
-              zoomState.level,
-            hardware:
-              zoomState.hardware,
-          });
 
         const crop =
           computeSourceCrop({
@@ -150,7 +135,6 @@ export function useCamera() {
               captureAspectRatio,
             mirrored:
               CAMERA_PREVIEW_MIRRORED,
-            zoomFactor,
           });
 
         if (!crop) {

@@ -13,7 +13,6 @@ import {
   CAMERA_PREVIEW_MIRRORED,
   computeSourceCrop,
 } from "@/lib/canvas";
-import { getZoomState } from "@/lib/cameraZoom";
 
 /*
  * Minta resolusi HD (Full HD 1920x1080). Kalau kamera tidak
@@ -110,13 +109,17 @@ export function useCamera() {
         }
 
         /*
-         * Skala digital dari WebcamView (MODE VIRTUAL: 1x = 1,
-         * 0.5x <= 1 = menjauh). Kamera dengan hardware wide /
-         * Ultra Wide selalu 1 di sini. Dipakai supaya crop capture
-         * persis sama dengan yang terlihat di preview.
+         * 0.5x TIDAK memakai pelebaran digital.
+         *
+         * Kalau 0.5x aktif, WebcamView sudah lebih dulu memilih:
+         *   - hardware zoom < 1x,
+         *   - kamera fisik Ultra Wide, atau
+         *   - stream sensor 4:3 sebagai fallback.
+         *
+         * Jadi crop capture harus memakai geometri video aktual
+         * tanpa `scale(<1)` tambahan. Ini membuat foto yang disimpan
+         * sama dengan area yang benar-benar terlihat di preview.
          */
-        const digitalZoom =
-          getZoomState().digital;
 
         const crop =
           computeSourceCrop({
@@ -132,8 +135,6 @@ export function useCamera() {
               captureAspectRatio,
             mirrored:
               CAMERA_PREVIEW_MIRRORED,
-            zoomFactor:
-              digitalZoom,
           });
 
         if (!crop) {

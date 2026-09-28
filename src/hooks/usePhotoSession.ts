@@ -70,10 +70,7 @@ export function usePhotoSession(
    * baru ketahuan setelah dikali ukuran PNG.
    */
   const [frameSize, setFrameSize] =
-    useState<{
-      w: number;
-      h: number;
-    } | null>(null);
+    useState<{ w: number; h: number } | null>(null);
 
   const filterRef =
     useRef<PhotoFilterId>(
@@ -86,9 +83,7 @@ export function usePhotoSession(
   }, [filterId]);
 
   const gapTimerRef =
-    useRef<ReturnType
-      typeof setTimeout
-    > | null>(null);
+    useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const selectedFrame =
     useSessionStore(

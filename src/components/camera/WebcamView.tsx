@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type RefObject,
@@ -18,9 +19,22 @@ import {
 import {
   ZOOM_LEVELS,
   applyCameraZoom,
+  findUltraWideDeviceId,
+  getStreamDeviceId,
+  getZoomState,
+  markHardwareWide,
   resetZoomState,
   type ZoomLevel,
 } from "@/lib/cameraZoom";
+
+/*
+ * Cara kamera menghasilkan tampilan 0.5x:
+ *  - "default" : kamera biasa (1x).
+ *  - "device"  : pindah ke kamera fisik Ultra Wide.
+ *  - "sensor"  : stream 4:3 sensor penuh (sudut pandang lebih lebar
+ *                dari 16:9) + pelebaran digital maksimal.
+ */
+type WideMode = "default" | "device" | "sensor";
 
 interface WebcamViewProps {
   webcamRef: RefObject<Webcam | null>;
@@ -73,6 +87,64 @@ export function WebcamView({
     hardwareWide,
     setHardwareWide,
   ] = useState(false);
+
+  const [wideMode, setWideMode] =
+    useState<WideMode>("default");
+
+  const wideModeRef =
+    useRef<WideMode>("default");
+
+  const [
+    wideDeviceId,
+    setWideDeviceId,
+  ] = useState<string | null>(null);
+
+  const streamConstraints =
+    useMemo<MediaTrackConstraints>(() => {
+      if (
+        wideMode === "device" &&
+        wideDeviceId
+      ) {
+        const {
+          facingMode: _facing,
+          ...rest
+        } = videoConstraints;
+
+        void _facing;
+
+        return {
+          ...rest,
+          deviceId: {
+            exact: wideDeviceId,
+          },
+        };
+      }
+
+      if (wideMode === "sensor") {
+        return {
+          ...videoConstraints,
+          width: { ideal: 1600 },
+          height: { ideal: 1200 },
+          aspectRatio: {
+            ideal: 4 / 3,
+          },
+        };
+      }
+
+      return videoConstraints;
+    }, [
+      videoConstraints,
+      wideMode,
+      wideDeviceId,
+    ]);
+
+  const changeWideMode = (
+    mode: WideMode
+  ) => {
+    wideModeRef.current = mode;
+
+    setWideMode(mode);
+  };
 
   /*
    * Reset status zoom setiap halaman kamera dibuka, supaya tidak
@@ -160,7 +232,21 @@ export function WebcamView({
         applyCameraZoom(
           stream,
           zoomRef.current
-        ).then(setHardwareWide);
+        ).then((hw) => {
+          /*
+           * Kalau stream ini sudah kamera Ultra Wide, pelebaran
+           * dikerjakan kameranya sendiri -> tidak perlu digital.
+           */
+          const wide =
+            hw ||
+            (wideModeRef.current ===
+              "device" &&
+              zoomRef.current < 1);
+
+          markHardwareWide(wide);
+
+          setHardwareWide(wide);
+        });
       },
       [syncVideoSize]
     );
@@ -178,14 +264,85 @@ export function WebcamView({
 
       setZoom(level);
 
+      const stream =
+        webcamRef.current?.stream;
+
+      /*
+       * Balik ke 1x: kembali ke kamera & stream normal. Kalau mode
+       * sebelumnya bukan "default", stream diminta ulang dan
+       * handleUserMedia yang menyelesaikan sisanya.
+       */
+      if (level >= 1) {
+        const needsRestart =
+          wideModeRef.current !==
+          "default";
+
+        if (needsRestart) {
+          changeWideMode("default");
+
+          markHardwareWide(false);
+
+          setHardwareWide(false);
+
+          getZoomState().level =
+            level;
+
+          return;
+        }
+
+        const hw =
+          await applyCameraZoom(
+            stream,
+            level
+          );
+
+        setHardwareWide(hw);
+
+        return;
+      }
+
+      /*
+       * 0.5x, langkah 1: zoom hardware di kamera yang sedang
+       * dipakai (kalau didukung).
+       */
       const hw =
         await applyCameraZoom(
-          webcamRef.current
-            ?.stream,
+          stream,
           level
         );
 
-      setHardwareWide(hw);
+      if (hw) {
+        setHardwareWide(true);
+
+        return;
+      }
+
+      /*
+       * Langkah 2: kamera fisik Ultra Wide (kalau perangkat punya).
+       */
+      const deviceId =
+        await findUltraWideDeviceId();
+
+      if (
+        deviceId &&
+        deviceId !==
+          getStreamDeviceId(stream)
+      ) {
+        setWideDeviceId(deviceId);
+
+        changeWideMode("device");
+
+        return;
+      }
+
+      /*
+       * Langkah 3: sensor penuh 4:3 + pelebaran digital maksimal.
+       */
+      setHardwareWide(false);
+
+      markHardwareWide(false);
+
+      changeWideMode("sensor");
     };
 
   const selectedFilter =
@@ -273,7 +430,7 @@ export function WebcamView({
           screenshotFormat="image/jpeg"
           screenshotQuality={0.95}
           videoConstraints={
-            videoConstraints
+            streamConstraints
           }
           onUserMedia={
             handleUserMedia

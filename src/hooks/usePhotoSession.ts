@@ -7,14 +7,21 @@ import {
 import { useRouter } from "next/navigation";
 import { useCamera } from "./useCamera";
 import { useCountdown } from "./useCountdown";
-import { useSessionStore } from "@/store/sessionStore";
+import {
+  useSessionStore,
+} from "@/store/sessionStore";
 import {
   COUNTDOWN_SECONDS,
   ROUTES,
 } from "@/lib/constants";
 import type { PhotoFilterId } from "@/lib/photoFilters";
+import {
+  detectFrameSlotsFromUrl,
+  type SlotRect,
+} from "@/lib/frameSlotDetector";
 
-const AUTO_SHOT_GAP_MS = 1100;
+const AUTO_SHOT_GAP_MS =
+  1100;
 
 type SessionMode =
   | "idle"
@@ -22,9 +29,11 @@ type SessionMode =
   | "retake";
 
 export function usePhotoSession(
-  filterId: PhotoFilterId = "original"
+  filterId: PhotoFilterId =
+    "original"
 ) {
-  const router = useRouter();
+  const router =
+    useRouter();
 
   const {
     webcamRef,
@@ -36,29 +45,48 @@ export function usePhotoSession(
     useState(false);
 
   const [mode, setMode] =
-    useState<SessionMode>("idle");
+    useState<SessionMode>(
+      "idle"
+    );
 
   const [isPausing, setIsPausing] =
     useState(false);
 
   const [retakeIndex, setRetakeIndex] =
-    useState<number | null>(null);
+    useState<number | null>(
+      null
+    );
+
+  const [slotLayout, setSlotLayout] =
+    useState<SlotRect[]>([]);
+
+  const [slotsReady, setSlotsReady] =
+    useState(false);
 
   const filterRef =
-    useRef<PhotoFilterId>(filterId);
+    useRef<PhotoFilterId>(
+      filterId
+    );
 
   useEffect(() => {
-    filterRef.current = filterId;
+    filterRef.current =
+      filterId;
   }, [filterId]);
 
   const gapTimerRef =
-    useRef<ReturnType<typeof setTimeout> | null>(
-      null
-    );
+    useRef<ReturnType<
+      typeof setTimeout
+    > | null>(null);
 
   const selectedFrame =
     useSessionStore(
       (s) => s.selectedFrame
+    );
+
+  const setFrameSlotLayout =
+    useSessionStore(
+      (s) =>
+        s.setFrameSlotLayout
     );
 
   const capturedPhotos =
@@ -81,13 +109,98 @@ export function usePhotoSession(
       (s) => s.resetPhotos
     );
 
+  /*
+   * ============================================================
+   * DETEKSI ULANG SLOT LANGSUNG DARI PNG FRAME
+   * ============================================================
+   */
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!selectedFrame) {
+      setSlotLayout([]);
+      setSlotsReady(false);
+      return;
+    }
+
+    setSlotsReady(false);
+
+    /*
+     * Sementara pakai data lama sebagai fallback
+     * supaya preview tidak kosong total.
+     */
+    setSlotLayout(
+      selectedFrame.slot_layout ??
+        []
+    );
+
+    detectFrameSlotsFromUrl(
+      selectedFrame.frame_png
+    )
+      .then((detected) => {
+        if (cancelled) return;
+
+        if (
+          !detected.length
+        ) {
+          throw new Error(
+            "Tidak ada slot"
+          );
+        }
+
+        /*
+         * Ini yang paling penting:
+         *
+         * slot_layout lama dari database
+         * diganti dengan slot yang benar-benar
+         * ditemukan dari PNG frame.
+         */
+        setSlotLayout(
+          detected
+        );
+
+        setFrameSlotLayout(
+          detected
+        );
+
+        setSlotsReady(true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+
+        /*
+         * Kalau deteksi gagal, gunakan data
+         * database sebagai fallback.
+         */
+        const fallback =
+          selectedFrame.slot_layout ??
+          [];
+
+        setSlotLayout(
+          fallback
+        );
+
+        setSlotsReady(
+          fallback.length > 0
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    selectedFrame?.frame_png,
+  ]);
+
   const totalSlots =
-    selectedFrame?.slot_layout?.length ||
+    slotLayout.length ||
     selectedFrame?.slot ||
     4;
 
   const isComplete =
-    capturedPhotos.length >= totalSlots;
+    slotsReady &&
+    capturedPhotos.length >=
+      totalSlots;
 
   const clearGapTimer =
     useCallback(() => {
@@ -96,7 +209,8 @@ export function usePhotoSession(
           gapTimerRef.current
         );
 
-        gapTimerRef.current = null;
+        gapTimerRef.current =
+          null;
       }
     }, []);
 
@@ -104,121 +218,133 @@ export function usePhotoSession(
     return () => {
       clearGapTimer();
     };
-  }, [clearGapTimer]);
+  }, [
+    clearGapTimer,
+  ]);
 
   const handleShot =
-    useCallback(async () => {
-      const activeFilter =
-        filterRef.current;
+    useCallback(
+      async () => {
+        if (!slotsReady) {
+          return;
+        }
 
-      /*
-       * Tentukan slot yang sedang diisi.
-       *
-       * Retake:
-       *   gunakan slot yang dipilih.
-       *
-       * Foto normal:
-       *   gunakan slot berikutnya.
-       */
-      const targetSlotIndex =
-        retakeIndex !== null
-          ? retakeIndex
-          : capturedPhotos.length;
+        const activeFilter =
+          filterRef.current;
 
-      const targetSlot =
-        selectedFrame?.slot_layout?.[
-          targetSlotIndex
-        ] ??
-        selectedFrame?.slot_layout?.[0];
+        const targetSlotIndex =
+          retakeIndex !== null
+            ? retakeIndex
+            : capturedPhotos.length;
 
-      /*
-       * Rasio slot menjadi rasio foto yang
-       * diambil dari kamera.
-       */
-      const captureAspectRatio =
-        targetSlot &&
-        targetSlot.h > 0
-          ? targetSlot.w /
-            targetSlot.h
-          : 4 / 5;
+        const targetSlot =
+          slotLayout[
+            targetSlotIndex
+          ] ??
+          slotLayout[0];
 
-      const photo =
-        await capture(
-          activeFilter,
-          captureAspectRatio
-        );
+        if (!targetSlot) {
+          return;
+        }
 
-      if (!photo) return;
+        /*
+         * INI RASIO SEBENARNYA DARI
+         * LUBANG FOTO FRAME.
+         */
+        const captureAspectRatio =
+          targetSlot.h > 0
+            ? targetSlot.w /
+              targetSlot.h
+            : 4 / 5;
 
-      setShowFlash(true);
+        const photo =
+          await capture(
+            activeFilter,
+            captureAspectRatio
+          );
 
-      setTimeout(() => {
-        setShowFlash(false);
-      }, 380);
+        if (!photo) {
+          return;
+        }
 
-      /*
-       * RETAKE
-       */
-      if (retakeIndex !== null) {
-        setPhotoAt(
-          retakeIndex,
-          photo
-        );
+        setShowFlash(true);
 
-        setRetakeIndex(null);
-        setMode("idle");
+        setTimeout(() => {
+          setShowFlash(false);
+        }, 380);
 
-        return;
-      }
+        /*
+         * RETAKE
+         */
+        if (
+          retakeIndex !== null
+        ) {
+          setPhotoAt(
+            retakeIndex,
+            photo
+          );
 
-      /*
-       * FOTO NORMAL
-       */
-      addPhoto(photo);
+          setRetakeIndex(
+            null
+          );
 
-      const nextCount =
-        capturedPhotos.length + 1;
+          setMode("idle");
 
-      /*
-       * Masih ada slot berikutnya.
-       */
-      if (
-        mode === "auto" &&
-        nextCount < totalSlots
-      ) {
-        setIsPausing(true);
+          return;
+        }
 
-        gapTimerRef.current =
-          setTimeout(() => {
-            setIsPausing(false);
-            start();
-          }, AUTO_SHOT_GAP_MS);
-      } else {
-        setMode("idle");
-      }
-    }, [
-      capture,
-      addPhoto,
-      setPhotoAt,
-      retakeIndex,
-      mode,
-      capturedPhotos.length,
-      totalSlots,
-      selectedFrame,
-    ]);
+        /*
+         * FOTO NORMAL
+         */
+        addPhoto(photo);
+
+        const nextCount =
+          capturedPhotos.length +
+          1;
+
+        if (
+          mode === "auto" &&
+          nextCount < totalSlots
+        ) {
+          setIsPausing(true);
+
+          gapTimerRef.current =
+            setTimeout(() => {
+              setIsPausing(false);
+              start();
+            }, AUTO_SHOT_GAP_MS);
+        } else {
+          setMode("idle");
+        }
+      },
+      [
+        slotsReady,
+        capture,
+        addPhoto,
+        setPhotoAt,
+        retakeIndex,
+        mode,
+        capturedPhotos.length,
+        totalSlots,
+        slotLayout,
+      ]
+    );
 
   const {
     count,
     isRunning,
     start,
   } = useCountdown({
-    seconds: COUNTDOWN_SECONDS,
-    onComplete: handleShot,
+    seconds:
+      COUNTDOWN_SECONDS,
+    onComplete:
+      handleShot,
   });
 
   const takeAllShots =
     useCallback(() => {
       if (
+        !slotsReady ||
         isRunning ||
         isComplete ||
         isPausing
@@ -227,8 +353,10 @@ export function usePhotoSession(
       }
 
       setMode("auto");
+
       start();
     }, [
+      slotsReady,
       isRunning,
       isComplete,
       isPausing,
@@ -239,18 +367,23 @@ export function usePhotoSession(
     useCallback(
       (index: number) => {
         if (
+          !slotsReady ||
           isRunning ||
           isPausing
         ) {
           return;
         }
 
-        setRetakeIndex(index);
+        setRetakeIndex(
+          index
+        );
+
         setMode("retake");
 
         start();
       },
       [
+        slotsReady,
         isRunning,
         isPausing,
         start,
@@ -261,8 +394,12 @@ export function usePhotoSession(
     useCallback(() => {
       clearGapTimer();
 
-      setRetakeIndex(null);
+      setRetakeIndex(
+        null
+      );
+
       setIsPausing(false);
+
       setMode("idle");
 
       resetPhotos();
@@ -313,9 +450,15 @@ export function usePhotoSession(
     goToResult,
 
     capturedPhotos,
+
     totalSlots,
+
     isComplete,
 
     selectedFrame,
+
+    slotLayout,
+
+    slotsReady,
   };
 }

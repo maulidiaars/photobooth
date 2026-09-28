@@ -24,7 +24,11 @@ import type { Photo } from "@/types/photo";
 // ============================================
 // KONFIGURASI WHATSAPP ADMIN
 // ============================================
-const ADMIN_PHONE = "085800619612";
+const ADMIN_PHONE = "083833726472";
+
+// Akun sosial media yang ikut dikirim di pesan WhatsApp ke pengguna
+const TIKTOK_URL = "https://www.tiktok.com/@clikja.photobooth";
+const INSTAGRAM_URL = "https://www.instagram.com/clikjaphotobooth";
 
 function formatPhoneDisplay(raw: string) {
   const d = raw.replace(/[^\d]/g, "");
@@ -146,6 +150,9 @@ export function PhotoLightbox({
           `Ada kendala atau mau cetak ulang? Hubungi admin kami di *${formatPhoneDisplay(
             ADMIN_PHONE
           )}*\n\n` +
+          `Yuk follow kami juga biar gak ketinggalan update seru lainnya:\n` +
+          `📸 Instagram: ${INSTAGRAM_URL}\n` +
+          `🎵 TikTok: ${TIKTOK_URL}\n\n` +
           `Semoga harimu menyenangkan, sampai jumpa lagi! 👋\n\n` +
           `_Salam hangat, tim ${APP_NAME}_`
       );

@@ -67,6 +67,7 @@ export default function CameraPage() {
     selectedFrame,
     slotLayout,
     slotsReady,
+    captureAspectRatio,
   } =
     usePhotoSession(
       photoFilter
@@ -110,46 +111,20 @@ export default function CameraPage() {
 
   /*
    * ============================================================
-   * SLOT YANG AKTIF
+   * RASIO GUIDE KAMERA
    * ============================================================
    *
-   * Saat foto normal:
-   *   slot 0 → slot 1 → slot 2 → dst.
+   * `captureAspectRatio` datang dari usePhotoSession dan merupakan
+   * rasio PIKSEL asli lubang foto (slot) frame yang dipilih:
    *
-   * Saat retake:
-   *   pakai slot yang sedang dipilih.
+   *   (slot.w * lebarPNG) / (slot.h * tinggiPNG)
+   *
+   * Nilai yang SAMA dipakai untuk:
+   *
+   *   guide kamera  →  crop capture  →  lubang di frame
+   *
+   * null = frame masih dianalisis (guide belum ditampilkan).
    */
-  const guideIndex =
-    activeIndex ?? 0;
-
-  const guideSlot =
-    slotLayout[
-      guideIndex
-    ] ??
-    slotLayout[0];
-
-  /*
-   * INI SATU-SATUNYA RASIO YANG DIPAKAI
-   * UNTUK LIVE CAMERA.
-   *
-   * Jadi:
-   *
-   * slot frame
-   *      ↓
-   * w / h
-   *      ↓
-   * camera guide
-   *      ↓
-   * capture crop
-   *      ↓
-   * hasil foto
-   */
-  const captureAspectRatio =
-    guideSlot &&
-    guideSlot.h > 0
-      ? guideSlot.w /
-        guideSlot.h
-      : 4 / 5;
 
   const handleSlotClick =
     (index: number) => {

@@ -52,48 +52,75 @@ export function getSlotPixelRatio(
   return w / h;
 }
 
-const GUIDE_TOP_INSET = 36;
-
 /**
  * Kotak guide (dalam piksel, relatif ke container kamera) dengan
- * rasio PERSIS `ratio`. Ukurannya menyesuaikan container (responsive)
- * tapi rasionya tidak pernah berubah.
- *
- * Ruang atas dipakai teks petunjuk, ruang bawah dipakai tombol
- * shutter / "Simpan & Lanjut".
+ * rasio PERSIS `ratio`. Guide memenuhi container penuh (sampai ke
+ * bawah, di belakang tombol shutter) selama rasionya tetap sama:
+ * ukurannya menyesuaikan container (responsive), rasionya tidak
+ * pernah berubah.
  */
 export function computeGuideRect(
   containerWidth: number,
   containerHeight: number,
   ratio: number
 ): PixelRect {
-  const bottomInset = clamp(containerHeight * 0.15, 84, 100);
-
-  let availH = containerHeight - GUIDE_TOP_INSET - bottomInset;
-
-  // Container sangat pendek: jangan sampai guide jadi terlalu kecil.
-  if (availH < containerHeight * 0.5) {
-    availH = containerHeight * 0.5;
-  }
-
-  const availW = containerWidth * 0.92;
-
-  let w = availW;
+  let w = containerWidth;
   let h = w / ratio;
 
-  if (h > availH) {
-    h = availH;
+  if (h > containerHeight) {
+    h = containerHeight;
     w = h * ratio;
   }
 
   const x = (containerWidth - w) / 2;
-  const y = clamp(
-    GUIDE_TOP_INSET + (availH - h) / 2,
-    0,
-    Math.max(0, containerHeight - h)
-  );
+  const y = (containerHeight - h) / 2;
 
   return { x, y, w, h };
+}
+
+/**
+ * Faktor pelebaran DIGITAL untuk zoom 0.5x (dipakai kalau kamera
+ * tidak punya zoom hardware di bawah 1x).
+ *
+ * Video ditampilkan object-fit: cover dengan skala `s1`. Video paling
+ * kecil yang masih menutup penuh guide punya skala `sMin`, jadi
+ * bidang pandang paling lebar yang bisa dicapai tanpa pinggiran
+ * kosong = sMin / s1. Hasilnya 1 (tidak ada perubahan) kalau zoom
+ * 1x atau kalau zoom hardware yang bekerja.
+ */
+export function computeDigitalZoomFactor(opts: {
+  containerWidth: number;
+  containerHeight: number;
+  videoWidth: number;
+  videoHeight: number;
+  ratio: number;
+  zoom: number;
+  hardware: boolean;
+}): number {
+  const {
+    containerWidth: cw,
+    containerHeight: ch,
+    videoWidth: vw,
+    videoHeight: vh,
+    ratio,
+    zoom,
+    hardware,
+  } = opts;
+
+  if (zoom >= 1 || hardware) {
+    return 1;
+  }
+
+  if (!(cw > 0) || !(ch > 0) || !(vw > 0) || !(vh > 0) || !(ratio > 0)) {
+    return 1;
+  }
+
+  const guide = computeGuideRect(cw, ch, ratio);
+
+  const s1 = Math.max(cw / vw, ch / vh);
+  const sMin = Math.max(guide.w / vw, guide.h / vh);
+
+  return clamp(Math.max(zoom, sMin / s1), 0.01, 1);
 }
 
 /**
@@ -103,7 +130,7 @@ export function computeGuideRect(
  * Video ditampilkan dengan object-fit: cover + object-position:
  * center, jadi:
  *
- *   scale  = max(cw / vw, ch / vh)
+ *   scale  = max(cw / vw, ch / vh) * zoomFactor
  *   offset = (container - video * scale) / 2
  *
  * Kalau preview di-mirror (scaleX(-1)), sumbu X dibalik dulu supaya
@@ -120,6 +147,8 @@ export function computeSourceCrop(opts: {
   videoHeight: number;
   ratio: number;
   mirrored: boolean;
+  /** Pelebaran digital (0-1) dari zoom 0.5x. Default 1. */
+  zoomFactor?: number;
 }): PixelRect | null {
   const {
     containerWidth: cw,
@@ -128,6 +157,7 @@ export function computeSourceCrop(opts: {
     videoHeight: vh,
     ratio,
     mirrored,
+    zoomFactor = 1,
   } = opts;
 
   if (!(cw > 0) || !(ch > 0) || !(vw > 0) || !(vh > 0) || !(ratio > 0)) {
@@ -136,7 +166,7 @@ export function computeSourceCrop(opts: {
 
   const guide = computeGuideRect(cw, ch, ratio);
 
-  const scale = Math.max(cw / vw, ch / vh);
+  const scale = Math.max(cw / vw, ch / vh) * (zoomFactor > 0 ? zoomFactor : 1);
   const offsetX = (cw - vw * scale) / 2;
   const offsetY = (ch - vh * scale) / 2;
 
@@ -194,6 +224,9 @@ function drawCover(
   // lubang, hanya untuk menutup garis tipis (hairline) di tepi lubang
   // PNG yang semi-transparan. Bagian ini nyaris seluruhnya tertutup
   // artwork frame di atasnya.
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
   const bleed = 0.012;
   const ox = dw * bleed;
   const oy = dh * bleed;
@@ -226,14 +259,16 @@ function canvasSupportsWebpEncoding(): boolean {
   return probe.toDataURL("image/webp", 0.8).startsWith("data:image/webp");
 }
 
-// Sisain jarak aman di bawah limit request-body Vercel (~4.5MB) biar
-// gak mepet-mepet 413 lagi walau sekecil apapun kelebihannya.
-const MAX_RESULT_BYTES = 4 * 1024 * 1024;
+// Limit request-body Vercel ~4.5MB. Yang dikirim ke server itu SATU
+// request berisi hasil akhir + semua foto original (base64), jadi
+// jatah hasil akhir = total jatah dikurangi ukuran foto original.
+// Ini yang bikin hasil bisa HD tapi tetap aman dari error 413.
+const MAX_REQUEST_CHARS = 4.2 * 1024 * 1024;
+const MIN_RESULT_CHARS = 1.2 * 1024 * 1024;
 
-function base64ByteLength(dataUrl: string): number {
-  const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
-  return Math.ceil((base64.length * 3) / 4);
-}
+// Resolusi hasil akhir (HD). Lebar mengikuti PNG frame, dibatasi
+// antara CANVAS_OUTPUT_WIDTH (min) dan HD_MAX_WIDTH (max).
+const HD_MAX_WIDTH = 2400;
 
 /**
  * Merge captured photo data-URLs into the chosen frame's transparent PNG,
@@ -246,74 +281,103 @@ export async function mergePhotosIntoFrame(
   slotLayout: SlotRect[]
 ): Promise<string> {
   const frameImg = await loadImage(framePngUrl);
-
-  const width = CANVAS_OUTPUT_WIDTH;
-  const height = Math.round((frameImg.height / frameImg.width) * width);
-
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d", { alpha: true }) as CanvasRenderingContext2D | null;
-  if (!ctx) throw new Error("Canvas 2D context not supported");
-
-  // Deliberately no opaque fill here — the canvas stays transparent
-  // outside the frame's own holes/artwork, so the exported PNG carries
-  // a real transparent background instead of a hidden white rectangle
-  // (that hidden fill was showing up as an ugly white box behind every
-  // result and admin thumbnail).
-  ctx.clearRect(0, 0, width, height);
-
   const photos = await Promise.all(photoDataUrls.map(loadImage));
 
-  photos.forEach((img, i) => {
-    const rect = slotLayout[i];
-    if (!rect) return;
-    drawCover(
-      ctx,
-      img,
-      rect.x * width,
-      rect.y * height,
-      rect.w * width,
-      rect.h * height
-    );
-  });
+  const rawChars = photoDataUrls.reduce((sum, p) => sum + p.length, 0);
 
-  // Frame artwork drawn on top so its transparent holes reveal the
-  // photos placed beneath, and its opaque design stays crisp on top.
-  ctx.drawImage(frameImg, 0, 0, width, height);
+  const maxResultChars = Math.max(
+    MIN_RESULT_CHARS,
+    MAX_REQUEST_CHARS - rawChars - 20_000
+  );
 
-  if (canvasSupportsWebpEncoding()) {
-    // WebP tetap dipertahankan buat browser yang beneran dukung
-    // (Chrome/Firefox/Edge, dsb) — transparansinya kejaga & ukurannya
-    // paling kecil. Kalau satu frame tertentu (banyak slot / detail
-    // rumit) masih kegedean walau udah WebP, turunin kualitasnya
-    // sedikit demi sedikit sampai aman di bawah limit.
-    let quality = 0.9;
-    let dataUrl = canvas.toDataURL("image/webp", quality);
-    while (base64ByteLength(dataUrl) > MAX_RESULT_BYTES && quality > 0.5) {
-      quality -= 0.1;
-      dataUrl = canvas.toDataURL("image/webp", quality);
+  const useWebp = canvasSupportsWebpEncoding();
+
+  const render = (width: number): string => {
+    const height = Math.round((frameImg.height / frameImg.width) * width);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d", {
+      alpha: true,
+    }) as CanvasRenderingContext2D | null;
+    if (!ctx) throw new Error("Canvas 2D context not supported");
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+
+    // Deliberately no opaque fill here — the canvas stays transparent
+    // outside the frame's own holes/artwork, so the exported PNG carries
+    // a real transparent background instead of a hidden white rectangle
+    // (that hidden fill was showing up as an ugly white box behind every
+    // result and admin thumbnail).
+    ctx.clearRect(0, 0, width, height);
+
+    photos.forEach((img, i) => {
+      const rect = slotLayout[i];
+      if (!rect) return;
+      drawCover(
+        ctx,
+        img,
+        rect.x * width,
+        rect.y * height,
+        rect.w * width,
+        rect.h * height
+      );
+    });
+
+    // Frame artwork drawn on top so its transparent holes reveal the
+    // photos placed beneath, and its opaque design stays crisp on top.
+    ctx.drawImage(frameImg, 0, 0, width, height);
+
+    if (useWebp) {
+      // WebP tetap dipertahankan buat browser yang beneran dukung
+      // (Chrome/Firefox/Edge, dsb) — transparansinya kejaga & ukurannya
+      // paling kecil. Mulai dari kualitas tinggi, turun pelan-pelan
+      // hanya kalau melebihi jatah.
+      let quality = 0.95;
+      let dataUrl = canvas.toDataURL("image/webp", quality);
+      while (dataUrl.length > maxResultChars && quality > 0.6) {
+        quality -= 0.05;
+        dataUrl = canvas.toDataURL("image/webp", quality);
+      }
+      return dataUrl;
+    }
+
+    // Fallback buat Safari/iPad/iPhone: JPEG bisa di-encode di semua
+    // browser dan kompresinya bagus. JPEG gak punya alpha channel, jadi
+    // area transparan di canvas (di luar bentuk frame) dikasih dasar
+    // putih dulu sebelum di-export, supaya gak jadi kotak hitam.
+    const jpegCanvas = document.createElement("canvas");
+    jpegCanvas.width = width;
+    jpegCanvas.height = height;
+    const jctx = jpegCanvas.getContext("2d") as CanvasRenderingContext2D;
+    jctx.fillStyle = "#ffffff";
+    jctx.fillRect(0, 0, width, height);
+    jctx.drawImage(canvas, 0, 0);
+
+    let quality = 0.95;
+    let dataUrl = jpegCanvas.toDataURL("image/jpeg", quality);
+    while (dataUrl.length > maxResultChars && quality > 0.6) {
+      quality -= 0.05;
+      dataUrl = jpegCanvas.toDataURL("image/jpeg", quality);
     }
     return dataUrl;
+  };
+
+  let width = Math.min(
+    Math.max(frameImg.width, CANVAS_OUTPUT_WIDTH),
+    HD_MAX_WIDTH
+  );
+
+  let result = render(width);
+
+  // Pengaman terakhir (jarang kejadian): kalau masih kegedean walau
+  // kualitas sudah turun, kecilkan resolusi sedikit demi sedikit.
+  while (result.length > maxResultChars && width > 1200) {
+    width = Math.max(1200, Math.round(width * 0.85));
+    result = render(width);
   }
 
-  // Fallback buat Safari/iPad/iPhone: JPEG bisa di-encode di semua
-  // browser dan kompresinya bagus. JPEG gak punya alpha channel, jadi
-  // area transparan di canvas (di luar bentuk frame) dikasih dasar
-  // putih dulu sebelum di-export, supaya gak jadi kotak hitam.
-  const jpegCanvas = document.createElement("canvas");
-  jpegCanvas.width = width;
-  jpegCanvas.height = height;
-  const jctx = jpegCanvas.getContext("2d") as CanvasRenderingContext2D;
-  jctx.fillStyle = "#ffffff";
-  jctx.fillRect(0, 0, width, height);
-  jctx.drawImage(canvas, 0, 0);
-
-  let quality = 0.92;
-  let dataUrl = jpegCanvas.toDataURL("image/jpeg", quality);
-  while (base64ByteLength(dataUrl) > MAX_RESULT_BYTES && quality > 0.5) {
-    quality -= 0.1;
-    dataUrl = jpegCanvas.toDataURL("image/jpeg", quality);
-  }
-  return dataUrl;
+  return result;
 }

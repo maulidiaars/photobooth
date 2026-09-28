@@ -15,9 +15,7 @@ import {
 } from "@/lib/canvas";
 
 interface WebcamViewProps {
-  webcamRef: RefObject
-    Webcam | null
-  >;
+  webcamRef: RefObject<Webcam | null>;
 
   videoConstraints:
     MediaTrackConstraints;
@@ -46,10 +44,7 @@ export function WebcamView({
   const [
     containerSize,
     setContainerSize,
-  ] = useState<{
-    w: number;
-    h: number;
-  } | null>(null);
+  ] = useState<{ w: number; h: number } | null>(null);
 
   /*
    * Ukur container kamera (responsive). Guide dihitung dalam

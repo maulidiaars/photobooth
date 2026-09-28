@@ -4,10 +4,17 @@
  * "yang difoto".
  *
  *  - 1x   : tampilan normal.
- *  - 0.5x : kalau kamera mendukung zoom hardware di bawah 1x
- *           (mis. kamera ultra-wide di sebagian HP Android), dipakai
- *           zoom hardware. Kalau tidak ada, dipakai pelebaran digital
- *           semaksimal mungkin (lihat computeDigitalZoomFactor).
+ *  - 0.5x : efek "Ultra Wide" ala iPhone — jangkauan kamera yang
+ *           melebar (lebih banyak area/orang masuk frame), BUKAN
+ *           layar yang mengecil. Urutan usahanya (dikerjakan
+ *           WebcamView):
+ *             1. zoom hardware di bawah 1x pada kamera yang sedang
+ *                dipakai (Android / webcam yang mendukung),
+ *             2. pindah ke kamera fisik "Ultra Wide" kalau perangkat
+ *                punya (mis. iPhone/iPad, HP Android),
+ *             3. minta stream sensor penuh (4:3) supaya sudut
+ *                pandang vertikal lebih lebar, lalu dilebarkan
+ *                digital semaksimal mungkin (computeDigitalZoomFactor).
  */
 export type ZoomLevel = 0.5 | 1;
 
@@ -31,6 +38,48 @@ export function getZoomState(): ZoomState {
 export function resetZoomState() {
   state.level = 1;
   state.hardware = false;
+}
+
+/** Tandai bahwa pelebaran sudah dikerjakan oleh kamera itu sendiri
+ *  (zoom hardware / kamera Ultra Wide), jadi tidak perlu pelebaran
+ *  digital tambahan saat preview maupun capture. */
+export function markHardwareWide(value: boolean) {
+  state.hardware = value;
+}
+
+/**
+ * Cari kamera fisik "Ultra Wide" (mis. "Back Ultra Wide Camera" di
+ * iPhone/iPad). Label kamera baru terbaca setelah izin kamera
+ * diberikan, jadi panggil ini SETELAH stream jalan.
+ */
+export async function findUltraWideDeviceId(): Promise<string | null> {
+  try {
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      return null;
+    }
+
+    const devices = await navigator.mediaDevices.enumerateDevices();
+
+    const wide = devices.find(
+      (d) =>
+        d.kind === "videoinput" &&
+        !!d.deviceId &&
+        /ultra[\s-]?wide|\b0[.,]5\s?x?\b/i.test(d.label)
+    );
+
+    return wide?.deviceId ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** ID kamera yang sedang dipakai stream (untuk cek sudah di Ultra Wide atau belum). */
+export function getStreamDeviceId(
+  stream: MediaStream | null | undefined
+): string | null {
+  return (
+    stream?.getVideoTracks?.()[0]?.getSettings?.().deviceId ?? null
+  );
 }
 
 interface ZoomCapability {
@@ -70,8 +119,8 @@ export async function applyCameraZoom(
       const target = Math.max(level, zoom.min);
 
       await track.applyConstraints({
-        advanced: [{ zoom: target } as MediaTrackConstraintSet],
-      });
+        zoom: target,
+      } as MediaTrackConstraints);
 
       state.hardware = true;
 
@@ -80,10 +129,8 @@ export async function applyCameraZoom(
 
     // Balik ke 1x (atau zoom terendah yang tersedia).
     await track.applyConstraints({
-      advanced: [
-        { zoom: Math.max(1, zoom.min) } as MediaTrackConstraintSet,
-      ],
-    });
+      zoom: Math.max(1, zoom.min),
+    } as MediaTrackConstraints);
   } catch {
     // Zoom tidak bisa diterapkan -> jatuh ke pelebaran digital.
   }

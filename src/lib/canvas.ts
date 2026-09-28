@@ -25,8 +25,15 @@ export interface PixelRect {
   h: number;
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
+function clamp(
+  value: number,
+  min: number,
+  max: number
+) {
+  return Math.min(
+    Math.max(value, min),
+    max
+  );
 }
 
 /**
@@ -42,10 +49,18 @@ export function getSlotPixelRatio(
   frameNaturalWidth: number,
   frameNaturalHeight: number
 ): number | null {
-  const w = slot.w * frameNaturalWidth;
-  const h = slot.h * frameNaturalHeight;
+  const w =
+    slot.w *
+    frameNaturalWidth;
 
-  if (!(w > 0) || !(h > 0)) {
+  const h =
+    slot.h *
+    frameNaturalHeight;
+
+  if (
+    !(w > 0) ||
+    !(h > 0)
+  ) {
     return null;
   }
 
@@ -64,42 +79,127 @@ export function computeGuideRect(
   containerHeight: number,
   ratio: number
 ): PixelRect {
-  let w = containerWidth;
-  let h = w / ratio;
+  let w =
+    containerWidth;
 
-  if (h > containerHeight) {
-    h = containerHeight;
-    w = h * ratio;
+  let h =
+    w / ratio;
+
+  if (
+    h >
+    containerHeight
+  ) {
+    h =
+      containerHeight;
+
+    w =
+      h * ratio;
   }
 
-  const x = (containerWidth - w) / 2;
-  const y = (containerHeight - h) / 2;
+  const x =
+    (containerWidth -
+      w) /
+    2;
 
-  return { x, y, w, h };
+  const y =
+    (containerHeight -
+      h) /
+    2;
+
+  return {
+    x,
+    y,
+    w,
+    h,
+  };
 }
 
 /**
- * 0.5x tidak disimulasikan dengan CSS `scale(<1)`.
+ * Faktor pelebaran DIGITAL untuk zoom 0.5x.
  *
- * `scale(<1)` hanya mengecilkan seluruh preview ke tengah layar,
- * sehingga terlihat seperti container kamera yang menjauh. Itu bukan
- * perilaku Ultra Wide.
+ * CATATAN:
+ * Fungsi ini masih dipertahankan agar kompatibel dengan logic
+ * kamera project yang sekarang.
  *
- * Pelebaran 0.5x harus datang dari stream kamera:
- *   1. zoom hardware < 1x,
- *   2. kamera fisik Ultra Wide, atau
- *   3. fallback stream sensor 4:3.
- *
- * Capture selalu memakai stream kamera aktual tanpa faktor digital
- * tambahan agar preview dan hasil foto tetap sinkron.
+ * Kalau hardware kamera / kamera Ultra Wide tersedia, nilai yang
+ * dikembalikan adalah 1 sehingga tidak ada digital scaling tambahan.
  */
+export function computeDigitalZoomFactor(
+  opts: {
+    containerWidth: number;
+    containerHeight: number;
+    videoWidth: number;
+    videoHeight: number;
+    ratio: number;
+    zoom: number;
+    hardware: boolean;
+  }
+): number {
+  const {
+    containerWidth:
+      cw,
+    containerHeight:
+      ch,
+    videoWidth:
+      vw,
+    videoHeight:
+      vh,
+    ratio,
+    zoom,
+    hardware,
+  } = opts;
+
+  if (
+    zoom >= 1 ||
+    hardware
+  ) {
+    return 1;
+  }
+
+  if (
+    !(cw > 0) ||
+    !(ch > 0) ||
+    !(vw > 0) ||
+    !(vh > 0) ||
+    !(ratio > 0)
+  ) {
+    return 1;
+  }
+
+  const guide =
+    computeGuideRect(
+      cw,
+      ch,
+      ratio
+    );
+
+  const s1 =
+    Math.max(
+      cw / vw,
+      ch / vh
+    );
+
+  const sMin =
+    Math.max(
+      guide.w / vw,
+      guide.h / vh
+    );
+
+  return clamp(
+    Math.max(
+      zoom,
+      sMin / s1
+    ),
+    0.01,
+    1
+  );
+}
 
 /**
  * Terjemahkan guide (koordinat layar) menjadi area di VIDEO SUMBER
  * (piksel asli kamera).
  *
- * Video ditampilkan dengan object-fit: cover + object-position: center,
- * jadi scale = max(cw / vw, ch / vh).
+ * Video ditampilkan object-fit: cover + object-position: center.
  *
  * Kalau preview di-mirror (scaleX(-1)), sumbu X dibalik dulu supaya
  * area yang dipotong dari video mentah adalah area yang sama dengan
@@ -108,21 +208,34 @@ export function computeGuideRect(
  * Hasil crop: rasio PERSIS sama dengan guide, dan selalu berada
  * di dalam video.
  */
-export function computeSourceCrop(opts: {
-  containerWidth: number;
-  containerHeight: number;
-  videoWidth: number;
-  videoHeight: number;
-  ratio: number;
-  mirrored: boolean;
-}): PixelRect | null {
+export function computeSourceCrop(
+  opts: {
+    containerWidth: number;
+    containerHeight: number;
+    videoWidth: number;
+    videoHeight: number;
+    ratio: number;
+    mirrored: boolean;
+
+    /**
+     * Pelebaran digital (0-1) dari zoom 0.5x.
+     * Default = 1.
+     */
+    zoomFactor?: number;
+  }
+): PixelRect | null {
   const {
-    containerWidth: cw,
-    containerHeight: ch,
-    videoWidth: vw,
-    videoHeight: vh,
+    containerWidth:
+      cw,
+    containerHeight:
+      ch,
+    videoWidth:
+      vw,
+    videoHeight:
+      vh,
     ratio,
     mirrored,
+    zoomFactor = 1,
   } = opts;
 
   if (
@@ -142,33 +255,47 @@ export function computeSourceCrop(opts: {
       ratio
     );
 
+  const safeZoomFactor =
+    zoomFactor > 0
+      ? zoomFactor
+      : 1;
+
   const scale =
     Math.max(
       cw / vw,
       ch / vh
-    );
+    ) *
+    safeZoomFactor;
 
   const offsetX =
-    (cw - vw * scale) / 2;
+    (cw -
+      vw * scale) /
+    2;
 
   const offsetY =
-    (ch - vh * scale) / 2;
+    (ch -
+      vh * scale) /
+    2;
 
   const guideLeft =
     mirrored
       ? cw -
-        (guide.x + guide.w)
+        (guide.x +
+          guide.w)
       : guide.x;
 
   const sw =
-    guide.w / scale;
+    guide.w /
+    scale;
 
   const sh =
-    guide.h / scale;
+    guide.h /
+    scale;
 
   const sx =
     clamp(
-      (guideLeft - offsetX) /
+      (guideLeft -
+        offsetX) /
         scale,
       0,
       Math.max(
@@ -179,7 +306,8 @@ export function computeSourceCrop(opts: {
 
   const sy =
     clamp(
-      (guide.y - offsetY) /
+      (guide.y -
+        offsetY) /
         scale,
       0,
       Math.max(
@@ -211,7 +339,8 @@ function loadImage(
         "anonymous";
 
       img.onload =
-        () => resolve(img);
+        () =>
+          resolve(img);
 
       img.onerror =
         reject;
@@ -222,12 +351,13 @@ function loadImage(
   );
 }
 
-/** Draw a photo into a slot rect.
+/**
+ * Draw a photo into a slot rect.
  *
- *  Foto hasil kamera sudah dipotong dengan rasio PERSIS sama dengan
- *  lubang ini, jadi `sx/sy/sw/sh` di bawah praktis = seluruh foto
- *  (tidak ada crop kedua). Cover-fit hanya jadi pengaman kalau ada
- *  foto lama dengan rasio berbeda. */
+ * Foto hasil kamera sudah dipotong dengan rasio PERSIS sama dengan
+ * lubang ini, jadi cover-fit hanya menjadi pengaman kalau ada foto
+ * dengan rasio berbeda.
+ */
 function drawCover(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
@@ -273,10 +403,11 @@ function drawCover(
       2;
   }
 
-  // Lapisan bawah (underlay): foto digambar sedikit lebih besar dari
-  // lubang, hanya untuk menutup garis tipis (hairline) di tepi lubang
-  // PNG yang semi-transparan. Bagian ini nyaris seluruhnya tertutup
-  // artwork frame di atasnya.
+  /*
+   * Lapisan bawah (underlay): foto digambar sedikit lebih besar
+   * dari lubang, hanya untuk menutup hairline tipis di tepi lubang
+   * PNG yang semi-transparan.
+   */
   ctx.imageSmoothingEnabled =
     true;
 
@@ -319,9 +450,9 @@ function drawCover(
 
   ctx.restore();
 
-  // Lapisan atas: foto PERSIS di posisi & ukuran lubang, tanpa
-  // scale tambahan, jadi komposisinya sama dengan yang terlihat di
-  // guide kamera.
+  /*
+   * Lapisan atas: foto PERSIS di posisi & ukuran lubang.
+   */
   ctx.drawImage(
     img,
     sx,
@@ -335,14 +466,13 @@ function drawCover(
   );
 }
 
-// Safari/WebKit — yaitu SEMUA browser di iPhone/iPad, termasuk "Chrome"
-// atau "Firefox" versi iOS sekalipun, karena Apple mewajibkan semua
-// browser di iOS pakai mesin WebKit-nya Safari — sampai sekarang belum
-// bisa encode canvas ke format WebP. Kalau diminta toDataURL("image/webp"),
-// dia gak error, tapi DIAM-DIAM balikin PNG full-size tanpa kompresi
-// sama sekali. Itu yang bikin hasil foto dari iPad jadi jauh lebih besar
-// dari yang seharusnya dan nabrak limit ukuran request Vercel (413).
-// Makanya kita cek dulu betulan didukung apa nggak, jangan cuma asumsi.
+/*
+ * Safari/WebKit — termasuk Chrome/Firefox di iOS — menggunakan
+ * WebKit sebagai engine browser.
+ *
+ * Beberapa versi tidak benar-benar meng-encode canvas ke WebP.
+ * Karena itu kita cek hasil data URL-nya secara nyata.
+ */
 function canvasSupportsWebpEncoding(): boolean {
   const probe =
     document.createElement(
@@ -362,255 +492,332 @@ function canvasSupportsWebpEncoding(): boolean {
     );
 }
 
-// Limit request-body Vercel ~4.5MB. Yang dikirim ke server itu SATU
-// request berisi hasil akhir + semua foto original (base64), jadi
-// jatah hasil akhir = total jatah dikurangi ukuran foto original.
-// Ini yang bikin hasil bisa HD tapi tetap aman dari error 413.
+/*
+ * Limit request-body Vercel sekitar 4.5 MB.
+ *
+ * Yang dikirim ke server:
+ *   - result image
+ *   - raw photos
+ *
+ * Jadi result image tidak boleh memakai seluruh limit.
+ */
 const MAX_REQUEST_CHARS =
-  4.2 * 1024 * 1024;
+  4.2 *
+  1024 *
+  1024;
 
 const MIN_RESULT_CHARS =
-  1.2 * 1024 * 1024;
+  1.2 *
+  1024 *
+  1024;
 
-// Resolusi hasil akhir dibatasi supaya kualitas tetap tinggi tanpa
-// membuat payload terlalu besar.
+/*
+ * Resolusi hasil akhir.
+ *
+ * Tetap HD, tapi dibatasi supaya payload tidak terlalu besar.
+ */
 const HD_MAX_WIDTH =
   2400;
 
 /**
- * Merge semua foto ke frame PNG.
+ * ================================================================
+ * MERGE PHOTOS INTO FRAME
+ * ================================================================
  *
- * Foto kamera sudah mempunyai rasio slot yang sama dengan lubang frame,
- * sehingga setiap foto cukup di-cover ke masing-masing slot lalu frame
- * PNG digambar di atasnya.
+ * PENTING:
+ *
+ * Function ini menerima 3 parameter karena result/page.tsx project
+ * kamu memang memanggil:
+ *
+ * mergePhotosIntoFrame(
+ *   capturedPhotos,
+ *   selectedFrame.frame_png,
+ *   selectedFrame.slot_layout
+ * )
+ *
+ * JANGAN mengubah signature ini menjadi 2 parameter.
  */
 export async function mergePhotosIntoFrame(
-  frameSrc: string,
-  photos: Array<{
-    dataUrl: string;
-    slot: SlotRect;
-  }>
+  photoDataUrls: string[],
+  framePngUrl: string,
+  slotLayout: SlotRect[]
 ): Promise<string> {
+  /*
+   * Load frame PNG.
+   */
   const frameImg =
     await loadImage(
-      frameSrc
+      framePngUrl
     );
 
-  const naturalWidth =
-    frameImg.naturalWidth ||
-    frameImg.width;
+  /*
+   * Load semua foto yang sudah diambil.
+   */
+  const photos =
+    await Promise.all(
+      photoDataUrls.map(
+        loadImage
+      )
+    );
 
-  const naturalHeight =
-    frameImg.naturalHeight ||
-    frameImg.height;
+  /*
+   * Hitung ukuran raw photos karena result image + raw photos
+   * nantinya dikirim dalam request yang sama.
+   */
+  const rawChars =
+    photoDataUrls.reduce(
+      (
+        sum,
+        photo
+      ) =>
+        sum +
+        photo.length,
+      0
+    );
 
-  let width = Math.min(
+  const maxResultChars =
     Math.max(
-      naturalWidth,
-      CANVAS_OUTPUT_WIDTH
-    ),
-    HD_MAX_WIDTH
-  );
-
-  const height =
-    Math.round(
-      width *
-        (naturalHeight /
-          naturalWidth)
+      MIN_RESULT_CHARS,
+      MAX_REQUEST_CHARS -
+        rawChars -
+        20_000
     );
 
-  const render =
-    async (
-      outputWidth: number
-    ) => {
-      const outputHeight =
-        Math.round(
-          outputWidth *
-            (naturalHeight /
-              naturalWidth)
-        );
+  const useWebp =
+    canvasSupportsWebpEncoding();
 
-      const canvas =
-        document.createElement(
-          "canvas"
-        );
+  /**
+   * Render frame + foto ke canvas.
+   */
+  const render = (
+    width: number
+  ): string => {
+    const height =
+      Math.round(
+        (frameImg.height /
+          frameImg.width) *
+          width
+      );
 
-      canvas.width =
-        outputWidth;
+    const canvas =
+      document.createElement(
+        "canvas"
+      );
 
-      canvas.height =
-        outputHeight;
+    canvas.width =
+      width;
 
-      const ctx =
-        canvas.getContext(
-          "2d"
-        );
+    canvas.height =
+      height;
 
-      if (!ctx) {
-        throw new Error(
-          "Canvas context unavailable."
-        );
-      }
+    const ctx =
+      canvas.getContext(
+        "2d",
+        {
+          alpha: true,
+        }
+      ) as
+        | CanvasRenderingContext2D
+        | null;
 
-      ctx.imageSmoothingEnabled =
-        true;
+    if (!ctx) {
+      throw new Error(
+        "Canvas 2D context not supported"
+      );
+    }
 
-      ctx.imageSmoothingQuality =
-        "high";
+    ctx.imageSmoothingEnabled =
+      true;
 
-      /*
-       * Background transparan sengaja dipertahankan.
-       * Foto akan diletakkan di bawah frame PNG.
-       */
-      for (
-        const photo of photos
-      ) {
-        const img =
-          await loadImage(
-            photo.dataUrl
-          );
+    ctx.imageSmoothingQuality =
+      "high";
 
-        const dx =
-          photo.slot.x *
-          outputWidth;
+    /*
+     * Jangan kasih background putih.
+     *
+     * Frame PNG tetap transparan di luar artwork.
+     */
+    ctx.clearRect(
+      0,
+      0,
+      width,
+      height
+    );
 
-        const dy =
-          photo.slot.y *
-          outputHeight;
+    /*
+     * Masukkan foto berdasarkan slot_layout frame.
+     *
+     * Ini yang memastikan setiap foto masuk ke lubang frame
+     * yang sesuai.
+     */
+    photos.forEach(
+      (
+        img,
+        index
+      ) => {
+        const rect =
+          slotLayout[
+            index
+          ];
 
-        const dw =
-          photo.slot.w *
-          outputWidth;
-
-        const dh =
-          photo.slot.h *
-          outputHeight;
+        if (!rect) {
+          return;
+        }
 
         drawCover(
           ctx,
           img,
-          dx,
-          dy,
-          dw,
-          dh
+          rect.x *
+            width,
+          rect.y *
+            height,
+          rect.w *
+            width,
+          rect.h *
+            height
         );
       }
+    );
 
-      // Frame PNG berada paling atas.
-      ctx.drawImage(
-        frameImg,
-        0,
-        0,
-        outputWidth,
-        outputHeight
-      );
+    /*
+     * Frame artwork selalu paling atas.
+     */
+    ctx.drawImage(
+      frameImg,
+      0,
+      0,
+      width,
+      height
+    );
 
-      const maxResultChars =
-        MAX_REQUEST_CHARS;
-
-      let dataUrl: string;
-
-      if (
-        canvasSupportsWebpEncoding()
-      ) {
-        let quality = 0.9;
-
-        dataUrl =
-          canvas.toDataURL(
-            "image/webp",
-            quality
-          );
-
-        while (
-          dataUrl.length >
-            maxResultChars &&
-          quality > 0.6
-        ) {
-          quality -= 0.05;
-
-          dataUrl =
-            canvas.toDataURL(
-              "image/webp",
-              quality
-            );
-        }
-
-        return dataUrl;
-      }
-
-      // Fallback buat Safari/iPad/iPhone: JPEG bisa di-encode di semua
-      // browser dan kompresinya bagus. JPEG gak punya alpha channel, jadi
-      // area transparan di canvas (di luar bentuk frame) dikasih dasar
-      // putih dulu sebelum di-export, supaya gak jadi kotak hitam.
-      const jpegCanvas =
-        document.createElement(
-          "canvas"
-        );
-
-      jpegCanvas.width =
-        outputWidth;
-
-      jpegCanvas.height =
-        outputHeight;
-
-      const jctx =
-        jpegCanvas.getContext(
-          "2d"
-        ) as CanvasRenderingContext2D;
-
-      jctx.fillStyle =
-        "#ffffff";
-
-      jctx.fillRect(
-        0,
-        0,
-        outputWidth,
-        outputHeight
-      );
-
-      jctx.drawImage(
-        canvas,
-        0,
-        0
-      );
-
+    /*
+     * Browser yang benar-benar support WebP:
+     * gunakan WebP supaya ukuran file lebih kecil.
+     */
+    if (useWebp) {
       let quality =
         0.95;
 
-      dataUrl =
-        jpegCanvas.toDataURL(
-          "image/jpeg",
+      let dataUrl =
+        canvas.toDataURL(
+          "image/webp",
           quality
         );
 
       while (
         dataUrl.length >
           maxResultChars &&
-        quality > 0.6
+        quality >
+          0.6
       ) {
-        quality -= 0.05;
+        quality -=
+          0.05;
 
         dataUrl =
-          jpegCanvas.toDataURL(
-            "image/jpeg",
+          canvas.toDataURL(
+            "image/webp",
             quality
           );
       }
 
       return dataUrl;
-    };
+    }
 
-  let result =
-    await render(
-      width
+    /*
+     * Safari/iPhone/iPad fallback:
+     *
+     * JPEG tidak mendukung transparansi, jadi buat canvas kedua
+     * dengan background putih terlebih dahulu.
+     */
+    const jpegCanvas =
+      document.createElement(
+        "canvas"
+      );
+
+    jpegCanvas.width =
+      width;
+
+    jpegCanvas.height =
+      height;
+
+    const jctx =
+      jpegCanvas.getContext(
+        "2d"
+      ) as CanvasRenderingContext2D;
+
+    jctx.fillStyle =
+      "#ffffff";
+
+    jctx.fillRect(
+      0,
+      0,
+      width,
+      height
     );
 
-  // Pengaman terakhir (jarang kejadian): kalau masih kegedean walau
-  // kualitas sudah turun, kecilkan resolusi sedikit demi sedikit.
+    jctx.drawImage(
+      canvas,
+      0,
+      0
+    );
+
+    let quality =
+      0.95;
+
+    let dataUrl =
+      jpegCanvas.toDataURL(
+        "image/jpeg",
+        quality
+      );
+
+    while (
+      dataUrl.length >
+        maxResultChars &&
+      quality >
+        0.6
+    ) {
+      quality -=
+        0.05;
+
+      dataUrl =
+        jpegCanvas.toDataURL(
+          "image/jpeg",
+          quality
+        );
+    }
+
+    return dataUrl;
+  };
+
+  /*
+   * Tentukan ukuran awal output.
+   *
+   * Minimal mengikuti CANVAS_OUTPUT_WIDTH,
+   * maksimal 2400px.
+   */
+  let width =
+    Math.min(
+      Math.max(
+        frameImg.width,
+        CANVAS_OUTPUT_WIDTH
+      ),
+      HD_MAX_WIDTH
+    );
+
+  let result =
+    render(width);
+
+  /*
+   * Pengaman terakhir.
+   *
+   * Kalau hasil masih terlalu besar setelah quality diturunkan,
+   * turunkan resolusi secara bertahap.
+   */
   while (
     result.length >
-      MAX_REQUEST_CHARS &&
-    width > 1200
+      maxResultChars &&
+    width >
+      1200
   ) {
     width =
       Math.max(
@@ -621,9 +828,7 @@ export async function mergePhotosIntoFrame(
       );
 
     result =
-      await render(
-        width
-      );
+      render(width);
   }
 
   return result;

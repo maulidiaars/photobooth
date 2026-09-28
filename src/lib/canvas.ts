@@ -1,6 +1,156 @@
 import { CANVAS_OUTPUT_WIDTH } from "./constants";
 import type { SlotRect } from "./frameSlotDetector";
 
+/* ================================================================
+ * GEOMETRI KAMERA -> FRAME (SATU SUMBER KEBENARAN)
+ * ================================================================
+ *
+ * Tiga hal di bawah ini WAJIB memakai fungsi yang sama supaya
+ * "apa yang terlihat di guide" == "apa yang di-capture" ==
+ * "apa yang masuk ke lubang frame":
+ *
+ *   1. WebcamView      -> menggambar guide  (computeGuideRect)
+ *   2. useCamera       -> memotong video    (computeSourceCrop)
+ *   3. mergePhotosIntoFrame -> menaruh foto ke lubang frame
+ */
+
+/** Preview kamera di-mirror (seperti kaca / selfie). Dipakai oleh
+ *  WebcamView (CSS) dan useCamera (capture) supaya keduanya sinkron. */
+export const CAMERA_PREVIEW_MIRRORED = true;
+
+export interface PixelRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+/**
+ * Rasio ASLI (dalam piksel) dari satu lubang foto di frame.
+ *
+ * SlotRect.w / SlotRect.h adalah PECAHAN 0-1 dari kanvas PNG, bukan
+ * piksel. Kalau PNG frame tidak persegi, w/h mentah TIDAK sama dengan
+ * rasio lubang aslinya — itu penyebab guide landscape padahal
+ * lubangnya portrait. Jadi harus dikali ukuran PNG dulu.
+ */
+export function getSlotPixelRatio(
+  slot: SlotRect,
+  frameNaturalWidth: number,
+  frameNaturalHeight: number
+): number | null {
+  const w = slot.w * frameNaturalWidth;
+  const h = slot.h * frameNaturalHeight;
+
+  if (!(w > 0) || !(h > 0)) {
+    return null;
+  }
+
+  return w / h;
+}
+
+const GUIDE_TOP_INSET = 36;
+
+/**
+ * Kotak guide (dalam piksel, relatif ke container kamera) dengan
+ * rasio PERSIS `ratio`. Ukurannya menyesuaikan container (responsive)
+ * tapi rasionya tidak pernah berubah.
+ *
+ * Ruang atas dipakai teks petunjuk, ruang bawah dipakai tombol
+ * shutter / "Simpan & Lanjut".
+ */
+export function computeGuideRect(
+  containerWidth: number,
+  containerHeight: number,
+  ratio: number
+): PixelRect {
+  const bottomInset = clamp(containerHeight * 0.15, 84, 100);
+
+  let availH = containerHeight - GUIDE_TOP_INSET - bottomInset;
+
+  // Container sangat pendek: jangan sampai guide jadi terlalu kecil.
+  if (availH < containerHeight * 0.5) {
+    availH = containerHeight * 0.5;
+  }
+
+  const availW = containerWidth * 0.92;
+
+  let w = availW;
+  let h = w / ratio;
+
+  if (h > availH) {
+    h = availH;
+    w = h * ratio;
+  }
+
+  const x = (containerWidth - w) / 2;
+  const y = clamp(
+    GUIDE_TOP_INSET + (availH - h) / 2,
+    0,
+    Math.max(0, containerHeight - h)
+  );
+
+  return { x, y, w, h };
+}
+
+/**
+ * Terjemahkan guide (koordinat layar) menjadi area di VIDEO SUMBER
+ * (piksel asli kamera).
+ *
+ * Video ditampilkan dengan object-fit: cover + object-position:
+ * center, jadi:
+ *
+ *   scale  = max(cw / vw, ch / vh)
+ *   offset = (container - video * scale) / 2
+ *
+ * Kalau preview di-mirror (scaleX(-1)), sumbu X dibalik dulu supaya
+ * area yang dipotong dari video mentah adalah area yang sama dengan
+ * yang tampak di guide.
+ *
+ * Hasil crop: rasio PERSIS sama dengan guide, dan selalu berada
+ * di dalam video.
+ */
+export function computeSourceCrop(opts: {
+  containerWidth: number;
+  containerHeight: number;
+  videoWidth: number;
+  videoHeight: number;
+  ratio: number;
+  mirrored: boolean;
+}): PixelRect | null {
+  const {
+    containerWidth: cw,
+    containerHeight: ch,
+    videoWidth: vw,
+    videoHeight: vh,
+    ratio,
+    mirrored,
+  } = opts;
+
+  if (!(cw > 0) || !(ch > 0) || !(vw > 0) || !(vh > 0) || !(ratio > 0)) {
+    return null;
+  }
+
+  const guide = computeGuideRect(cw, ch, ratio);
+
+  const scale = Math.max(cw / vw, ch / vh);
+  const offsetX = (cw - vw * scale) / 2;
+  const offsetY = (ch - vh * scale) / 2;
+
+  const guideLeft = mirrored ? cw - (guide.x + guide.w) : guide.x;
+
+  const sw = guide.w / scale;
+  const sh = guide.h / scale;
+
+  const sx = clamp((guideLeft - offsetX) / scale, 0, Math.max(0, vw - sw));
+  const sy = clamp((guide.y - offsetY) / scale, 0, Math.max(0, vh - sh));
+
+  return { x: sx, y: sy, w: sw, h: sh };
+}
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -11,8 +161,12 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/** Draw a photo into a slot rect using "cover" fit so it fills the hole
- *  edge-to-edge without spilling outside it. */
+/** Draw a photo into a slot rect.
+ *
+ *  Foto hasil kamera sudah dipotong dengan rasio PERSIS sama dengan
+ *  lubang ini, jadi `sx/sy/sw/sh` di bawah praktis = seluruh foto
+ *  (tidak ada crop kedua). Cover-fit hanya jadi pengaman kalau ada
+ *  foto lama dengan rasio berbeda. */
 function drawCover(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
@@ -36,32 +190,25 @@ function drawCover(
     sy = (img.height - sh) / 2;
   }
 
-  // Overscan the photo a couple of percent past the slot's own edges
-  // before clipping (same trick the live camera preview uses via its
-  // scale-[1.02] class) so the photo always bleeds flush under the
-  // frame artwork's hole. Without this, sub-pixel rounding or a soft/
-  // anti-aliased edge on the frame PNG's hole can leave a hairline gap
-  // where the frame's own background peeks through, reading as a thin
-  // white border around every photo.
-  const bleed = 0.025;
+  // Lapisan bawah (underlay): foto digambar sedikit lebih besar dari
+  // lubang, hanya untuk menutup garis tipis (hairline) di tepi lubang
+  // PNG yang semi-transparan. Bagian ini nyaris seluruhnya tertutup
+  // artwork frame di atasnya.
+  const bleed = 0.012;
   const ox = dw * bleed;
   const oy = dh * bleed;
 
   ctx.save();
-  // Clip to the *overscanned* rect (not the original slot rect) so the
-  // bleed above actually has somewhere to go. Clipping to the exact
-  // original rect here defeated the overscan entirely — the frame PNG's
-  // hole has a couple of semi-transparent anti-aliased pixels right at
-  // its edge, and clipping the photo to precisely the same rect left
-  // that soft edge showing through as a thin white ring. The frame
-  // artwork drawn on top afterward is fully opaque everywhere outside
-  // the actual hole, so letting the photo bleed slightly further here is
-  // still safe — it just gets covered back up by the frame there.
   ctx.beginPath();
   ctx.rect(dx - ox, dy - oy, dw + ox * 2, dh + oy * 2);
   ctx.clip();
   ctx.drawImage(img, sx, sy, sw, sh, dx - ox, dy - oy, dw + ox * 2, dh + oy * 2);
   ctx.restore();
+
+  // Lapisan atas: foto PERSIS di posisi & ukuran lubang, tanpa
+  // scale tambahan, jadi komposisinya sama dengan yang terlihat di
+  // guide kamera.
+  ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
 }
 
 // Safari/WebKit — yaitu SEMUA browser di iPhone/iPad, termasuk "Chrome"

@@ -113,3 +113,223 @@ export const DEFAULT_PHOTO_FILTER: PhotoFilterId = "original";
 export function getPhotoFilter(id: PhotoFilterId): PhotoFilter {
   return PHOTO_FILTERS.find((item) => item.id === id) ?? PHOTO_FILTERS[0]!;
 }
+
+/* ================================================================
+ * FALLBACK FILTER UNTUK SAFARI / iPad / iPhone
+ * ================================================================
+ *
+ * `ctx.filter` (filter CSS di canvas) TIDAK didukung Safari/WebKit
+ * (semua browser di iPhone & iPad). Di sana filter cuma kelihatan di
+ * preview (CSS biasa), tapi hasil jepretannya polos tanpa filter.
+ *
+ * Solusinya: kalau `ctx.filter` tidak jalan, filter yang sama
+ * (sepia, saturate, contrast, brightness, hue-rotate, grayscale)
+ * dihitung manual per-piksel memakai rumus resmi filter CSS, jadi
+ * hasilnya menyatu dengan foto & mirip dengan preview.
+ */
+
+let nativeCanvasFilterSupport: boolean | null = null;
+
+export function canvasSupportsNativeFilter(): boolean {
+  if (nativeCanvasFilterSupport !== null) {
+    return nativeCanvasFilterSupport;
+  }
+
+  try {
+    const probe = document.createElement("canvas");
+    probe.width = 1;
+    probe.height = 1;
+
+    const ctx = probe.getContext("2d");
+
+    if (!ctx || !("filter" in ctx)) {
+      nativeCanvasFilterSupport = false;
+      return false;
+    }
+
+    ctx.filter = "grayscale(1)";
+    ctx.fillStyle = "#ff0000";
+    ctx.fillRect(0, 0, 1, 1);
+
+    const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+
+    // Merah murni -> abu-abu kalau filternya benar-benar jalan.
+    nativeCanvasFilterSupport = r === g && g === b;
+  } catch {
+    nativeCanvasFilterSupport = false;
+  }
+
+  return nativeCanvasFilterSupport;
+}
+
+interface FilterOp {
+  name: string;
+  value: number;
+}
+
+function parseFilterOps(css: string): FilterOp[] {
+  const ops: FilterOp[] = [];
+
+  const re =
+    /([a-z-]+)\(\s*([-+]?\d*\.?\d+)\s*(deg|rad|turn|%|px)?\s*\)/gi;
+
+  let match: RegExpExecArray | null;
+
+  while ((match = re.exec(css)) !== null) {
+    const name = (match[1] ?? "").toLowerCase();
+    let value = parseFloat(match[2] ?? "0");
+    const unit = (match[3] ?? "").toLowerCase();
+
+    if (name === "hue-rotate") {
+      if (unit === "rad") value = (value * 180) / Math.PI;
+      else if (unit === "turn") value = value * 360;
+    } else if (unit === "%") {
+      value = value / 100;
+    }
+
+    ops.push({ name, value });
+  }
+
+  return ops;
+}
+
+function mulMat3(a: number[], b: number[]): number[] {
+  const out = new Array<number>(9).fill(0);
+
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      let sum = 0;
+
+      for (let k = 0; k < 3; k++) {
+        sum += (a[r * 3 + k] ?? 0) * (b[k * 3 + c] ?? 0);
+      }
+
+      out[r * 3 + c] = sum;
+    }
+  }
+
+  return out;
+}
+
+function mulMatVec3(a: number[], v: number[]): number[] {
+  return [0, 1, 2].map(
+    (r) =>
+      (a[r * 3] ?? 0) * (v[0] ?? 0) +
+      (a[r * 3 + 1] ?? 0) * (v[1] ?? 0) +
+      (a[r * 3 + 2] ?? 0) * (v[2] ?? 0)
+  );
+}
+
+function clamp01(n: number) {
+  return Math.min(Math.max(n, 0), 1);
+}
+
+/**
+ * Terapkan string filter CSS (mis. "sepia(.2) saturate(1.2)") ke
+ * seluruh isi canvas, per piksel. Dipakai hanya kalau `ctx.filter`
+ * tidak didukung browser.
+ */
+export function applyCssFilterFallback(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  css: string
+) {
+  if (!css || css === "none") return;
+
+  const ops = parseFilterOps(css);
+
+  if (!ops.length) return;
+
+  // Semua operasi digabung jadi satu transformasi: out = M * rgb + o
+  let m = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+  let o = [0, 0, 0];
+
+  for (const { name, value } of ops) {
+    if (name === "brightness") {
+      const b = Math.max(value, 0);
+      m = m.map((x) => x * b);
+      o = o.map((x) => x * b);
+      continue;
+    }
+
+    if (name === "contrast") {
+      const c = Math.max(value, 0);
+      const t = 255 * (0.5 - 0.5 * c);
+      m = m.map((x) => x * c);
+      o = o.map((x) => x * c + t);
+      continue;
+    }
+
+    let a: number[] | null = null;
+
+    if (name === "grayscale") {
+      const k = 1 - clamp01(value);
+
+      a = [
+        0.2126 + 0.7874 * k, 0.7152 - 0.7152 * k, 0.0722 - 0.0722 * k,
+        0.2126 - 0.2126 * k, 0.7152 + 0.2848 * k, 0.0722 - 0.0722 * k,
+        0.2126 - 0.2126 * k, 0.7152 - 0.7152 * k, 0.0722 + 0.9278 * k,
+      ];
+    } else if (name === "sepia") {
+      const k = 1 - clamp01(value);
+
+      a = [
+        0.393 + 0.607 * k, 0.769 - 0.769 * k, 0.189 - 0.189 * k,
+        0.349 - 0.349 * k, 0.686 + 0.314 * k, 0.168 - 0.168 * k,
+        0.272 - 0.272 * k, 0.534 - 0.534 * k, 0.131 + 0.869 * k,
+      ];
+    } else if (name === "saturate") {
+      const s = Math.max(value, 0);
+
+      a = [
+        0.213 + 0.787 * s, 0.715 - 0.715 * s, 0.072 - 0.072 * s,
+        0.213 - 0.213 * s, 0.715 + 0.285 * s, 0.072 - 0.072 * s,
+        0.213 - 0.213 * s, 0.715 - 0.715 * s, 0.072 + 0.928 * s,
+      ];
+    } else if (name === "hue-rotate") {
+      const rad = (value * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+
+      a = [
+        0.213 + cos * 0.787 - sin * 0.213,
+        0.715 - cos * 0.715 - sin * 0.715,
+        0.072 - cos * 0.072 + sin * 0.928,
+        0.213 - cos * 0.213 + sin * 0.143,
+        0.715 + cos * 0.285 + sin * 0.14,
+        0.072 - cos * 0.072 - sin * 0.283,
+        0.213 - cos * 0.213 - sin * 0.787,
+        0.715 - cos * 0.715 + sin * 0.715,
+        0.072 + cos * 0.928 + sin * 0.072,
+      ];
+    }
+
+    // blur() dan lainnya sengaja dilewati (efeknya nyaris tak terlihat).
+    if (a) {
+      m = mulMat3(a, m);
+      o = mulMatVec3(a, o);
+    }
+  }
+
+  const image = ctx.getImageData(0, 0, width, height);
+  const d = image.data;
+
+  const [m0, m1, m2, m3, m4, m5, m6, m7, m8] = m as [
+    number, number, number, number, number, number, number, number, number
+  ];
+  const [o0, o1, o2] = o as [number, number, number];
+
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i] as number;
+    const g = d[i + 1] as number;
+    const b = d[i + 2] as number;
+
+    // Uint8ClampedArray otomatis membatasi nilai ke 0-255.
+    d[i] = m0 * r + m1 * g + m2 * b + o0;
+    d[i + 1] = m3 * r + m4 * g + m5 * b + o1;
+    d[i + 2] = m6 * r + m7 * g + m8 * b + o2;
+  }
+
+  ctx.putImageData(image, 0, 0);
+}

@@ -1,4 +1,4 @@
-export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Klikka Photobooth";
+export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Clikja Photobooth";
 
 /** Public base URL of the deployed app (Vercel), used to build the
  *  /foto/[id] link sent to guests over WhatsApp. Override via the
@@ -18,7 +18,7 @@ export const COUNTDOWN_SECONDS = 3;
  *  habis. */
 export const SESSION_DURATION_MS = 5 * 60 * 1000;
 
-export const CANVAS_OUTPUT_WIDTH = 1200;
+export const CANVAS_OUTPUT_WIDTH = 1800;
 
 export const PASTEL_ACCENTS = [
   "pink-gradient",

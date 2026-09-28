@@ -4,16 +4,26 @@ import {
 } from "react";
 import Webcam from "react-webcam";
 import type { PhotoFilterId } from "@/lib/photoFilters";
-import { getPhotoFilter } from "@/lib/photoFilters";
+import {
+  applyCssFilterFallback,
+  canvasSupportsNativeFilter,
+  getPhotoFilter,
+} from "@/lib/photoFilters";
 import {
   CAMERA_PREVIEW_MIRRORED,
+  computeDigitalZoomFactor,
   computeSourceCrop,
 } from "@/lib/canvas";
+import { getZoomState } from "@/lib/cameraZoom";
 
+/*
+ * Minta resolusi HD (Full HD 1920x1080). Kalau kamera tidak
+ * sanggup, browser otomatis turun ke resolusi tertinggi yang ada.
+ */
 const videoConstraints: MediaTrackConstraints =
   {
-    width: 1280,
-    height: 720,
+    width: { ideal: 1920 },
+    height: { ideal: 1080 },
     facingMode: "user",
   };
 
@@ -105,6 +115,27 @@ export function useCamera() {
          * (absolute inset-0). Guide di WebcamView dihitung dari
          * ukuran yang sama dengan fungsi yang sama.
          */
+        const zoomState =
+          getZoomState();
+
+        const zoomFactor =
+          computeDigitalZoomFactor({
+            containerWidth:
+              video.clientWidth,
+            containerHeight:
+              video.clientHeight,
+            videoWidth:
+              video.videoWidth,
+            videoHeight:
+              video.videoHeight,
+            ratio:
+              captureAspectRatio,
+            zoom:
+              zoomState.level,
+            hardware:
+              zoomState.hardware,
+          });
+
         const crop =
           computeSourceCrop({
             containerWidth:
@@ -119,6 +150,7 @@ export function useCamera() {
               captureAspectRatio,
             mirrored:
               CAMERA_PREVIEW_MIRRORED,
+            zoomFactor,
           });
 
         if (!crop) {
@@ -174,11 +206,31 @@ export function useCamera() {
             filterId
           );
 
+        /*
+         * Filter dipanggang LANGSUNG ke piksel foto.
+         *
+         * Browser yang mendukung `ctx.filter` (Chrome, Firefox,
+         * Edge) memakainya langsung. Safari / iPad / iPhone TIDAK
+         * mendukung `ctx.filter` -> di sana filter dihitung manual
+         * per-piksel (applyCssFilterFallback) setelah foto digambar,
+         * supaya filter tetap menyatu dengan foto & ikut ke hasil
+         * akhir.
+         */
+        const nativeFilter =
+          canvasSupportsNativeFilter();
+
+        ctx.imageSmoothingEnabled =
+          true;
+
+        ctx.imageSmoothingQuality =
+          "high";
+
         ctx.filter =
-          selected.filter ===
-          "none"
-            ? "none"
-            : selected.filter;
+          nativeFilter &&
+          selected.filter !==
+            "none"
+            ? selected.filter
+            : "none";
 
         /*
          * Preview di-mirror lewat CSS (scaleX(-1)). Crop di atas
@@ -223,6 +275,19 @@ export function useCamera() {
 
         ctx.filter =
           "none";
+
+        if (
+          !nativeFilter &&
+          selected.filter !==
+            "none"
+        ) {
+          applyCssFilterFallback(
+            ctx,
+            outWidth,
+            outHeight,
+            selected.filter
+          );
+        }
 
         return canvas.toDataURL(
           "image/jpeg",

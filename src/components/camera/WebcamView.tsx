@@ -16,24 +16,29 @@ import {
   computeGuideRect,
 } from "@/lib/canvas";
 import {
+  VIRTUAL_ZOOM_1X,
   ZOOM_LEVELS,
   applyCameraZoom,
   findUltraWideDeviceId,
   getStreamDeviceId,
   getZoomState,
+  hasRealWideCamera,
   markHardwareWide,
   resetZoomState,
+  setDigitalZoom,
   type ZoomLevel,
 } from "@/lib/cameraZoom";
 
 /*
  * Cara kamera menghasilkan tampilan 0.5x:
  *  - "default" : kamera biasa (1x).
- *  - "device"  : pindah ke kamera fisik Ultra Wide.
- *  - "sensor"  : stream 4:3 sensor penuh sebagai fallback supaya
- *                kamera tidak lagi mengecilkan preview dengan CSS.
+ *  - "device"  : pindah ke kamera fisik Ultra Wide DEPAN.
+ *
+ * Kalau kamera tidak punya keduanya (laptop, webcam USB, kamera
+ * depan HP biasa) dipakai MODE VIRTUAL (state `virtualWide` di
+ * bawah): 0.5x = frame kamera penuh, 1x = crop tengah frame.
  */
-type WideMode = "default" | "device" | "sensor";
+type WideMode = "default" | "device";
 
 interface WebcamViewProps {
   webcamRef: RefObject<Webcam | null>;
@@ -87,6 +92,17 @@ export function WebcamView({
     setHardwareWide,
   ] = useState(false);
 
+  /*
+   * MODE VIRTUAL: kamera tidak punya zoom hardware < 1x maupun
+   * kamera Ultra Wide depan. Supaya 0.5x tetap terlihat lebih lebar
+   * di kamera apa pun, 1x di-zoom-in digital (VIRTUAL_ZOOM_1X) dan
+   * 0.5x menampilkan frame penuh.
+   */
+  const [
+    virtualWide,
+    setVirtualWide,
+  ] = useState(false);
+
   const [wideMode, setWideMode] =
     useState<WideMode>("default");
 
@@ -119,24 +135,6 @@ export function WebcamView({
         };
       }
 
-      /*
-       * Fallback 0.5x:
-       *
-       * Jangan scale preview menjadi kecil.
-       * Minta sensor 4:3 supaya kamera mempunyai lebih banyak
-       * area sensor yang bisa ditampilkan dibanding stream 16:9.
-       */
-      if (wideMode === "sensor") {
-        return {
-          ...videoConstraints,
-          width: { ideal: 1600 },
-          height: { ideal: 1200 },
-          aspectRatio: {
-            ideal: 4 / 3,
-          },
-        };
-      }
-
       return videoConstraints;
     }, [
       videoConstraints,
@@ -151,6 +149,20 @@ export function WebcamView({
 
     setWideMode(mode);
   };
+
+  /*
+   * Pembesaran digital yang sedang tampil. Hanya aktif di MODE
+   * VIRTUAL: 1x = VIRTUAL_ZOOM_1X, 0.5x = 1 (frame penuh).
+   * Nilai yang sama dipakai useCamera saat capture.
+   */
+  const digitalScale =
+    virtualWide && zoom >= 1
+      ? VIRTUAL_ZOOM_1X
+      : 1;
+
+  useEffect(() => {
+    setDigitalZoom(digitalScale);
+  }, [digitalScale]);
 
   /*
    * Reset status zoom setiap halaman kamera dibuka, supaya tidak
@@ -234,6 +246,21 @@ export function WebcamView({
     useCallback(
       (stream: MediaStream) => {
         syncVideoSize();
+
+        /*
+         * Cek apakah kamera ini punya cara "asli" untuk melebar.
+         * Kalau tidak, aktifkan MODE VIRTUAL sejak awal supaya 0.5x
+         * nanti benar-benar terlihat lebih lebar dari 1x.
+         */
+        hasRealWideCamera(stream).then(
+          (real) => {
+            setVirtualWide(
+              !real &&
+                wideModeRef.current !==
+                  "device"
+            );
+          }
+        );
 
         applyCameraZoom(
           stream,
@@ -342,16 +369,16 @@ export function WebcamView({
       }
 
       /*
-       * Langkah 3: fallback sensor penuh 4:3.
+       * Langkah 3: MODE VIRTUAL (laptop, webcam, kamera depan biasa).
        *
-       * TIDAK ada transform scale(<1).
-       * Preview tetap memenuhi container seperti kamera normal.
+       * Tidak perlu restart stream: 0.5x = frame penuh, 1x = crop
+       * tengah (lihat digitalScale). TIDAK ada scale(<1).
        */
       setHardwareWide(false);
 
       markHardwareWide(false);
 
-      changeWideMode("sensor");
+      setVirtualWide(true);
     };
 
   const selectedFilter =
@@ -391,8 +418,8 @@ export function WebcamView({
    * Itu hanya mengecilkan seluruh preview ke tengah layar, bukan
    * memperluas field of view seperti kamera Ultra Wide.
    *
-   * Pada 0.5x, pelebaran datang dari hardware Ultra Wide atau dari
-   * fallback stream sensor 4:3 yang diminta di atas.
+   * Pada 0.5x, pelebaran datang dari hardware Ultra Wide, atau dari
+   * MODE VIRTUAL (1x di-zoom-in digital, 0.5x = frame penuh).
    */
 
   return (
@@ -407,8 +434,15 @@ export function WebcamView({
             filterStyle,
           WebkitFilter:
             filterStyle,
+          /*
+           * Zoom-in digital (>= 1) hanya untuk MODE VIRTUAL. Diskala
+           * dari tengah, sama persis dengan hitungan crop di capture.
+           */
+          transform: `scale(${digitalScale})`,
+          transformOrigin:
+            "center center",
           transition:
-            "filter 180ms ease, -webkit-filter 180ms ease",
+            "filter 180ms ease, -webkit-filter 180ms ease, transform 250ms ease",
         }}
       >
         <Webcam

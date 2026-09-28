@@ -3,6 +3,7 @@
 import {
   Suspense,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -29,6 +30,7 @@ import {
 } from "@/services/photoService";
 
 import { useToast } from "@/components/ui/Toast";
+import { useDragScroll } from "@/hooks/useDragScroll";
 import { openPrintWindow } from "@/lib/print";
 import { formatDateTimeID } from "@/lib/dateUtils";
 
@@ -54,6 +56,100 @@ const FILTERS: {
 // semua halaman (dashboard, notifikasi, lightbox, halaman share) pakai
 // logic yang sama persis dan gak ada lagi yang salah/geser jamnya.
 const formatTime = formatDateTimeID;
+
+/**
+ * Wadah grid foto: tinggi maksimalnya PAS 2 baris kartu (sebaris = 4
+ * foto di layar normal). Kalau foto lebih dari 2 baris, sisanya bisa
+ * di-scroll ke bawah (scrollbar tipis & elegan) atau di-drag pakai
+ * mouse (grab & drag), sedangkan di layar sentuh cukup di-swipe.
+ * Tinggi dihitung dari posisi baris ke-3 sehingga tetap pas walau
+ * jumlah kolom berubah (2 / 4 / 5 kolom) atau ukuran layar berubah.
+ */
+function TwoRowScroller({
+  count,
+  children,
+}: {
+  count: number;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  const [maxH, setMaxH] =
+    useState<number | null>(null);
+
+  useDragScroll(ref, "y");
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+
+    if (!el) {
+      return;
+    }
+
+    const measure = () => {
+      const items = Array.from(
+        el.children
+      ) as HTMLElement[];
+
+      const tops: number[] = [];
+
+      for (const item of items) {
+        const t = item.offsetTop;
+
+        if (!tops.includes(t)) {
+          tops.push(t);
+        }
+
+        if (tops.length > 2) {
+          break;
+        }
+      }
+
+      const thirdTop = tops[2];
+
+      if (thirdTop === undefined) {
+        setMaxH(null);
+
+        return;
+      }
+
+      const gap =
+        parseFloat(
+          getComputedStyle(el).rowGap
+        ) || 0;
+
+      const next = Math.round(
+        thirdTop - gap
+      );
+
+      setMaxH((prev) =>
+        prev === next ? prev : next
+      );
+    };
+
+    measure();
+
+    const ro = new ResizeObserver(
+      measure
+    );
+
+    ro.observe(el);
+
+    return () => ro.disconnect();
+  }, [count]);
+
+  return (
+    <div
+      ref={ref}
+      style={
+        maxH ? { maxHeight: maxH } : undefined
+      }
+      className="drag-slider-y relative grid grid-cols-2 gap-3 overflow-y-auto overscroll-contain p-1.5 sm:grid-cols-4 sm:gap-4 2xl:grid-cols-5 [scrollbar-width:thin] [scrollbar-color:#d98a90_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#d98a90]/80 hover:[&::-webkit-scrollbar-thumb]:bg-[#6B2D2C]"
+    >
+      {children}
+    </div>
+  );
+}
 
 function AdminDashboardContent() {
   const router = useRouter();
@@ -544,10 +640,9 @@ function AdminDashboardContent() {
               </div>
             ) : (
               /* Grid: 4 kartu per baris (2 di mobile, 5 di layar
-                 sangat lebar). Kalau foto lebih banyak, otomatis
-                 turun ke baris berikutnya — admin tinggal scroll ke
-                 bawah, tidak ada scroll ke samping. */
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4 2xl:grid-cols-5">
+                 sangat lebar). Wadah hanya menampung 2 baris; sisanya
+                 di-scroll / di-drag ke bawah. */
+              <TwoRowScroller count={filteredPhotos.length}>
                 {filteredPhotos.map(
                   (photo, globalIndex) => (
                     <motion.button
@@ -617,7 +712,7 @@ function AdminDashboardContent() {
                     </motion.button>
                   )
                 )}
-              </div>
+              </TwoRowScroller>
             )}
           </div>
 

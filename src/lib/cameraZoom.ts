@@ -13,10 +13,12 @@
  *             2. pindah ke kamera fisik "Ultra Wide" DEPAN kalau
  *                perangkat punya (mis. iPad Pro),
  *             3. MODE VIRTUAL (semua kamera lain: laptop, webcam USB,
- *                iPhone/Android depan biasa): 1x TETAP normal,
- *                sedangkan 0.5x menjauhkan gambar (VIRTUAL_ZOOM_OUT).
- *                Area di luar sensor kamera diisi background blur
- *                (bukan hitam), baik di preview maupun di foto.
+ *                iPhone/Android depan biasa): 1x TETAP normal (persis
+ *                seperti biasa). 0.5x menjauhkan gambar sejauh yang
+ *                MASIH ADA isinya di sensor kamera (dihitung
+ *                computeDigitalZoomFactor di canvas.ts), supaya foto
+ *                memuat area terlebar yang bisa dilihat kamera itu.
+ *                Tidak ada blur / isian palsu.
  */
 export type ZoomLevel = 0.5 | 1;
 
@@ -25,20 +27,13 @@ export const ZOOM_LEVELS: ZoomLevel[] = [
   1,
 ];
 
-/**
- * Besar "menjauh" untuk 0.5x di MODE VIRTUAL (kamera tanpa lensa
- * lebar asli, mis. laptop). 1x selalu normal (1). Makin kecil angka
- * ini, makin jauh tampilannya. Aman di kisaran 0.5 - 0.8.
- */
-export const VIRTUAL_ZOOM_OUT = 0.65;
-
 interface ZoomState {
   level: ZoomLevel;
   /** true kalau zoom-out saat ini dikerjakan oleh hardware kamera. */
   hardware: boolean;
   /**
    * Skala digital yang sedang dipakai preview relatif terhadap
-   * tampilan "cover" biasa. 1 = normal, < 1 = menjauh (0.5x mode
+   * tampilan "cover" biasa (1 = normal, < 1 = menjauh di 0.5x mode
    * virtual). Dipakai useCamera saat capture supaya foto == preview.
    */
   digital: number;

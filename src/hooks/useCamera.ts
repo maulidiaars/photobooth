@@ -70,9 +70,7 @@ export function useCamera() {
         filterId: PhotoFilterId =
           "original",
         captureAspectRatio: number
-      ): Promise
-        string | null
-      > => {
+      ): Promise<string | null> => {
         const video =
           webcamRef.current
             ?.video;

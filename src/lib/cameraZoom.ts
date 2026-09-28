@@ -13,11 +13,10 @@
  *             2. pindah ke kamera fisik "Ultra Wide" DEPAN kalau
  *                perangkat punya (mis. iPad Pro),
  *             3. MODE VIRTUAL (semua kamera lain: laptop, webcam USB,
- *                iPhone/Android depan biasa): 0.5x = seluruh frame
- *                kamera terlihat, sedangkan 1x = crop tengah frame
- *                (VIRTUAL_ZOOM_1X). Jadi 0.5x selalu terlihat lebih
- *                lebar dari 1x di kamera apa pun. Tidak ada
- *                `scale(<1)` (preview tidak pernah mengecil).
+ *                iPhone/Android depan biasa): 1x TETAP normal,
+ *                sedangkan 0.5x menjauhkan gambar (VIRTUAL_ZOOM_OUT).
+ *                Area di luar sensor kamera diisi background blur
+ *                (bukan hitam), baik di preview maupun di foto.
  */
 export type ZoomLevel = 0.5 | 1;
 
@@ -27,21 +26,20 @@ export const ZOOM_LEVELS: ZoomLevel[] = [
 ];
 
 /**
- * Besar zoom-in digital untuk 1x di MODE VIRTUAL (kamera tanpa lensa
- * lebar asli, mis. laptop). 0.5x = 1 (frame penuh), 1x = angka ini.
- * Makin besar -> beda 0.5x vs 1x makin terasa, tapi 1x makin
- * "ke-crop". Aman di kisaran 1.3 - 2.
+ * Besar "menjauh" untuk 0.5x di MODE VIRTUAL (kamera tanpa lensa
+ * lebar asli, mis. laptop). 1x selalu normal (1). Makin kecil angka
+ * ini, makin jauh tampilannya. Aman di kisaran 0.5 - 0.8.
  */
-export const VIRTUAL_ZOOM_1X = 1.5;
+export const VIRTUAL_ZOOM_OUT = 0.65;
 
 interface ZoomState {
   level: ZoomLevel;
   /** true kalau zoom-out saat ini dikerjakan oleh hardware kamera. */
   hardware: boolean;
   /**
-   * Pembesaran digital yang sedang dipakai preview (>= 1), relatif
-   * terhadap tampilan "cover" biasa. Dipakai useCamera saat capture
-   * supaya foto == preview.
+   * Skala digital yang sedang dipakai preview relatif terhadap
+   * tampilan "cover" biasa. 1 = normal, < 1 = menjauh (0.5x mode
+   * virtual). Dipakai useCamera saat capture supaya foto == preview.
    */
   digital: number;
 }
@@ -62,7 +60,7 @@ export function resetZoomState() {
   state.digital = 1;
 }
 
-/** Simpan pembesaran digital yang sedang tampil di preview. */
+/** Simpan skala digital yang sedang tampil di preview. */
 export function setDigitalZoom(
   value: number
 ) {

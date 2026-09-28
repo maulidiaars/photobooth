@@ -11,7 +11,6 @@ import {
 } from "@/lib/photoFilters";
 import {
   CAMERA_PREVIEW_MIRRORED,
-  computeGuideRect,
   computeSourceCrop,
 } from "@/lib/canvas";
 import { getZoomState } from "@/lib/cameraZoom";
@@ -112,15 +111,12 @@ export function useCamera() {
 
         /*
          * Skala digital dari WebcamView (MODE VIRTUAL: 1x = 1,
-         * 0.5x = VIRTUAL_ZOOM_OUT < 1). Kamera dengan hardware wide /
-         * Ultra Wide selalu 1 di sini. Dipakai supaya foto persis
-         * sama dengan yang terlihat di preview.
+         * 0.5x <= 1 = menjauh). Kamera dengan hardware wide /
+         * Ultra Wide selalu 1 di sini. Dipakai supaya crop capture
+         * persis sama dengan yang terlihat di preview.
          */
         const digitalZoom =
           getZoomState().digital;
-
-        const zoomedOut =
-          digitalZoom < 1;
 
         const crop =
           computeSourceCrop({
@@ -137,9 +133,7 @@ export function useCamera() {
             mirrored:
               CAMERA_PREVIEW_MIRRORED,
             zoomFactor:
-              zoomedOut
-                ? 1
-                : digitalZoom,
+              digitalZoom,
           });
 
         if (!crop) {
@@ -241,171 +235,17 @@ export function useCamera() {
           );
         }
 
-        if (!zoomedOut) {
-          ctx.drawImage(
-            video,
-            crop.x,
-            crop.y,
-            crop.w,
-            crop.h,
-            0,
-            0,
-            outWidth,
-            outHeight
-          );
-        } else {
-          /*
-           * 0.5x MODE VIRTUAL: gambar menjauh (skala < 1) dari
-           * tengah, tepinya diisi background blur — sama dengan
-           * preview. Koordinat dihitung di ruang video mentah
-           * (canvas sudah di-mirror di atas).
-           */
-          const cw =
-            video.clientWidth;
-
-          const ch =
-            video.clientHeight;
-
-          const guide =
-            computeGuideRect(
-              cw,
-              ch,
-              captureAspectRatio
-            );
-
-          const k =
-            outWidth / guide.w;
-
-          const scale =
-            Math.max(
-              cw /
-                video.videoWidth,
-              ch /
-                video.videoHeight
-            ) * digitalZoom;
-
-          const guideLeft =
-            CAMERA_PREVIEW_MIRRORED
-              ? cw -
-                (guide.x +
-                  guide.w)
-              : guide.x;
-
-          const vidW =
-            video.videoWidth *
-            scale;
-
-          const vidH =
-            video.videoHeight *
-            scale;
-
-          const dx =
-            ((cw - vidW) / 2 -
-              guideLeft) *
-            k;
-
-          const dy =
-            ((ch - vidH) / 2 -
-              guide.y) *
-            k;
-
-          /* 1) Background blur: video di-cover ke canvas lalu
-           *    diperkecil-diperbesar (blur ringan lintas browser,
-           *    termasuk Safari yang tak punya ctx.filter). */
-          const tinyW = 32;
-
-          const tinyH =
-            Math.max(
-              1,
-              Math.round(
-                tinyW /
-                  captureAspectRatio
-              )
-            );
-
-          const tiny =
-            document.createElement(
-              "canvas"
-            );
-
-          tiny.width = tinyW;
-          tiny.height = tinyH;
-
-          const tctx =
-            tiny.getContext("2d");
-
-          if (tctx) {
-            const vr =
-              video.videoWidth /
-              video.videoHeight;
-
-            let bsx = 0;
-            let bsy = 0;
-            let bsw =
-              video.videoWidth;
-            let bsh =
-              video.videoHeight;
-
-            if (
-              vr >
-              captureAspectRatio
-            ) {
-              bsw =
-                bsh *
-                captureAspectRatio;
-
-              bsx =
-                (video.videoWidth -
-                  bsw) /
-                2;
-            } else {
-              bsh =
-                bsw /
-                captureAspectRatio;
-
-              bsy =
-                (video.videoHeight -
-                  bsh) /
-                2;
-            }
-
-            tctx.imageSmoothingEnabled =
-              true;
-
-            tctx.drawImage(
-              video,
-              bsx,
-              bsy,
-              bsw,
-              bsh,
-              0,
-              0,
-              tinyW,
-              tinyH
-            );
-
-            ctx.drawImage(
-              tiny,
-              0,
-              0,
-              outWidth,
-              outHeight
-            );
-          }
-
-          /* 2) Video asli, dikecilkan dari tengah. */
-          ctx.drawImage(
-            video,
-            0,
-            0,
-            video.videoWidth,
-            video.videoHeight,
-            dx,
-            dy,
-            vidW * k,
-            vidH * k
-          );
-        }
+        ctx.drawImage(
+          video,
+          crop.x,
+          crop.y,
+          crop.w,
+          crop.h,
+          0,
+          0,
+          outWidth,
+          outHeight
+        );
 
         ctx.setTransform(
           1,

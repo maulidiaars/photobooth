@@ -13,10 +13,10 @@ import type { PhotoFilterId } from "@/lib/photoFilters";
 import { getPhotoFilter } from "@/lib/photoFilters";
 import {
   CAMERA_PREVIEW_MIRRORED,
+  computeDigitalZoomFactor,
   computeGuideRect,
 } from "@/lib/canvas";
 import {
-  VIRTUAL_ZOOM_OUT,
   ZOOM_LEVELS,
   applyCameraZoom,
   findUltraWideDeviceId,
@@ -36,7 +36,7 @@ import {
  *
  * Kalau kamera tidak punya keduanya (laptop, webcam USB, kamera
  * depan HP biasa) dipakai MODE VIRTUAL (state `virtualWide` di
- * bawah): 1x tetap normal, 0.5x menjauhkan gambar.
+ * bawah): 1x tetap normal, 0.5x menjauh sejauh yang masih ada isinya.
  */
 type WideMode = "default" | "device";
 
@@ -95,17 +95,12 @@ export function WebcamView({
   /*
    * MODE VIRTUAL: kamera tidak punya zoom hardware < 1x maupun
    * kamera Ultra Wide depan. 1x tetap normal; 0.5x menjauhkan
-   * gambar (VIRTUAL_ZOOM_OUT) dan area di luar sensor diisi
-   * background blur.
+   * gambar sejauh area sensor yang masih ada isinya.
    */
   const [
     virtualWide,
     setVirtualWide,
   ] = useState(false);
-
-  /* Video kedua (blur) untuk mengisi tepi saat 0.5x mode virtual. */
-  const bgVideoRef =
-    useRef<HTMLVideoElement>(null);
 
   const [wideMode, setWideMode] =
     useState<WideMode>("default");
@@ -153,20 +148,6 @@ export function WebcamView({
 
     setWideMode(mode);
   };
-
-  /*
-   * Skala digital yang sedang tampil. Hanya aktif di MODE VIRTUAL
-   * saat 0.5x (< 1 = menjauh). 1x selalu 1 (normal).
-   * Nilai yang sama dipakai useCamera saat capture.
-   */
-  const digitalScale =
-    virtualWide && zoom < 1
-      ? VIRTUAL_ZOOM_OUT
-      : 1;
-
-  useEffect(() => {
-    setDigitalZoom(digitalScale);
-  }, [digitalScale]);
 
   /*
    * Reset status zoom setiap halaman kamera dibuka, supaya tidak
@@ -250,15 +231,6 @@ export function WebcamView({
     useCallback(
       (stream: MediaStream) => {
         syncVideoSize();
-
-        if (bgVideoRef.current) {
-          bgVideoRef.current.srcObject =
-            stream;
-
-          bgVideoRef.current
-            .play()
-            .catch(() => {});
-        }
 
         /*
          * Cek apakah kamera ini punya cara "asli" untuk melebar.
@@ -385,7 +357,7 @@ export function WebcamView({
        * Langkah 3: MODE VIRTUAL (laptop, webcam, kamera depan biasa).
        *
        * Tidak perlu restart stream: 1x normal, 0.5x menjauh
-       * (lihat digitalScale) dengan background blur di tepinya.
+       * (lihat digitalScale di bawah).
        */
       setHardwareWide(false);
 
@@ -426,13 +398,39 @@ export function WebcamView({
       : null;
 
   /*
-   * 0.5x:
-   *  - Kamera dengan zoom hardware / Ultra Wide depan: pelebaran
-   *    dikerjakan kameranya (tanpa scale digital).
-   *  - Kamera lain (MODE VIRTUAL): gambar dikecilkan dari tengah
-   *    (digitalScale) dan tepinya diisi background blur, BUKAN
-   *    bar hitam. 1x tidak pernah diubah.
+   * Skala digital yang sedang tampil (MODE VIRTUAL, 0.5x saja).
+   *
+   * 1x selalu 1 (normal). Di 0.5x gambar dijauhkan dari tengah
+   * sejauh guide masih PENUH berisi gambar kamera (tanpa area
+   * kosong di dalam foto). Kalau kamera sudah dipakai penuh oleh
+   * guide di 1x, hasilnya 1 (tidak ada area lebih yang bisa
+   * ditampilkan). Nilai yang sama dipakai useCamera saat capture.
    */
+  const digitalScale =
+    virtualWide &&
+    zoom < 1 &&
+    containerSize &&
+    videoSize &&
+    hasValidRatio
+      ? computeDigitalZoomFactor({
+          containerWidth:
+            containerSize.w,
+          containerHeight:
+            containerSize.h,
+          videoWidth:
+            videoSize.w,
+          videoHeight:
+            videoSize.h,
+          ratio:
+            captureAspectRatio as number,
+          zoom,
+          hardware: false,
+        })
+      : 1;
+
+  useEffect(() => {
+    setDigitalZoom(digitalScale);
+  }, [digitalScale]);
 
   return (
     <div
@@ -450,41 +448,11 @@ export function WebcamView({
             "filter 180ms ease, -webkit-filter 180ms ease",
         }}
       >
-        {/*
-         * Background blur (mirror stream yang sama) — hanya terlihat
-         * saat 0.5x mode virtual, mengisi area di luar sensor kamera.
-         */}
-        <video
-          ref={bgVideoRef}
-          muted
-          playsInline
-          autoPlay
-          aria-hidden="true"
-          className="absolute inset-0 h-full w-full object-cover object-center"
-          style={{
-            transform: `${
-              CAMERA_PREVIEW_MIRRORED
-                ? "scaleX(-1) "
-                : ""
-            }scale(1.2)`,
-            filter:
-              "blur(28px)",
-            WebkitFilter:
-              "blur(28px)",
-            opacity:
-              digitalScale < 1
-                ? 1
-                : 0,
-            transition:
-              "opacity 250ms ease",
-          }}
-        />
-
         <div
           className="absolute inset-0 h-full w-full"
           style={{
             /*
-             * Skala digital (< 1 hanya di 0.5x mode virtual),
+             * Skala digital (< 1 hanya di 0.5x MODE VIRTUAL),
              * dari tengah — sama persis dengan hitungan capture.
              */
             transform: `scale(${digitalScale})`,

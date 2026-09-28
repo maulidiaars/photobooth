@@ -16,7 +16,7 @@ import {
   computeGuideRect,
 } from "@/lib/canvas";
 import {
-  VIRTUAL_ZOOM_1X,
+  VIRTUAL_ZOOM_OUT,
   ZOOM_LEVELS,
   applyCameraZoom,
   findUltraWideDeviceId,
@@ -36,7 +36,7 @@ import {
  *
  * Kalau kamera tidak punya keduanya (laptop, webcam USB, kamera
  * depan HP biasa) dipakai MODE VIRTUAL (state `virtualWide` di
- * bawah): 0.5x = frame kamera penuh, 1x = crop tengah frame.
+ * bawah): 1x tetap normal, 0.5x menjauhkan gambar.
  */
 type WideMode = "default" | "device";
 
@@ -94,14 +94,18 @@ export function WebcamView({
 
   /*
    * MODE VIRTUAL: kamera tidak punya zoom hardware < 1x maupun
-   * kamera Ultra Wide depan. Supaya 0.5x tetap terlihat lebih lebar
-   * di kamera apa pun, 1x di-zoom-in digital (VIRTUAL_ZOOM_1X) dan
-   * 0.5x menampilkan frame penuh.
+   * kamera Ultra Wide depan. 1x tetap normal; 0.5x menjauhkan
+   * gambar (VIRTUAL_ZOOM_OUT) dan area di luar sensor diisi
+   * background blur.
    */
   const [
     virtualWide,
     setVirtualWide,
   ] = useState(false);
+
+  /* Video kedua (blur) untuk mengisi tepi saat 0.5x mode virtual. */
+  const bgVideoRef =
+    useRef<HTMLVideoElement>(null);
 
   const [wideMode, setWideMode] =
     useState<WideMode>("default");
@@ -151,13 +155,13 @@ export function WebcamView({
   };
 
   /*
-   * Pembesaran digital yang sedang tampil. Hanya aktif di MODE
-   * VIRTUAL: 1x = VIRTUAL_ZOOM_1X, 0.5x = 1 (frame penuh).
+   * Skala digital yang sedang tampil. Hanya aktif di MODE VIRTUAL
+   * saat 0.5x (< 1 = menjauh). 1x selalu 1 (normal).
    * Nilai yang sama dipakai useCamera saat capture.
    */
   const digitalScale =
-    virtualWide && zoom >= 1
-      ? VIRTUAL_ZOOM_1X
+    virtualWide && zoom < 1
+      ? VIRTUAL_ZOOM_OUT
       : 1;
 
   useEffect(() => {
@@ -246,6 +250,15 @@ export function WebcamView({
     useCallback(
       (stream: MediaStream) => {
         syncVideoSize();
+
+        if (bgVideoRef.current) {
+          bgVideoRef.current.srcObject =
+            stream;
+
+          bgVideoRef.current
+            .play()
+            .catch(() => {});
+        }
 
         /*
          * Cek apakah kamera ini punya cara "asli" untuk melebar.
@@ -371,8 +384,8 @@ export function WebcamView({
       /*
        * Langkah 3: MODE VIRTUAL (laptop, webcam, kamera depan biasa).
        *
-       * Tidak perlu restart stream: 0.5x = frame penuh, 1x = crop
-       * tengah (lihat digitalScale). TIDAK ada scale(<1).
+       * Tidak perlu restart stream: 1x normal, 0.5x menjauh
+       * (lihat digitalScale) dengan background blur di tepinya.
        */
       setHardwareWide(false);
 
@@ -413,13 +426,12 @@ export function WebcamView({
       : null;
 
   /*
-   * PENTING:
-   * Jangan pernah memakai CSS scale(<1) untuk mensimulasikan 0.5x.
-   * Itu hanya mengecilkan seluruh preview ke tengah layar, bukan
-   * memperluas field of view seperti kamera Ultra Wide.
-   *
-   * Pada 0.5x, pelebaran datang dari hardware Ultra Wide, atau dari
-   * MODE VIRTUAL (1x di-zoom-in digital, 0.5x = frame penuh).
+   * 0.5x:
+   *  - Kamera dengan zoom hardware / Ultra Wide depan: pelebaran
+   *    dikerjakan kameranya (tanpa scale digital).
+   *  - Kamera lain (MODE VIRTUAL): gambar dikecilkan dari tengah
+   *    (digitalScale) dan tepinya diisi background blur, BUKAN
+   *    bar hitam. 1x tidak pernah diubah.
    */
 
   return (
@@ -434,17 +446,54 @@ export function WebcamView({
             filterStyle,
           WebkitFilter:
             filterStyle,
-          /*
-           * Zoom-in digital (>= 1) hanya untuk MODE VIRTUAL. Diskala
-           * dari tengah, sama persis dengan hitungan crop di capture.
-           */
-          transform: `scale(${digitalScale})`,
-          transformOrigin:
-            "center center",
           transition:
-            "filter 180ms ease, -webkit-filter 180ms ease, transform 250ms ease",
+            "filter 180ms ease, -webkit-filter 180ms ease",
         }}
       >
+        {/*
+         * Background blur (mirror stream yang sama) — hanya terlihat
+         * saat 0.5x mode virtual, mengisi area di luar sensor kamera.
+         */}
+        <video
+          ref={bgVideoRef}
+          muted
+          playsInline
+          autoPlay
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover object-center"
+          style={{
+            transform: `${
+              CAMERA_PREVIEW_MIRRORED
+                ? "scaleX(-1) "
+                : ""
+            }scale(1.2)`,
+            filter:
+              "blur(28px)",
+            WebkitFilter:
+              "blur(28px)",
+            opacity:
+              digitalScale < 1
+                ? 1
+                : 0,
+            transition:
+              "opacity 250ms ease",
+          }}
+        />
+
+        <div
+          className="absolute inset-0 h-full w-full"
+          style={{
+            /*
+             * Skala digital (< 1 hanya di 0.5x mode virtual),
+             * dari tengah — sama persis dengan hitungan capture.
+             */
+            transform: `scale(${digitalScale})`,
+            transformOrigin:
+              "center center",
+            transition:
+              "transform 250ms ease",
+          }}
+        >
         <Webcam
           ref={webcamRef}
           audio={false}
@@ -464,6 +513,7 @@ export function WebcamView({
           }
           className="absolute inset-0 h-full w-full object-cover object-center"
         />
+        </div>
       </div>
 
       <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">

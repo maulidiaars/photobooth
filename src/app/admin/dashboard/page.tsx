@@ -30,7 +30,6 @@ import {
 
 import { useToast } from "@/components/ui/Toast";
 import { openPrintWindow } from "@/lib/print";
-import { useDragScroll } from "@/hooks/useDragScroll";
 import { formatDateTimeID } from "@/lib/dateUtils";
 
 import type {
@@ -79,9 +78,6 @@ function AdminDashboardContent() {
   const knownIds = useRef<Set<string>>(new Set());
 
   const openedFromParam = useRef<string | null>(null);
-
-  const scrollerRef = useRef<HTMLDivElement>(null);
-  useDragScroll(scrollerRef);
 
   const toast = useToast();
 
@@ -547,15 +543,11 @@ function AdminDashboardContent() {
                 </p>
               </div>
             ) : (
-              /* Satu baris terus (flex-nowrap, drag buat geser) — 4
-                 kartu pas kelihatan penuh per baris di layar sm ke
-                 atas (2 di mobile), sisanya tinggal di-drag ke
-                 samping. Tidak pernah wrap ke bawah & tidak ada
-                 scrollbar yang kelihatan. */
-              <div
-                ref={scrollerRef}
-                className="no-scrollbar drag-slider -mx-1 flex cursor-grab select-none gap-3 overflow-x-auto scroll-smooth px-1 pb-2 active:cursor-grabbing sm:gap-4"
-              >
+              /* Grid: 4 kartu per baris (2 di mobile, 5 di layar
+                 sangat lebar). Kalau foto lebih banyak, otomatis
+                 turun ke baris berikutnya — admin tinggal scroll ke
+                 bawah, tidak ada scroll ke samping. */
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4 2xl:grid-cols-5">
                 {filteredPhotos.map(
                   (photo, globalIndex) => (
                     <motion.button
@@ -581,7 +573,7 @@ function AdminDashboardContent() {
                           globalIndex
                         )
                       }
-                      className="group relative w-[calc(50%-0.375rem)] shrink-0 sm:w-[calc(25%-0.75rem)]"
+                      className="group relative w-full min-w-0"
                     >
                       {/* aspect-[3/4] + object-cover: SEMUA kartu sama
                           persis ukurannya, gak peduli rasio asli file

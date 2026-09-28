@@ -1,167 +1,210 @@
-import { useCallback, useRef } from "react";
+import {
+  useCallback,
+  useRef,
+} from "react";
 import Webcam from "react-webcam";
 import type { PhotoFilterId } from "@/lib/photoFilters";
 import { getPhotoFilter } from "@/lib/photoFilters";
 
-const videoConstraints: MediaTrackConstraints = {
-  width: 1280,
-  height: 720,
-  facingMode: "user",
-};
+const videoConstraints: MediaTrackConstraints =
+  {
+    width: 1280,
+    height: 720,
+    facingMode: "user",
+  };
 
 export function useCamera() {
-  const webcamRef = useRef<Webcam>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const webcamRef =
+    useRef<Webcam>(null);
 
-  const playShutterSound = useCallback(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio(
-        "/sounds/shutter.mp3"
-      );
-    }
+  const audioRef =
+    useRef<HTMLAudioElement | null>(
+      null
+    );
 
-    audioRef.current.currentTime = 0;
-
-    audioRef.current.play().catch(() => {});
-  }, []);
-
-  const capture = useCallback(
-    async (
-      filterId: PhotoFilterId = "original",
-      captureAspectRatio = 4 / 5
-    ): Promise<string | null> => {
-      if (!webcamRef.current) {
-        return null;
+  const playShutterSound =
+    useCallback(() => {
+      if (!audioRef.current) {
+        audioRef.current =
+          new Audio(
+            "/sounds/shutter.mp3"
+          );
       }
 
-      playShutterSound();
+      audioRef.current.currentTime =
+        0;
 
-      const screenshot =
-        webcamRef.current.getScreenshot();
+      audioRef.current
+        .play()
+        .catch(() => {});
+    }, []);
 
-      if (!screenshot) {
-        return null;
-      }
+  const capture =
+    useCallback(
+      async (
+        filterId: PhotoFilterId =
+          "original",
+        captureAspectRatio = 4 / 5
+      ): Promise<
+        string | null
+      > => {
+        if (
+          !webcamRef.current
+        ) {
+          return null;
+        }
 
-      const selected =
-        getPhotoFilter(filterId);
+        playShutterSound();
 
-      /*
-       * Screenshot webcam mentah selalu dicrop
-       * ke rasio slot frame terlebih dahulu.
-       *
-       * Dengan begitu:
-       *
-       * AREA FOTO DI KAMERA
-       *        =
-       * AREA FOTO HASIL
-       */
-      return new Promise((resolve) => {
-        const img = new Image();
+        const screenshot =
+          webcamRef.current.getScreenshot();
 
-        img.onload = () => {
-          const sourceWidth =
-            img.naturalWidth || img.width;
+        if (!screenshot) {
+          return null;
+        }
 
-          const sourceHeight =
-            img.naturalHeight || img.height;
+        const selected =
+          getPhotoFilter(
+            filterId
+          );
 
-          const safeRatio =
-            Number.isFinite(
-              captureAspectRatio
-            ) &&
-            captureAspectRatio > 0
-              ? captureAspectRatio
-              : 4 / 5;
+        return new Promise(
+          (resolve) => {
+            const img =
+              new Image();
 
-          /*
-           * Cari crop terbesar yang masih memiliki
-           * aspect ratio yang sama dengan slot frame.
-           */
-          let cropWidth = sourceWidth;
+            img.onload = () => {
+              const sourceWidth =
+                img.naturalWidth ||
+                img.width;
 
-          let cropHeight =
-            sourceWidth / safeRatio;
+              const sourceHeight =
+                img.naturalHeight ||
+                img.height;
 
-          if (cropHeight > sourceHeight) {
-            cropHeight = sourceHeight;
-            cropWidth =
-              sourceHeight * safeRatio;
+              const safeRatio =
+                Number.isFinite(
+                  captureAspectRatio
+                ) &&
+                captureAspectRatio >
+                  0
+                  ? captureAspectRatio
+                  : 4 / 5;
+
+              /*
+               * Cari crop terbesar yang mempunyai
+               * rasio PERSIS sama dengan lubang frame.
+               */
+              let cropWidth =
+                sourceWidth;
+
+              let cropHeight =
+                sourceWidth /
+                safeRatio;
+
+              if (
+                cropHeight >
+                sourceHeight
+              ) {
+                cropHeight =
+                  sourceHeight;
+
+                cropWidth =
+                  sourceHeight *
+                  safeRatio;
+              }
+
+              /*
+               * Crop selalu dari tengah.
+               *
+               * Posisi ini sama dengan posisi
+               * framing guide di live camera.
+               */
+              const cropX =
+                (sourceWidth -
+                  cropWidth) /
+                2;
+
+              const cropY =
+                (sourceHeight -
+                  cropHeight) /
+                2;
+
+              const canvas =
+                document.createElement(
+                  "canvas"
+                );
+
+              canvas.width =
+                Math.max(
+                  1,
+                  Math.round(
+                    cropWidth
+                  )
+                );
+
+              canvas.height =
+                Math.max(
+                  1,
+                  Math.round(
+                    cropHeight
+                  )
+                );
+
+              const ctx =
+                canvas.getContext(
+                  "2d"
+                );
+
+              if (!ctx) {
+                resolve(
+                  screenshot
+                );
+                return;
+              }
+
+              ctx.filter =
+                selected.filter ===
+                "none"
+                  ? "none"
+                  : selected.filter;
+
+              ctx.drawImage(
+                img,
+                cropX,
+                cropY,
+                cropWidth,
+                cropHeight,
+                0,
+                0,
+                canvas.width,
+                canvas.height
+              );
+
+              ctx.filter =
+                "none";
+
+              resolve(
+                canvas.toDataURL(
+                  "image/jpeg",
+                  0.95
+                )
+              );
+            };
+
+            img.onerror = () => {
+              resolve(
+                screenshot
+              );
+            };
+
+            img.src =
+              screenshot;
           }
-
-          /*
-           * Crop selalu di tengah.
-           *
-           * Ini dibuat sama dengan posisi
-           * framing guide di live camera.
-           */
-          const cropX =
-            (sourceWidth - cropWidth) / 2;
-
-          const cropY =
-            (sourceHeight - cropHeight) / 2;
-
-          const canvas =
-            document.createElement("canvas");
-
-          canvas.width = Math.max(
-            1,
-            Math.round(cropWidth)
-          );
-
-          canvas.height = Math.max(
-            1,
-            Math.round(cropHeight)
-          );
-
-          const ctx =
-            canvas.getContext("2d");
-
-          if (!ctx) {
-            resolve(screenshot);
-            return;
-          }
-
-          /*
-           * Filter diterapkan langsung ketika
-           * foto di-crop.
-           */
-          ctx.filter =
-            selected.filter === "none"
-              ? "none"
-              : selected.filter;
-
-          ctx.drawImage(
-            img,
-            cropX,
-            cropY,
-            cropWidth,
-            cropHeight,
-            0,
-            0,
-            canvas.width,
-            canvas.height
-          );
-
-          ctx.filter = "none";
-
-          resolve(
-            canvas.toDataURL(
-              "image/jpeg",
-              0.95
-            )
-          );
-        };
-
-        img.onerror = () => {
-          resolve(screenshot);
-        };
-
-        img.src = screenshot;
-      });
-    },
-    [playShutterSound]
-  );
+        );
+      },
+      [playShutterSound]
+    );
 
   return {
     webcamRef,

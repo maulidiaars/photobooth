@@ -13,7 +13,6 @@ import type { PhotoFilterId } from "@/lib/photoFilters";
 import { getPhotoFilter } from "@/lib/photoFilters";
 import {
   CAMERA_PREVIEW_MIRRORED,
-  computeDigitalZoomFactor,
   computeGuideRect,
 } from "@/lib/canvas";
 import {
@@ -31,8 +30,8 @@ import {
  * Cara kamera menghasilkan tampilan 0.5x:
  *  - "default" : kamera biasa (1x).
  *  - "device"  : pindah ke kamera fisik Ultra Wide.
- *  - "sensor"  : stream 4:3 sensor penuh (sudut pandang lebih lebar
- *                dari 16:9) + pelebaran digital maksimal.
+ *  - "sensor"  : stream 4:3 sensor penuh sebagai fallback supaya
+ *                kamera tidak lagi mengecilkan preview dengan CSS.
  */
 type WideMode = "default" | "device" | "sensor";
 
@@ -120,6 +119,13 @@ export function WebcamView({
         };
       }
 
+      /*
+       * Fallback 0.5x:
+       *
+       * Jangan scale preview menjadi kecil.
+       * Minta sensor 4:3 supaya kamera mempunyai lebih banyak
+       * area sensor yang bisa ditampilkan dibanding stream 16:9.
+       */
       if (wideMode === "sensor") {
         return {
           ...videoConstraints,
@@ -235,7 +241,7 @@ export function WebcamView({
         ).then((hw) => {
           /*
            * Kalau stream ini sudah kamera Ultra Wide, pelebaran
-           * dikerjakan kameranya sendiri -> tidak perlu digital.
+           * dikerjakan kameranya sendiri -> tidak perlu CSS scale.
            */
           const wide =
             hw ||
@@ -336,7 +342,10 @@ export function WebcamView({
       }
 
       /*
-       * Langkah 3: sensor penuh 4:3 + pelebaran digital maksimal.
+       * Langkah 3: fallback sensor penuh 4:3.
+       *
+       * TIDAK ada transform scale(<1).
+       * Preview tetap memenuhi container seperti kamera normal.
        */
       setHardwareWide(false);
 
@@ -377,30 +386,14 @@ export function WebcamView({
       : null;
 
   /*
-   * Pelebaran digital untuk 0.5x (hanya dipakai kalau kamera tidak
-   * punya zoom hardware di bawah 1x). Rumus yang SAMA dipakai
-   * saat capture.
+   * PENTING:
+   * Jangan pernah memakai CSS scale(<1) untuk mensimulasikan 0.5x.
+   * Itu hanya mengecilkan seluruh preview ke tengah layar, bukan
+   * memperluas field of view seperti kamera Ultra Wide.
+   *
+   * Pada 0.5x, pelebaran datang dari hardware Ultra Wide atau dari
+   * fallback stream sensor 4:3 yang diminta di atas.
    */
-  const digitalZoom =
-    containerSize &&
-    videoSize &&
-    hasValidRatio
-      ? computeDigitalZoomFactor({
-          containerWidth:
-            containerSize.w,
-          containerHeight:
-            containerSize.h,
-          videoWidth:
-            videoSize.w,
-          videoHeight:
-            videoSize.h,
-          ratio:
-            captureAspectRatio as number,
-          zoom,
-          hardware:
-            hardwareWide,
-        })
-      : 1;
 
   return (
     <div
@@ -414,11 +407,8 @@ export function WebcamView({
             filterStyle,
           WebkitFilter:
             filterStyle,
-          transform: `scale(${digitalZoom})`,
-          transformOrigin:
-            "center center",
           transition:
-            "filter 180ms ease, -webkit-filter 180ms ease, transform 260ms ease",
+            "filter 180ms ease, -webkit-filter 180ms ease",
         }}
       >
         <Webcam

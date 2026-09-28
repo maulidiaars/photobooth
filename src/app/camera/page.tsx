@@ -1,9 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { CheckCircle2, Sparkles } from "lucide-react";
+import {
+  CheckCircle2,
+  Sparkles,
+} from "lucide-react";
 
 import { WebcamView } from "@/components/camera/WebcamView";
 import { CountdownOverlay } from "@/components/camera/CountdownOverlay";
@@ -22,13 +31,24 @@ import type { PhotoFilterId } from "@/lib/photoFilters";
 import { ROUTES } from "@/lib/constants";
 
 export default function CameraPage() {
-  const router = useRouter();
+  const router =
+    useRouter();
 
-  const [retakeCandidate, setRetakeCandidate] =
-    useState<number | null>(null);
+  const [
+    retakeCandidate,
+    setRetakeCandidate,
+  ] =
+    useState<number | null>(
+      null
+    );
 
-  const [photoFilter, setPhotoFilter] =
-    useState<PhotoFilterId>("original");
+  const [
+    photoFilter,
+    setPhotoFilter,
+  ] =
+    useState<PhotoFilterId>(
+      "original"
+    );
 
   const {
     webcamRef,
@@ -45,14 +65,22 @@ export default function CameraPage() {
     totalSlots,
     isComplete,
     selectedFrame,
-  } = usePhotoSession(photoFilter);
+    slotLayout,
+    slotsReady,
+  } =
+    usePhotoSession(
+      photoFilter
+    );
 
   const previewAreaRef =
-    useRef<HTMLDivElement>(null);
+    useRef<HTMLDivElement>(
+      null
+    );
 
   const contentBox =
     useFrameContentBox(
-      selectedFrame?.frame_png ?? null
+      selectedFrame?.frame_png ??
+        null
     );
 
   const previewLayout =
@@ -63,52 +91,59 @@ export default function CameraPage() {
 
   useEffect(() => {
     if (!selectedFrame) {
-      router.replace(ROUTES.frame);
+      router.replace(
+        ROUTES.frame
+      );
     }
   }, [
     selectedFrame,
     router,
   ]);
 
-  if (!selectedFrame) return null;
+  if (!selectedFrame) {
+    return null;
+  }
 
   const busy =
-    isRunning || isPausing;
+    isRunning ||
+    isPausing;
 
   /*
    * ============================================================
-   * CAMERA FRAMING GUIDE
+   * SLOT YANG AKTIF
    * ============================================================
    *
-   * Kotak panduan harus memiliki aspect ratio yang sama dengan
-   * slot foto yang akan diisi.
-   *
-   * Sebelum foto pertama:
-   *   → gunakan slot pertama.
-   *
-   * Saat countdown foto berikutnya:
-   *   → gunakan slot aktif.
+   * Saat foto normal:
+   *   slot 0 → slot 1 → slot 2 → dst.
    *
    * Saat retake:
-   *   → gunakan slot yang sedang di-retake.
-   *
-   * Jadi:
-   *
-   * CAMERA GUIDE
-   *       =
-   * CAPTURE CROP
-   *       =
-   * SLOT FRAME
+   *   pakai slot yang sedang dipilih.
    */
-  const guideSlotIndex =
+  const guideIndex =
     activeIndex ?? 0;
 
   const guideSlot =
-    selectedFrame.slot_layout[
-      guideSlotIndex
+    slotLayout[
+      guideIndex
     ] ??
-    selectedFrame.slot_layout[0];
+    slotLayout[0];
 
+  /*
+   * INI SATU-SATUNYA RASIO YANG DIPAKAI
+   * UNTUK LIVE CAMERA.
+   *
+   * Jadi:
+   *
+   * slot frame
+   *      ↓
+   * w / h
+   *      ↓
+   * camera guide
+   *      ↓
+   * capture crop
+   *      ↓
+   * hasil foto
+   */
   const captureAspectRatio =
     guideSlot &&
     guideSlot.h > 0
@@ -116,35 +151,50 @@ export default function CameraPage() {
         guideSlot.h
       : 4 / 5;
 
-  const handleSlotClick = (
-    index: number
-  ) => {
-    if (busy) return;
+  const handleSlotClick =
+    (index: number) => {
+      if (
+        busy ||
+        !slotsReady
+      ) {
+        return;
+      }
 
-    setRetakeCandidate(index);
-  };
-
-  const handleConfirmRetake = () => {
-    if (
-      retakeCandidate !== null
-    ) {
-      confirmRetake(
-        retakeCandidate
+      setRetakeCandidate(
+        index
       );
-    }
+    };
 
-    setRetakeCandidate(null);
-  };
+  const handleConfirmRetake =
+    () => {
+      if (
+        retakeCandidate !== null
+      ) {
+        confirmRetake(
+          retakeCandidate
+        );
+      }
 
-  const handleTimerExpire = () => {
-    router.push(
-      ROUTES.result
-    );
-  };
+      setRetakeCandidate(
+        null
+      );
+    };
+
+  const handleTimerExpire =
+    () => {
+      router.push(
+        ROUTES.result
+      );
+    };
 
   const handleMainCameraButton =
     () => {
-      if (busy) return;
+      if (
+        busy ||
+        !slotsReady
+      ) {
+        return;
+      }
 
       if (isComplete) {
         goToResult();
@@ -182,11 +232,15 @@ export default function CameraPage() {
 
         <section className="relative z-10 min-h-0 flex-1 overflow-hidden rounded-clay-lg bg-black sm:rounded-[28px]">
           <WebcamView
-            webcamRef={webcamRef}
+            webcamRef={
+              webcamRef
+            }
             videoConstraints={
               videoConstraints
             }
-            filter={photoFilter}
+            filter={
+              photoFilter
+            }
             captureAspectRatio={
               captureAspectRatio
             }
@@ -228,7 +282,10 @@ export default function CameraPage() {
                 onClick={
                   handleMainCameraButton
                 }
-                disabled={busy}
+                disabled={
+                  busy ||
+                  !slotsReady
+                }
                 whileHover={
                   !busy
                     ? {
@@ -269,7 +326,10 @@ export default function CameraPage() {
                 onClick={
                   handleMainCameraButton
                 }
-                disabled={busy}
+                disabled={
+                  busy ||
+                  !slotsReady
+                }
                 aria-label="Mulai ambil foto"
                 whileHover={
                   !busy
@@ -307,8 +367,10 @@ export default function CameraPage() {
                     !busy
                       ? {
                           duration: 1.6,
-                          repeat: Infinity,
-                          ease: "easeOut",
+                          repeat:
+                            Infinity,
+                          ease:
+                            "easeOut",
                         }
                       : undefined
                   }
@@ -327,20 +389,28 @@ export default function CameraPage() {
             ? ({
                 "--preview-w":
                   `${previewLayout.width}px`,
-              } as React.CSSProperties)
+              } as CSSProperties)
             : undefined
         }
       >
         <div
-          ref={previewAreaRef}
+          ref={
+            previewAreaRef
+          }
           className="relative min-h-0 flex-1"
         >
-          {selectedFrame.slot_layout
-            .length > 0 ? (
+          {slotLayout.length >
+          0 ? (
             <FramePreviewLive
-              frame={selectedFrame}
-              photos={capturedPhotos}
-              totalSlots={totalSlots}
+              frame={
+                selectedFrame
+              }
+              photos={
+                capturedPhotos
+              }
+              totalSlots={
+                totalSlots
+              }
               activeIndex={
                 activeIndex
               }
@@ -373,13 +443,16 @@ export default function CameraPage() {
 
       <ConfirmModal
         open={
-          retakeCandidate !== null
+          retakeCandidate !==
+          null
         }
         title="Ambil ulang foto ini?"
         description={
-          retakeCandidate !== null
+          retakeCandidate !==
+          null
             ? `Slot ${
-                retakeCandidate + 1
+                retakeCandidate +
+                1
               } akan difoto ulang — slot lain nggak berubah.`
             : undefined
         }
@@ -389,7 +462,9 @@ export default function CameraPage() {
           handleConfirmRetake
         }
         onCancel={() =>
-          setRetakeCandidate(null)
+          setRetakeCandidate(
+            null
+          )
         }
       />
     </main>

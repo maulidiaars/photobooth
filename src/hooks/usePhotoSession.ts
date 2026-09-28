@@ -19,6 +19,7 @@ import {
   detectFrameSlotsFromUrl,
   type SlotRect,
 } from "@/lib/frameSlotDetector";
+import { getSlotPixelRatio } from "@/lib/canvas";
 
 const AUTO_SHOT_GAP_MS =
   1100;
@@ -63,6 +64,17 @@ export function usePhotoSession(
   const [slotsReady, setSlotsReady] =
     useState(false);
 
+  /*
+   * Ukuran asli (piksel) PNG frame. Dibutuhkan karena SlotRect
+   * hanya menyimpan PECAHAN 0-1 — rasio lubang yang sebenarnya
+   * baru ketahuan setelah dikali ukuran PNG.
+   */
+  const [frameSize, setFrameSize] =
+    useState<{
+      w: number;
+      h: number;
+    } | null>(null);
+
   const filterRef =
     useRef<PhotoFilterId>(
       filterId
@@ -74,7 +86,7 @@ export function usePhotoSession(
   }, [filterId]);
 
   const gapTimerRef =
-    useRef<ReturnType<
+    useRef<ReturnType
       typeof setTimeout
     > | null>(null);
 
@@ -192,6 +204,59 @@ export function usePhotoSession(
     selectedFrame?.frame_png,
   ]);
 
+  useEffect(() => {
+    const src =
+      selectedFrame?.frame_png;
+
+    if (!src) {
+      setFrameSize(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    setFrameSize(null);
+
+    const img = new Image();
+
+    img.onload = () => {
+      if (cancelled) return;
+
+      if (
+        img.naturalWidth > 0 &&
+        img.naturalHeight > 0
+      ) {
+        setFrameSize({
+          w: img.naturalWidth,
+          h: img.naturalHeight,
+        });
+      }
+    };
+
+    img.onerror = () => {
+      if (!cancelled) {
+        setFrameSize(null);
+      }
+    };
+
+    img.src = src;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    selectedFrame?.frame_png,
+  ]);
+
+  /*
+   * Kamera baru dianggap siap kalau slot sudah terdeteksi DAN
+   * ukuran PNG frame sudah diketahui (supaya rasio guide/capture
+   * benar sejak foto pertama).
+   */
+  const cameraReady =
+    slotsReady &&
+    frameSize !== null;
+
   const totalSlots =
     slotLayout.length ||
     selectedFrame?.slot ||
@@ -201,6 +266,39 @@ export function usePhotoSession(
     slotsReady &&
     capturedPhotos.length >=
       totalSlots;
+
+  /*
+   * ============================================================
+   * SLOT TARGET & RASIO CAPTURE
+   * ============================================================
+   *
+   * Satu-satunya sumber rasio untuk guide kamera DAN capture:
+   *
+   *   slot frame yang akan diisi (retake -> slot itu,
+   *   normal -> slot berikutnya)
+   *        ↓
+   *   lebar/tinggi PIKSEL lubang di PNG frame
+   *        ↓
+   *   guide kamera  +  crop capture
+   */
+  const targetSlotIndex =
+    retakeIndex !== null
+      ? retakeIndex
+      : capturedPhotos.length;
+
+  const targetSlot =
+    slotLayout[
+      targetSlotIndex
+    ] ?? slotLayout[0];
+
+  const captureAspectRatio =
+    targetSlot && frameSize
+      ? getSlotPixelRatio(
+          targetSlot,
+          frameSize.w,
+          frameSize.h
+        )
+      : null;
 
   const clearGapTimer =
     useCallback(() => {
@@ -225,38 +323,20 @@ export function usePhotoSession(
   const handleShot =
     useCallback(
       async () => {
-        if (!slotsReady) {
+        if (
+          !cameraReady ||
+          !captureAspectRatio
+        ) {
           return;
         }
 
         const activeFilter =
           filterRef.current;
 
-        const targetSlotIndex =
-          retakeIndex !== null
-            ? retakeIndex
-            : capturedPhotos.length;
-
-        const targetSlot =
-          slotLayout[
-            targetSlotIndex
-          ] ??
-          slotLayout[0];
-
-        if (!targetSlot) {
-          return;
-        }
-
         /*
-         * INI RASIO SEBENARNYA DARI
-         * LUBANG FOTO FRAME.
+         * Rasio PIKSEL lubang foto frame — sama persis dengan
+         * rasio guide yang sedang tampil di kamera.
          */
-        const captureAspectRatio =
-          targetSlot.h > 0
-            ? targetSlot.w /
-              targetSlot.h
-            : 4 / 5;
-
         const photo =
           await capture(
             activeFilter,
@@ -318,7 +398,8 @@ export function usePhotoSession(
         }
       },
       [
-        slotsReady,
+        cameraReady,
+        captureAspectRatio,
         capture,
         addPhoto,
         setPhotoAt,
@@ -326,7 +407,6 @@ export function usePhotoSession(
         mode,
         capturedPhotos.length,
         totalSlots,
-        slotLayout,
       ]
     );
 
@@ -344,7 +424,7 @@ export function usePhotoSession(
   const takeAllShots =
     useCallback(() => {
       if (
-        !slotsReady ||
+        !cameraReady ||
         isRunning ||
         isComplete ||
         isPausing
@@ -356,7 +436,7 @@ export function usePhotoSession(
 
       start();
     }, [
-      slotsReady,
+      cameraReady,
       isRunning,
       isComplete,
       isPausing,
@@ -367,7 +447,7 @@ export function usePhotoSession(
     useCallback(
       (index: number) => {
         if (
-          !slotsReady ||
+          !cameraReady ||
           isRunning ||
           isPausing
         ) {
@@ -383,7 +463,7 @@ export function usePhotoSession(
         start();
       },
       [
-        slotsReady,
+        cameraReady,
         isRunning,
         isPausing,
         start,
@@ -459,6 +539,16 @@ export function usePhotoSession(
 
     slotLayout,
 
-    slotsReady,
+    /*
+     * `slotsReady` dipakai UI untuk mengaktifkan tombol.
+     * Sekarang berarti: slot terdeteksi DAN rasio kamera siap.
+     */
+    slotsReady: cameraReady,
+
+    /*
+     * Rasio PIKSEL lubang foto slot yang akan diisi berikutnya.
+     * Dipakai guide kamera dan capture.
+     */
+    captureAspectRatio,
   };
 }

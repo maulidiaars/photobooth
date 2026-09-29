@@ -139,21 +139,21 @@ export function PhotoLightbox({
 
       const message = encodeURIComponent(
         `*${APP_NAME}*\n\n` +
-          `Haii, terima kasih banyak ya udah mampir dan berfoto bareng kami hari ini! 🎞️\n\n` +
-          `🖼️ Frame: *${photo.frame_nama ?? "Frame"}*\n` +
-          `🗓️ Tanggal: ${formatTime(photo.created_at)}\n\n` +
+          `Haii, terima kasih banyak ya udah mampir dan berfoto bareng kami hari ini! \u{1F39E}\u{FE0F}\n\n` +
+          `\u{1F5BC}\u{FE0F} Frame: *${photo.frame_nama ?? "Frame"}*\n` +
+          `\u{1F5D3}\u{FE0F} Tanggal: ${formatTime(photo.created_at)}\n\n` +
           `Yeay, hasil foto kamu udah jadi! Klik link di bawah ini buat lihat & download-nya ya:\n` +
           `${photoLink}\n\n` +
           `Di halaman itu ada 2 bagian:\n` +
-          `1️⃣ Hasil foto lengkap dengan frame — tinggal tekan tombol download-nya\n` +
-          `2️⃣ Foto asli satuan (tanpa frame) — geser satu-satu, tiap foto ada tombol download sendiri\n\n` +
+          `1\u{FE0F}\u{20E3} Hasil foto lengkap dengan frame — tinggal tekan tombol download-nya\n` +
+          `2\u{FE0F}\u{20E3} Foto asli satuan (tanpa frame) — geser satu-satu, tiap foto ada tombol download sendiri\n\n` +
           `Ada kendala atau mau cetak ulang? Hubungi admin kami di *${formatPhoneDisplay(
             ADMIN_PHONE
           )}*\n\n` +
           `Yuk follow kami juga biar gak ketinggalan update seru lainnya:\n` +
-          `📸 Instagram: ${INSTAGRAM_URL}\n` +
-          `🎵 TikTok: ${TIKTOK_URL}\n\n` +
-          `Semoga harimu menyenangkan, sampai jumpa lagi! 👋\n\n` +
+          `\u{1F4F8} Instagram: ${INSTAGRAM_URL}\n` +
+          `\u{1F3B5} TikTok: ${TIKTOK_URL}\n\n` +
+          `Semoga harimu menyenangkan, sampai jumpa lagi! \u{1F44B}\n\n` +
           `_Salam hangat, tim ${APP_NAME}_`
       );
 

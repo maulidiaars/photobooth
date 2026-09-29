@@ -137,25 +137,40 @@ export function PhotoLightbox({
 
       const photoLink = `${origin}/foto/${photo.id}`;
 
-      const message = encodeURIComponent(
+      // Build emojis from Unicode code points instead of literal emoji characters.
+      // This keeps the source file ASCII-safe and prevents U+FFFD (�) from ever
+      // being inserted into the WhatsApp message before URL encoding.
+      const emoji = {
+        film: String.fromCodePoint(0x1f39e, 0xfe0f),
+        frame: String.fromCodePoint(0x1f5bc, 0xfe0f),
+        calendar: String.fromCodePoint(0x1f5d3, 0xfe0f),
+        one: `1${String.fromCodePoint(0xfe0f, 0x20e3)}`,
+        two: `2${String.fromCodePoint(0xfe0f, 0x20e3)}`,
+        camera: String.fromCodePoint(0x1f4f8),
+        music: String.fromCodePoint(0x1f3b5),
+        wave: String.fromCodePoint(0x1f44b),
+      };
+
+      const messageText =
         `*${APP_NAME}*\n\n` +
-          `Haii, terima kasih banyak ya udah mampir dan berfoto bareng kami hari ini! \u{1F39E}\u{FE0F}\n\n` +
-          `\u{1F5BC}\u{FE0F} Frame: *${photo.frame_nama ?? "Frame"}*\n` +
-          `\u{1F5D3}\u{FE0F} Tanggal: ${formatTime(photo.created_at)}\n\n` +
-          `Yeay, hasil foto kamu udah jadi! Klik link di bawah ini buat lihat & download-nya ya:\n` +
-          `${photoLink}\n\n` +
-          `Di halaman itu ada 2 bagian:\n` +
-          `1\u{FE0F}\u{20E3} Hasil foto lengkap dengan frame — tinggal tekan tombol download-nya\n` +
-          `2\u{FE0F}\u{20E3} Foto asli satuan (tanpa frame) — geser satu-satu, tiap foto ada tombol download sendiri\n\n` +
-          `Ada kendala atau mau cetak ulang? Hubungi admin kami di *${formatPhoneDisplay(
-            ADMIN_PHONE
-          )}*\n\n` +
-          `Yuk follow kami juga biar gak ketinggalan update seru lainnya:\n` +
-          `\u{1F4F8} Instagram: ${INSTAGRAM_URL}\n` +
-          `\u{1F3B5} TikTok: ${TIKTOK_URL}\n\n` +
-          `Semoga harimu menyenangkan, sampai jumpa lagi! \u{1F44B}\n\n` +
-          `_Salam hangat, tim ${APP_NAME}_`
-      );
+        `Haii, terima kasih banyak ya udah mampir dan berfoto bareng kami hari ini! ${emoji.film}\n\n` +
+        `${emoji.frame} Frame: *${photo.frame_nama ?? "Frame"}*\n` +
+        `${emoji.calendar} Tanggal: ${formatTime(photo.created_at)}\n\n` +
+        `Yeay, hasil foto kamu udah jadi! Klik link di bawah ini buat lihat & download-nya ya:\n` +
+        `${photoLink}\n\n` +
+        `Di halaman itu ada 2 bagian:\n` +
+        `${emoji.one} Hasil foto lengkap dengan frame — tinggal tekan tombol download-nya\n` +
+        `${emoji.two} Foto asli satuan (tanpa frame) — geser satu-satu, tiap foto ada tombol download sendiri\n\n` +
+        `Ada kendala atau mau cetak ulang? Hubungi admin kami di *${formatPhoneDisplay(
+          ADMIN_PHONE
+        )}*\n\n` +
+        `Yuk follow kami juga biar gak ketinggalan update seru lainnya:\n` +
+        `${emoji.camera} Instagram: ${INSTAGRAM_URL}\n` +
+        `${emoji.music} TikTok: ${TIKTOK_URL}\n\n` +
+        `Semoga harimu menyenangkan, sampai jumpa lagi! ${emoji.wave}\n\n` +
+        `_Salam hangat, tim ${APP_NAME}_`;
+
+      const message = encodeURIComponent(messageText);
 
       window.open(
         `https://wa.me/${formattedNumber}?text=${message}`,

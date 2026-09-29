@@ -110,85 +110,85 @@ export function PhotoLightbox({
   // ============================================
   // WHATSAPP
   // ============================================
-  const handleSendWhatsApp = () => {
-    if (!photo?.whatsapp_number) {
-      toast.push("Nomor WhatsApp tidak tersedia", "error");
-      return;
+const handleSendWhatsApp = () => {
+  if (!photo?.whatsapp_number) {
+    toast.push("Nomor WhatsApp tidak tersedia", "error");
+    return;
+  }
+
+  setSending(true);
+
+  try {
+    const cleanNumber = photo.whatsapp_number.replace(/[^0-9]/g, "");
+
+    let formattedNumber = cleanNumber;
+
+    if (formattedNumber.startsWith("0")) {
+      formattedNumber = `62${formattedNumber.slice(1)}`;
+    } else if (!formattedNumber.startsWith("62")) {
+      formattedNumber = `62${formattedNumber}`;
     }
 
-    setSending(true);
+    const origin =
+      APP_URL ||
+      (typeof window !== "undefined"
+        ? window.location.origin
+        : "");
 
-    try {
-      const cleanNumber = photo.whatsapp_number.replace(/[^0-9]/g, "");
+    const photoLink = `${origin}/foto/${photo.id}`;
 
-      let formattedNumber = cleanNumber;
+    // Emoji dibuat menggunakan Unicode code point
+    // supaya tidak berubah menjadi karakter �.
+    const emoji = {
+      film: String.fromCodePoint(0x1f39e, 0xfe0f),
+      frame: String.fromCodePoint(0x1f5bc, 0xfe0f),
+      calendar: String.fromCodePoint(0x1f5d3, 0xfe0f),
+      one: `1${String.fromCodePoint(0xfe0f, 0x20e3)}`,
+      two: `2${String.fromCodePoint(0xfe0f, 0x20e3)}`,
+      camera: String.fromCodePoint(0x1f4f8),
+      music: String.fromCodePoint(0x1f3b5),
+      wave: String.fromCodePoint(0x1f44b),
+    };
 
-      if (formattedNumber.startsWith("0")) {
-        formattedNumber = `62${formattedNumber.slice(1)}`;
-      } else if (!formattedNumber.startsWith("62")) {
-        formattedNumber = `62${formattedNumber}`;
-      }
+    const messageText =
+      `*${APP_NAME}*\n\n` +
+      `Haii, terima kasih banyak ya udah mampir dan berfoto bareng kami hari ini! ${emoji.film}\n\n` +
+      `${emoji.frame} Frame: *${photo.frame_nama ?? "Frame"}*\n` +
+      `${emoji.calendar} Tanggal: ${formatTime(photo.created_at)}\n\n` +
+      `Yeay, hasil foto kamu udah jadi! Klik link di bawah ini buat lihat & download-nya ya:\n` +
+      `${photoLink}\n\n` +
+      `Di halaman itu ada 2 bagian:\n` +
+      `${emoji.one} Hasil foto lengkap dengan frame — tinggal tekan tombol download-nya\n` +
+      `${emoji.two} Foto asli satuan (tanpa frame) — geser satu-satu, tiap foto ada tombol download sendiri\n\n` +
+      `Ada kendala atau mau cetak ulang? Hubungi admin kami di *${formatPhoneDisplay(
+        ADMIN_PHONE
+      )}*\n\n` +
+      `Yuk follow kami juga biar gak ketinggalan update seru lainnya:\n` +
+      `${emoji.camera} Instagram: ${INSTAGRAM_URL}\n` +
+      `${emoji.music} TikTok: ${TIKTOK_URL}\n\n` +
+      `Semoga harimu menyenangkan, sampai jumpa lagi! ${emoji.wave}\n\n` +
+      `_Salam hangat, tim ${APP_NAME}_`;
 
-      const origin =
-        APP_URL ||
-        (typeof window !== "undefined"
-          ? window.location.origin
-          : "");
+    // URLSearchParams menangani encoding Unicode/emoji dengan benar.
+    const whatsappUrl =
+      `https://api.whatsapp.com/send/?phone=${formattedNumber}&` +
+      new URLSearchParams({
+        text: messageText,
+      }).toString();
 
-      const photoLink = `${origin}/foto/${photo.id}`;
+    window.open(whatsappUrl, "_blank");
 
-      // Build emojis from Unicode code points instead of literal emoji characters.
-      // This keeps the source file ASCII-safe and prevents U+FFFD (�) from ever
-      // being inserted into the WhatsApp message before URL encoding.
-      const emoji = {
-        film: String.fromCodePoint(0x1f39e, 0xfe0f),
-        frame: String.fromCodePoint(0x1f5bc, 0xfe0f),
-        calendar: String.fromCodePoint(0x1f5d3, 0xfe0f),
-        one: `1${String.fromCodePoint(0xfe0f, 0x20e3)}`,
-        two: `2${String.fromCodePoint(0xfe0f, 0x20e3)}`,
-        camera: String.fromCodePoint(0x1f4f8),
-        music: String.fromCodePoint(0x1f3b5),
-        wave: String.fromCodePoint(0x1f44b),
-      };
-
-      const messageText =
-        `*${APP_NAME}*\n\n` +
-        `Haii, terima kasih banyak ya udah mampir dan berfoto bareng kami hari ini! ${emoji.film}\n\n` +
-        `${emoji.frame} Frame: *${photo.frame_nama ?? "Frame"}*\n` +
-        `${emoji.calendar} Tanggal: ${formatTime(photo.created_at)}\n\n` +
-        `Yeay, hasil foto kamu udah jadi! Klik link di bawah ini buat lihat & download-nya ya:\n` +
-        `${photoLink}\n\n` +
-        `Di halaman itu ada 2 bagian:\n` +
-        `${emoji.one} Hasil foto lengkap dengan frame — tinggal tekan tombol download-nya\n` +
-        `${emoji.two} Foto asli satuan (tanpa frame) — geser satu-satu, tiap foto ada tombol download sendiri\n\n` +
-        `Ada kendala atau mau cetak ulang? Hubungi admin kami di *${formatPhoneDisplay(
-          ADMIN_PHONE
-        )}*\n\n` +
-        `Yuk follow kami juga biar gak ketinggalan update seru lainnya:\n` +
-        `${emoji.camera} Instagram: ${INSTAGRAM_URL}\n` +
-        `${emoji.music} TikTok: ${TIKTOK_URL}\n\n` +
-        `Semoga harimu menyenangkan, sampai jumpa lagi! ${emoji.wave}\n\n` +
-        `_Salam hangat, tim ${APP_NAME}_`;
-
-      const message = encodeURIComponent(messageText);
-
-      window.open(
-        `https://wa.me/${formattedNumber}?text=${message}`,
-        "_blank"
-      );
-
-      toast.push(
-        "WhatsApp dibuka dengan link foto siap kirim!",
-        "success"
-      );
-    } catch (error) {
-      console.error("WhatsApp error:", error);
-      toast.push("Gagal membuka WhatsApp", "error");
-    } finally {
-      setSending(false);
-    }
-  };
-
+    toast.push(
+      "WhatsApp dibuka dengan link foto siap kirim!",
+      "success"
+    );
+  } catch (error) {
+    console.error("WhatsApp error:", error);
+    toast.push("Gagal membuka WhatsApp", "error");
+  } finally {
+    setSending(false);
+  }
+};
   // ============================================
   // DOWNLOAD RAW PHOTO
   // ============================================

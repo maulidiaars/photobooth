@@ -16,6 +16,8 @@ import {
   Clock3,
   CheckCircle2,
   BarChart3,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 import { StatsCard } from "@/components/admin/StatsCard";
@@ -73,80 +75,188 @@ function TwoRowScroller({
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-
-  const [maxH, setMaxH] =
-    useState<number | null>(null);
+  const [maxH, setMaxH] = useState<number | null>(null);
+  const [scrollState, setScrollState] = useState({
+    top: 0,
+    canScroll: false,
+    progress: 0,
+  });
 
   useDragScroll(ref, "y");
 
   useLayoutEffect(() => {
     const el = ref.current;
-
-    if (!el) {
-      return;
-    }
+    if (!el) return;
 
     const measure = () => {
-      const items = Array.from(
-        el.children
-      ) as HTMLElement[];
+      const items = Array.from(el.children).filter(
+        (node): node is HTMLElement =>
+          node instanceof HTMLElement
+      );
 
       const tops: number[] = [];
 
       for (const item of items) {
-        const t = item.offsetTop;
-
-        if (!tops.includes(t)) {
-          tops.push(t);
-        }
-
-        if (tops.length > 2) {
-          break;
-        }
+        const top = item.offsetTop;
+        if (!tops.includes(top)) tops.push(top);
+        if (tops.length > 2) break;
       }
 
       const thirdTop = tops[2];
+      const gap = parseFloat(getComputedStyle(el).rowGap) || 0;
 
       if (thirdTop === undefined) {
         setMaxH(null);
-
-        return;
+      } else {
+        setMaxH(Math.round(thirdTop - gap));
       }
-
-      const gap =
-        parseFloat(
-          getComputedStyle(el).rowGap
-        ) || 0;
-
-      const next = Math.round(
-        thirdTop - gap
-      );
-
-      setMaxH((prev) =>
-        prev === next ? prev : next
-      );
     };
 
     measure();
 
-    const ro = new ResizeObserver(
-      measure
-    );
-
+    const ro = new ResizeObserver(measure);
     ro.observe(el);
 
     return () => ro.disconnect();
   }, [count]);
 
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const updateScrollState = () => {
+      const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight);
+      const canScroll = maxScroll > 4;
+      const progress = canScroll ? el.scrollTop / maxScroll : 0;
+
+      setScrollState((prev) => {
+        const next = {
+          top: el.scrollTop,
+          canScroll,
+          progress,
+        };
+
+        if (
+          Math.abs(prev.top - next.top) < 0.5 &&
+          prev.canScroll === next.canScroll &&
+          Math.abs(prev.progress - next.progress) < 0.001
+        ) {
+          return prev;
+        }
+
+        return next;
+      });
+    };
+
+    updateScrollState();
+    el.addEventListener("scroll", updateScrollState, { passive: true });
+
+    const ro = new ResizeObserver(updateScrollState);
+    ro.observe(el);
+
+    return () => {
+      el.removeEventListener("scroll", updateScrollState);
+      ro.disconnect();
+    };
+  }, [count, maxH]);
+
+  const scrollBy = (amount: number) => {
+    ref.current?.scrollBy({
+      top: amount,
+      behavior: "smooth",
+    });
+  };
+
+  const scrollToTop = () => {
+    ref.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const scrollToBottom = () => {
+    const el = ref.current;
+    if (!el) return;
+
+    el.scrollTo({
+      top: el.scrollHeight,
+      behavior: "smooth",
+    });
+  };
+
   return (
-    <div
-      ref={ref}
-      style={
-        maxH ? { maxHeight: maxH } : undefined
-      }
-      className="drag-slider-y relative grid grid-cols-2 gap-3 overflow-y-auto overscroll-contain p-1.5 sm:grid-cols-4 sm:gap-4 2xl:grid-cols-5 [scrollbar-width:thin] [scrollbar-color:#d98a90_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#d98a90]/80 hover:[&::-webkit-scrollbar-thumb]:bg-[#6B2D2C]"
-    >
-      {children}
+    <div className="relative">
+      {/* Soft fade makes the edge of the gallery feel intentional rather
+          than like a hard browser clipping boundary. */}
+      {scrollState.canScroll && (
+        <>
+          <div className="pointer-events-none absolute inset-x-1 top-0 z-20 h-8 rounded-t-xl bg-gradient-to-b from-[#FBF7F2] via-[#FBF7F2]/70 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-1 bottom-7 z-20 h-10 rounded-b-xl bg-gradient-to-t from-[#FBF7F2] via-[#FBF7F2]/70 to-transparent" />
+        </>
+      )}
+
+      <div
+        ref={ref}
+        style={maxH ? { maxHeight: maxH } : undefined}
+        className="no-scrollbar drag-slider-y relative grid grid-cols-2 gap-3 overflow-y-auto overscroll-contain scroll-smooth p-1.5 sm:grid-cols-4 sm:gap-4 2xl:grid-cols-5"
+      >
+        {children}
+      </div>
+
+      {scrollState.canScroll && (
+        <div className="pointer-events-none absolute right-1 top-1/2 z-30 hidden -translate-y-1/2 flex-col items-center gap-1.5 sm:flex">
+          <button
+            type="button"
+            aria-label="Scroll ke atas"
+            onClick={() => scrollBy(-220)}
+            className="pointer-events-auto grid h-7 w-7 place-items-center rounded-full border border-[#C9A87C]/30 bg-[#FBF7F2]/95 text-[#6B2D2C] shadow-sm backdrop-blur transition hover:bg-white hover:shadow-md active:scale-95"
+          >
+            <ChevronUp size={14} strokeWidth={2.5} />
+          </button>
+
+          <div className="relative h-24 w-1 overflow-hidden rounded-full bg-[#E8DDD0]/80 shadow-inner">
+            <div
+              className="absolute left-0 w-full rounded-full bg-gradient-to-b from-[#6B2D2C] to-[#C9A87C] transition-[top] duration-100"
+              style={{
+                top: `${scrollState.progress * 80}px`,
+                height: "16px",
+              }}
+            />
+          </div>
+
+          <button
+            type="button"
+            aria-label="Scroll ke bawah"
+            onClick={() => scrollBy(220)}
+            className="pointer-events-auto grid h-7 w-7 place-items-center rounded-full border border-[#C9A87C]/30 bg-[#FBF7F2]/95 text-[#6B2D2C] shadow-sm backdrop-blur transition hover:bg-white hover:shadow-md active:scale-95"
+          >
+            <ChevronDown size={14} strokeWidth={2.5} />
+          </button>
+        </div>
+      )}
+
+      {scrollState.canScroll && (
+        <div className="mt-2 flex items-center justify-between px-1">
+          <button
+            type="button"
+            onClick={scrollToTop}
+            className="font-serif text-[10px] font-medium tracking-wide text-[#6B2D2C]/55 transition hover:text-[#6B2D2C]"
+          >
+            ↑ Atas
+          </button>
+
+          <div className="flex items-center gap-1.5 font-serif text-[10px] tracking-wide text-[#6B2D2C]/50">
+            <span className="inline-block h-1 w-1 rounded-full bg-[#C9A87C]" />
+            Geser untuk melihat foto lainnya
+            <span className="inline-block h-1 w-1 rounded-full bg-[#C9A87C]" />
+          </div>
+
+          <button
+            type="button"
+            onClick={scrollToBottom}
+            className="font-serif text-[10px] font-medium tracking-wide text-[#6B2D2C]/55 transition hover:text-[#6B2D2C]"
+          >
+            Bawah ↓
+          </button>
+        </div>
+      )}
     </div>
   );
 }

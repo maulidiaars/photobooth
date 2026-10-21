@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ADMIN_COOKIE_NAME } from "@/lib/constants";
 
-const PROTECTED_PREFIXES = ["/admin/dashboard", "/admin/frames", "/admin/photos"];
+const PROTECTED_PREFIXES = ["/admin/dashboard", "/admin/frames", "/admin/photos", "/admin/whatsapp"];
 
 /**
  * Lightweight gate: only checks that the admin cookie is present.
@@ -29,5 +29,10 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/dashboard/:path*", "/admin/frames/:path*", "/admin/photos/:path*"],
+  matcher: [
+    "/admin/dashboard/:path*",
+    "/admin/frames/:path*",
+    "/admin/photos/:path*",
+    "/admin/whatsapp/:path*",
+  ],
 };

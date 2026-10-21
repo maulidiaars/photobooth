@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import clsx from "clsx";
 import { FrameForm } from "@/components/admin/FrameForm";
 import { FrameTable } from "@/components/admin/FrameTable";
 import { useToast } from "@/components/ui/Toast";
@@ -9,16 +10,25 @@ import {
   createFrame,
   deleteFrame,
   getFrames,
+  setFrameArchived,
   updateFrame,
 } from "@/services/frameService";
 import type { Frame, SlotRect } from "@/types/frame";
 
+type FrameView = "active" | "archived";
+
 export default function AdminFramesPage() {
+  // Berisi SEMUA frame (aktif + diarsipkan). Dipisah per tab di bawah.
   const [frames, setFrames] = useState<Frame[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Frame | null>(null);
+  const [view, setView] = useState<FrameView>("active");
   const toast = useToast();
   const formRef = useRef<HTMLDivElement>(null);
+
+  const activeFrames = useMemo(() => frames.filter((f) => !f.archived), [frames]);
+  const archivedFrames = useMemo(() => frames.filter((f) => f.archived), [frames]);
+  const shownFrames = view === "active" ? activeFrames : archivedFrames;
 
   // Tombol "Edit" di FrameTable cuma set state `editing` — tanpa ini,
   // form pengeditan di atas berubah isinya tapi viewport admin masih
@@ -34,7 +44,7 @@ export default function AdminFramesPage() {
 
   const loadFrames = () => {
     setLoading(true);
-    getFrames()
+    getFrames({ includeArchived: true })
       .then(setFrames)
       .finally(() => setLoading(false));
   };
@@ -65,7 +75,25 @@ export default function AdminFramesPage() {
   const handleDelete = async (frame: Frame) => {
     await deleteFrame(frame.id);
     toast.push(`Frame "${frame.nama}" berhasil dihapus`, "success");
+    // Kalau frame yang lagi diedit ikut dihapus, tutup form editnya.
+    if (editing?.id === frame.id) setEditing(null);
     loadFrames();
+  };
+
+  const handleToggleArchive = async (frame: Frame) => {
+    const nextArchived = !frame.archived;
+    try {
+      await setFrameArchived(frame.id, nextArchived);
+      toast.push(
+        nextArchived
+          ? `Frame "${frame.nama}" diarsipkan — tidak tampil lagi di pengunjung`
+          : `Frame "${frame.nama}" diaktifkan lagi`,
+        "success"
+      );
+      loadFrames();
+    } catch {
+      toast.push("Gagal mengubah status arsip frame", "error");
+    }
   };
 
   return (
@@ -88,8 +116,13 @@ export default function AdminFramesPage() {
         <div className="mt-2 sm:mt-0 flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-[#6B2D2C]/10 px-3 py-1.5 font-serif text-xs text-[#6B2D2C]">
             <span className="h-1.5 w-1.5 rounded-full bg-[#5B7F5C] animate-pulse" />
-            {frames.length} frame aktif
+            {activeFrames.length} frame aktif
           </span>
+          {archivedFrames.length > 0 && (
+            <span className="inline-flex items-center rounded-full bg-[#4A1A1A]/10 px-3 py-1.5 font-serif text-xs text-[#4A1A1A]/70">
+              {archivedFrames.length} diarsipkan
+            </span>
+          )}
         </div>
       </motion.div>
 
@@ -109,17 +142,43 @@ export default function AdminFramesPage() {
 
       {/* Daftar Frame — sengaja TANPA card/background di belakangnya,
           biar PNG frame-nya beneran "mengambang" polos di atas halaman.
-          Satu baris terus, kalau frame-nya banyak tinggal di-scroll ke
-          samping (lihat FrameTable.tsx). */}
+          Ada 2 tab: Aktif (tampil di pengunjung) & Diarsipkan (disembunyikan). */}
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-serif text-lg font-semibold text-[#4A1A1A] tracking-wide">
             Daftar Frame
           </h2>
-          <span className="font-serif text-xs text-[#4A1A1A]/50">
-            {frames.length} frame
-          </span>
+
+          <div className="inline-flex rounded-full bg-[#F5EBE0] p-1">
+            {(
+              [
+                { id: "active", label: "Aktif", count: activeFrames.length },
+                { id: "archived", label: "Diarsipkan", count: archivedFrames.length },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setView(tab.id)}
+                className={clsx(
+                  "rounded-full px-4 py-1.5 font-serif text-xs font-semibold transition-all",
+                  view === tab.id
+                    ? "bg-[#6B2D2C] text-[#F5EBE0] shadow"
+                    : "text-[#4A1A1A]/70 hover:text-[#4A1A1A]"
+                )}
+              >
+                {tab.label} ({tab.count})
+              </button>
+            ))}
+          </div>
         </div>
+
+        {view === "archived" && archivedFrames.length > 0 && (
+          <p className="font-serif text-xs text-[#4A1A1A]/50">
+            Frame di tab ini disembunyikan dari pengunjung. Tekan ikon arsip
+            pada frame untuk mengaktifkannya lagi.
+          </p>
+        )}
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -128,7 +187,13 @@ export default function AdminFramesPage() {
             </p>
           </div>
         ) : (
-          <FrameTable frames={frames} onEdit={handleEdit} onDelete={handleDelete} />
+          <FrameTable
+            frames={shownFrames}
+            archivedView={view === "archived"}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onToggleArchive={handleToggleArchive}
+          />
         )}
       </section>
     </div>

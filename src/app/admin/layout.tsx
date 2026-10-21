@@ -10,6 +10,7 @@ import { ROUTES } from "@/lib/constants";
 const TITLES: Record<string, string> = {
   [ROUTES.adminDashboard]: "Dashboard",
   [ROUTES.adminFrames]: "Kelola Frame",
+  [ROUTES.adminWhatsapp]: "Pesan WhatsApp",
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

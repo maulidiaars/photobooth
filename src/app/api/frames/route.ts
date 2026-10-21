@@ -1,103 +1,73 @@
 import { NextRequest, NextResponse } from "next/server";
+import { v4 as uuidv4 } from "uuid";
 import { query } from "@/lib/db";
 import { ensureSchema } from "@/lib/ensureSchema";
-import { deletePublicFile, saveBase64Image } from "@/lib/fileStorage";
+import { saveBase64Image } from "@/lib/fileStorage";
 import { requireAdmin } from "@/lib/requireAdmin";
 import { parseFrameRow, type FrameRow } from "@/lib/frameRow";
-import type { UpdateFramePayload } from "@/types/frame";
+import type { CreateFramePayload } from "@/types/frame";
 
-interface Params {
-  params: Promise<{ id: string }>;
-}
-
-export async function GET(_request: NextRequest, { params }: Params) {
-  const { id } = await params;
-  try {
-    const [row] = await query<FrameRow[]>("SELECT * FROM frames WHERE id = ?", [id]);
-    if (!row) {
-      return NextResponse.json({ message: "Frame tidak ditemukan" }, { status: 404 });
-    }
-    return NextResponse.json({ data: parseFrameRow(row) });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ message: "Gagal memuat frame" }, { status: 500 });
-  }
-}
-
-export async function PUT(request: NextRequest, { params }: Params) {
-  const admin = requireAdmin(request);
-  if (!admin) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
+export async function GET(request: NextRequest) {
   try {
     await ensureSchema();
 
-    const [existingRow] = await query<FrameRow[]>("SELECT * FROM frames WHERE id = ?", [id]);
-    if (!existingRow) {
-      return NextResponse.json({ message: "Frame tidak ditemukan" }, { status: 404 });
-    }
-    const existing = parseFrameRow(existingRow);
+    // Pengunjung HANYA dapat frame aktif. Frame yang diarsipkan baru ikut
+    // dikirim kalau yang minta adalah admin yang sudah login.
+    const wantsAll = request.nextUrl.searchParams.get("includeArchived") === "1";
+    const includeArchived = wantsAll && requireAdmin(request) !== null;
 
-    const body = (await request.json()) as UpdateFramePayload;
-    const nama = body.nama ?? existing.nama;
-
-    // Arsip / aktifkan lagi. Kalau field ini nggak dikirim, status lama dipertahankan.
-    const archived = typeof body.archived === "boolean" ? body.archived : existing.archived;
-
-    let framePng = existing.frame_png;
-    let thumbnail = existing.thumbnail;
-    let slot = existing.slot;
-    let slotLayout = existing.slot_layout;
-
-    // A new PNG upload always comes with a freshly-detected slotLayout
-    // from the browser — re-analyzing the image itself, so slot count
-    // and hole positions always stay in sync with the actual file.
-    if (body.framePngBase64 && body.slotLayout && body.slotLayout.length > 0) {
-      const saved = await saveBase64Image(body.framePngBase64, "frames", "frame");
-      await deletePublicFile(existing.frame_png);
-      framePng = saved.publicPath;
-      thumbnail = saved.publicPath;
-      slotLayout = body.slotLayout;
-      slot = body.slotLayout.length;
-    }
-
-    await query(
-      `UPDATE frames SET nama = ?, thumbnail = ?, frame_png = ?, slot = ?, slot_layout = ?, archived = ? WHERE id = ?`,
-      [nama, thumbnail, framePng, slot, JSON.stringify(slotLayout), archived ? 1 : 0, id]
+    const rows = await query<FrameRow[]>(
+      includeArchived
+        ? "SELECT * FROM frames ORDER BY created_at DESC"
+        : "SELECT * FROM frames WHERE archived = 0 ORDER BY created_at DESC"
     );
-
-    const [updatedRow] = await query<FrameRow[]>("SELECT * FROM frames WHERE id = ?", [id]);
-    return NextResponse.json({ data: updatedRow ? parseFrameRow(updatedRow) : null });
+    return NextResponse.json({ data: rows.map(parseFrameRow) });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ message: "Gagal memperbarui frame" }, { status: 500 });
+    return NextResponse.json(
+      { message: "Gagal memuat data frame" },
+      { status: 500 }
+    );
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: Params) {
+export async function POST(request: NextRequest) {
   const admin = requireAdmin(request);
   if (!admin) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const { id } = await params;
   try {
-    const [existingRow] = await query<FrameRow[]>("SELECT * FROM frames WHERE id = ?", [id]);
-    if (!existingRow) {
-      return NextResponse.json({ message: "Frame tidak ditemukan" }, { status: 404 });
+    await ensureSchema();
+
+    const body = (await request.json()) as CreateFramePayload;
+    const { nama, framePngBase64, slotLayout } = body;
+
+    if (!nama || !framePngBase64 || !slotLayout || slotLayout.length === 0) {
+      return NextResponse.json(
+        { message: "Nama, file frame PNG, dan hasil deteksi kotak foto wajib ada" },
+        { status: 400 }
+      );
     }
 
-    await query("DELETE FROM frames WHERE id = ?", [id]);
-    await deletePublicFile(existingRow.frame_png);
-    if (existingRow.thumbnail !== existingRow.frame_png) {
-      await deletePublicFile(existingRow.thumbnail);
-    }
+    // Only ONE file is uploaded — the transparent frame PNG itself also
+    // doubles as the thumbnail preview, so no separate thumbnail upload
+    // is needed.
+    const framePng = await saveBase64Image(framePngBase64, "frames", "frame");
 
-    return NextResponse.json({ data: { id } });
+    const id = uuidv4();
+    await query(
+      `INSERT INTO frames (id, nama, thumbnail, frame_png, slot, slot_layout) VALUES (?, ?, ?, ?, ?, ?)`,
+      [id, nama, framePng.publicPath, framePng.publicPath, slotLayout.length, JSON.stringify(slotLayout)]
+    );
+
+    const [created] = await query<FrameRow[]>("SELECT * FROM frames WHERE id = ?", [id]);
+    return NextResponse.json({ data: created ? parseFrameRow(created) : null }, { status: 201 });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ message: "Gagal menghapus frame" }, { status: 500 });
+    return NextResponse.json(
+      { message: "Gagal membuat frame baru" },
+      { status: 500 }
+    );
   }
 }

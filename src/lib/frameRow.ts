@@ -7,6 +7,7 @@ export interface FrameRow {
   frame_png: string;
   slot: number;
   slot_layout: string | SlotRect[];
+  archived?: number | boolean | null;
   created_at: string;
 }
 
@@ -29,6 +30,7 @@ export function parseFrameRow(row: FrameRow): Frame {
     frame_png: row.frame_png,
     slot: row.slot,
     slot_layout: slotLayout,
+    archived: Number(row.archived ?? 0) === 1,
     created_at: row.created_at,
   };
 }

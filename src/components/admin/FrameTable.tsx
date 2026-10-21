@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Pencil, Trash2, Grid3x3 } from "lucide-react";
+import { Pencil, Trash2, Grid3x3, Archive, ArchiveRestore } from "lucide-react";
 import type { Frame } from "@/types/frame";
 import { ConfirmModal } from "@/components/ui/Modal";
 import { useDragScroll } from "@/hooks/useDragScroll";
@@ -12,12 +12,18 @@ interface FrameTableProps {
   frames: Frame[];
   onEdit: (frame: Frame) => void;
   onDelete: (frame: Frame) => void;
+  /** Arsipkan frame aktif / aktifkan lagi frame yang diarsipkan. */
+  onToggleArchive: (frame: Frame) => void;
+  /** true kalau tab "Diarsipkan" yang sedang dibuka (cuma ngubah teks kosong). */
+  archivedView?: boolean;
 }
 
 export function FrameTable({
   frames,
   onEdit,
   onDelete,
+  onToggleArchive,
+  archivedView = false,
 }: FrameTableProps) {
   const [pendingDelete, setPendingDelete] =
     useState<Frame | null>(null);
@@ -46,11 +52,13 @@ export function FrameTable({
         />
 
         <p className="font-serif text-[#4A1A1A]/40">
-          Belum ada frame
+          {archivedView ? "Belum ada frame yang diarsipkan" : "Belum ada frame"}
         </p>
 
         <p className="font-serif text-sm text-[#4A1A1A]/30">
-          Tambahkan frame pertamamu di form atas
+          {archivedView
+            ? "Frame yang kamu arsipkan akan muncul di sini"
+            : "Tambahkan frame pertamamu di form atas"}
         </p>
       </div>
     );
@@ -84,6 +92,7 @@ export function FrameTable({
                 key={frame.id}
                 frame={frame}
                 onEdit={onEdit}
+                onToggleArchive={() => onToggleArchive(frame)}
                 onDelete={() => setPendingDelete(frame)}
               />
             ))}
@@ -117,12 +126,14 @@ export function FrameTable({
 interface AdminFrameCardProps {
   frame: Frame;
   onEdit: (frame: Frame) => void;
+  onToggleArchive: () => void;
   onDelete: () => void;
 }
 
 function AdminFrameCard({
   frame,
   onEdit,
+  onToggleArchive,
   onDelete,
 }: AdminFrameCardProps) {
   /*
@@ -182,7 +193,7 @@ function AdminFrameCard({
         scale: 0.94,
       }}
       animate={{
-        opacity: 1,
+        opacity: frame.archived ? 0.6 : 1,
         scale: 1,
       }}
       exit={{
@@ -191,6 +202,7 @@ function AdminFrameCard({
       }}
       whileHover={{
         y: -5,
+        opacity: 1,
       }}
       className="group relative min-w-0"
     >
@@ -246,6 +258,36 @@ function AdminFrameCard({
             whileTap={{
               scale: 0.9,
             }}
+            onClick={onToggleArchive}
+            aria-label={
+              frame.archived
+                ? `Aktifkan lagi ${frame.nama}`
+                : `Arsipkan ${frame.nama}`
+            }
+            title={frame.archived ? "Aktifkan lagi" : "Arsipkan"}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FBF7F2]/95 text-[#6B2D2C] shadow-lg backdrop-blur-sm hover:shadow-xl sm:h-9 sm:w-9"
+          >
+            {frame.archived ? (
+              <ArchiveRestore
+                size={14}
+                strokeWidth={2.3}
+              />
+            ) : (
+              <Archive
+                size={14}
+                strokeWidth={2.3}
+              />
+            )}
+          </motion.button>
+
+          <motion.button
+            type="button"
+            whileHover={{
+              scale: 1.08,
+            }}
+            whileTap={{
+              scale: 0.9,
+            }}
             onClick={onDelete}
             aria-label={`Hapus ${frame.nama}`}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FBF7F2]/95 text-[#A0524A] shadow-lg backdrop-blur-sm hover:shadow-xl sm:h-9 sm:w-9"
@@ -269,6 +311,12 @@ function AdminFrameCard({
             sehingga badge benar-benar menempel ke frame.
           ============================================================== 
         */}
+        {frame.archived && (
+          <span className="absolute left-1.5 top-1.5 z-10 rounded-full bg-[#4A1A1A]/85 px-2.5 py-1 font-serif text-[9px] font-semibold uppercase tracking-wide text-[#F5EBE0] shadow-md backdrop-blur-sm sm:left-2 sm:top-2 sm:text-[10px]">
+            Diarsipkan
+          </span>
+        )}
+
         <span className="absolute bottom-1.5 left-1/2 z-10 -translate-x-1/2 rounded-full border border-[#F5EBE0]/80 bg-[#6B2D2C]/90 px-2.5 py-1 font-serif text-[9px] font-semibold text-[#F5EBE0] shadow-md backdrop-blur-sm sm:bottom-2 sm:px-3 sm:text-[10px]">
           {frame.slot} slot
         </span>

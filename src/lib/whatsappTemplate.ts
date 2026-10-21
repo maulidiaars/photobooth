@@ -46,20 +46,38 @@ export const WHATSAPP_REQUIRED_VARIABLE: WhatsappVariableKey = "link_foto";
 // ------------------------------------------------------------------
 const cp = (...codes: number[]) => String.fromCodePoint(...codes);
 
+
 export const WHATSAPP_EMOJIS: string[] = [
-  cp(0x1f39e, 0xfe0f), // 🎞️
-  cp(0x1f5bc, 0xfe0f), // 🖼️
-  cp(0x1f4f8), // 📸
-  cp(0x1f3b5), // 🎵
-  cp(0x1f44b), // 👋
-  cp(0x1f60a), // 😊
+  cp(0x1f60d), // 😍
   cp(0x1f970), // 🥰
-  cp(0x2728), // ✨
-  cp(0x1f389), // 🎉
+  cp(0x1f929), // 🤩
+  cp(0x1f618), // 😘
+  cp(0x1f495), // 💕
+  cp(0x1f496), // 💖
   cp(0x2764, 0xfe0f), // ❤️
+  cp(0x1f339), // 🌹
+  cp(0x1f338), // 🌸
+  cp(0x1f33a), // 🌺
+  cp(0x2728), // ✨
+  cp(0x1f31f), // 🌟
+  cp(0x1f4ab), // 💫
+  cp(0x1f389), // 🎉
+  cp(0x1f381), // 🎁
+  cp(0x1f4f8), // 📸
+  cp(0x1f4f7), // 📷
+  cp(0x1f5bc, 0xfe0f), // 🖼️
+  cp(0x1f3a8), // 🎨
+  cp(0x1f4be), // 💾
+  cp(0x1f517), // 🔗
+  cp(0x1f44d), // 👍
   cp(0x1f64f), // 🙏
+  cp(0x1f60a), // 😊
+  cp(0x1f44b), // 👋
+  cp(0x1f4ac), // 💬
+  cp(0x1f4e9), // 📩
   cp(0x1f4f2), // 📲
 ];
+
 
 const E = {
   film: cp(0x1f39e, 0xfe0f),

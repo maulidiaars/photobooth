@@ -85,8 +85,14 @@ export function FrameTable({
         ref={scrollerRef}
         className="no-scrollbar drag-slider-y h-[62vh] min-h-[320px] max-h-[720px] overflow-y-auto overscroll-contain pr-1 sm:h-[64vh] lg:h-[66vh]"
       >
-        <div className="grid grid-cols-4 items-start gap-x-3 gap-y-7 pb-6 sm:gap-x-5 sm:gap-y-9 lg:gap-x-6">
-          <AnimatePresence>
+        <motion.div
+          key={archivedView ? "archived" : "active"}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+          className="grid grid-cols-4 items-start gap-x-3 gap-y-7 pb-6 sm:gap-x-5 sm:gap-y-9 lg:gap-x-6"
+        >
+          <AnimatePresence initial={false}>
             {frames.map((frame) => (
               <AdminFrameCard
                 key={frame.id}
@@ -97,7 +103,7 @@ export function FrameTable({
               />
             ))}
           </AnimatePresence>
-        </div>
+        </motion.div>
       </div>
 
       <ConfirmModal
@@ -188,26 +194,19 @@ function AdminFrameCard({
 
   return (
     <motion.div
-      initial={{
-        opacity: 0,
-        scale: 0.94,
-      }}
-      animate={{
-        opacity: frame.archived ? 0.6 : 1,
-        scale: 1,
-      }}
-      exit={{
-        opacity: 0,
-        scale: 0.94,
-      }}
-      whileHover={{
-        y: -5,
-        opacity: 1,
-      }}
+      layout="position"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 6, transition: { duration: 0.18 } }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       className="group relative min-w-0"
     >
+      {/*
+        Hover dibuat halus: frame cuma naik 2px dan dapat bayangan
+        lembut yang mengikuti bentuk frame. Tidak ada scale / lompatan.
+      */}
       <div
-        className="relative mx-auto w-full max-w-[13rem]"
+        className="relative mx-auto w-full max-w-[13rem] transition-[filter,transform] duration-300 ease-out group-hover:-translate-y-0.5 group-hover:drop-shadow-[0_8px_14px_rgba(58,40,31,0.2)]"
         style={
           trimmedStyle ?? {
             aspectRatio: "3 / 4",
@@ -225,39 +224,24 @@ function AdminFrameCard({
         )}
 
         {/*
-          ==============================================================
           ACTION BUTTONS
 
-          Tetap berada di frame, bukan di luar card transparan.
-          ============================================================== 
+          Muncul pelan saat hover / fokus. Di layar sentuh (HP/tablet)
+          tidak ada hover, jadi tombolnya selalu kelihatan.
         */}
-        <div className="absolute right-1.5 top-1.5 z-10 flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 sm:right-2 sm:top-2">
-          <motion.button
+        <div className="absolute right-1.5 top-1.5 z-10 flex translate-y-0.5 items-center gap-1 opacity-0 transition-all duration-200 ease-out group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:translate-y-0 group-hover:opacity-100 sm:right-2 sm:top-2 [@media(hover:none)]:translate-y-0 [@media(hover:none)]:opacity-100">
+          <button
             type="button"
-            whileHover={{
-              scale: 1.08,
-            }}
-            whileTap={{
-              scale: 0.9,
-            }}
             onClick={() => onEdit(frame)}
             aria-label={`Edit ${frame.nama}`}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FBF7F2]/95 text-[#4A1A1A] shadow-lg backdrop-blur-sm hover:shadow-xl sm:h-9 sm:w-9"
+            title="Edit"
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FBF7F2]/95 text-[#4A1A1A] shadow-sm transition-colors hover:bg-white active:scale-95 sm:h-8 sm:w-8"
           >
-            <Pencil
-              size={14}
-              strokeWidth={2.3}
-            />
-          </motion.button>
+            <Pencil size={13} strokeWidth={2.3} />
+          </button>
 
-          <motion.button
+          <button
             type="button"
-            whileHover={{
-              scale: 1.08,
-            }}
-            whileTap={{
-              scale: 0.9,
-            }}
             onClick={onToggleArchive}
             aria-label={
               frame.archived
@@ -265,59 +249,28 @@ function AdminFrameCard({
                 : `Arsipkan ${frame.nama}`
             }
             title={frame.archived ? "Aktifkan lagi" : "Arsipkan"}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FBF7F2]/95 text-[#6B2D2C] shadow-lg backdrop-blur-sm hover:shadow-xl sm:h-9 sm:w-9"
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FBF7F2]/95 text-[#6B2D2C] shadow-sm transition-colors hover:bg-white active:scale-95 sm:h-8 sm:w-8"
           >
             {frame.archived ? (
-              <ArchiveRestore
-                size={14}
-                strokeWidth={2.3}
-              />
+              <ArchiveRestore size={13} strokeWidth={2.3} />
             ) : (
-              <Archive
-                size={14}
-                strokeWidth={2.3}
-              />
+              <Archive size={13} strokeWidth={2.3} />
             )}
-          </motion.button>
+          </button>
 
-          <motion.button
+          <button
             type="button"
-            whileHover={{
-              scale: 1.08,
-            }}
-            whileTap={{
-              scale: 0.9,
-            }}
             onClick={onDelete}
             aria-label={`Hapus ${frame.nama}`}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FBF7F2]/95 text-[#A0524A] shadow-lg backdrop-blur-sm hover:shadow-xl sm:h-9 sm:w-9"
+            title="Hapus"
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FBF7F2]/95 text-[#A0524A] shadow-sm transition-colors hover:bg-white active:scale-95 sm:h-8 sm:w-8"
           >
-            <Trash2
-              size={14}
-              strokeWidth={2.3}
-            />
-          </motion.button>
+            <Trash2 size={13} strokeWidth={2.3} />
+          </button>
         </div>
 
-        {/*
-          ==============================================================
-          SLOT BADGE
-
-          Sebelumnya:
-            badge berada di pojok card 3/4
-
-          Sekarang:
-            card mengikuti artwork frame,
-            sehingga badge benar-benar menempel ke frame.
-          ============================================================== 
-        */}
-        {frame.archived && (
-          <span className="absolute left-1.5 top-1.5 z-10 rounded-full bg-[#4A1A1A]/85 px-2.5 py-1 font-serif text-[9px] font-semibold uppercase tracking-wide text-[#F5EBE0] shadow-md backdrop-blur-sm sm:left-2 sm:top-2 sm:text-[10px]">
-            Diarsipkan
-          </span>
-        )}
-
-        <span className="absolute bottom-1.5 left-1/2 z-10 -translate-x-1/2 rounded-full border border-[#F5EBE0]/80 bg-[#6B2D2C]/90 px-2.5 py-1 font-serif text-[9px] font-semibold text-[#F5EBE0] shadow-md backdrop-blur-sm sm:bottom-2 sm:px-3 sm:text-[10px]">
+        {/* Badge jumlah slot */}
+        <span className="absolute bottom-1.5 left-1/2 z-10 -translate-x-1/2 rounded-full bg-[#6B2D2C]/85 px-2.5 py-1 font-serif text-[9px] font-semibold text-[#F5EBE0] shadow-sm backdrop-blur-sm sm:bottom-2 sm:px-3 sm:text-[10px]">
           {frame.slot} slot
         </span>
       </div>

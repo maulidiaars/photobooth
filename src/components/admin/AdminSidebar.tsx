@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
-import { LayoutDashboard, Image as ImageIcon, LogOut, Circle, ChevronLeft, Menu } from "lucide-react";
+import { LayoutDashboard, Image as ImageIcon, MessageCircle, LogOut, Circle, ChevronLeft, Menu } from "lucide-react";
 import { APP_NAME, ROUTES } from "@/lib/constants";
 import { useState, useEffect } from "react";
 import { Logo } from "@/components/ui/Logo";
@@ -12,6 +12,7 @@ import { Logo } from "@/components/ui/Logo";
 const NAV_ITEMS = [
   { href: ROUTES.adminDashboard, label: "Dashboard", Icon: LayoutDashboard },
   { href: ROUTES.adminFrames, label: "Frame", Icon: ImageIcon },
+  { href: ROUTES.adminWhatsapp, label: "Pesan WhatsApp", Icon: MessageCircle },
 ];
 
 interface AdminSidebarProps {

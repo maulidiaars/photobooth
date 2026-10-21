@@ -21,17 +21,18 @@ export function formatPhoneDisplay(raw: string) {
 // Variabel yang bisa dipakai di template, ditulis dengan kurung kurawal
 // ------------------------------------------------------------------
 export const WHATSAPP_TEMPLATE_VARIABLES = [
-  { key: "nama_brand", desc: "Nama brand photobooth", sample: "Clikja Photobooth" },
-  { key: "frame", desc: "Nama frame yang dipakai pelanggan", sample: "Pink Ribbon" },
-  { key: "tanggal", desc: "Tanggal & jam foto diambil", sample: "20 Oktober 2026, 14.30" },
+  { key: "nama_brand", label: "Nama brand", desc: "Nama brand photobooth", sample: "Clikja Photobooth" },
+  { key: "frame", label: "Nama frame", desc: "Nama frame yang dipakai pelanggan", sample: "Pink Ribbon" },
+  { key: "tanggal", label: "Tanggal foto", desc: "Tanggal & jam foto diambil", sample: "20 Okt 2026, 14.30" },
   {
     key: "link_foto",
+    label: "Link foto",
     desc: "Link halaman foto untuk download (WAJIB ada)",
     sample: "https://contoh.vercel.app/foto/abc123",
   },
-  { key: "nomor_admin", desc: "Nomor WhatsApp admin", sample: formatPhoneDisplay(WA_ADMIN_PHONE) },
-  { key: "instagram", desc: "Link Instagram", sample: WA_INSTAGRAM_URL },
-  { key: "tiktok", desc: "Link TikTok", sample: WA_TIKTOK_URL },
+  { key: "nomor_admin", label: "Nomor admin", desc: "Nomor WhatsApp admin", sample: formatPhoneDisplay(WA_ADMIN_PHONE) },
+  { key: "instagram", label: "Link Instagram", desc: "Link Instagram", sample: WA_INSTAGRAM_URL },
+  { key: "tiktok", label: "Link TikTok", desc: "Link TikTok", sample: WA_TIKTOK_URL },
 ] as const;
 
 export type WhatsappVariableKey = (typeof WHATSAPP_TEMPLATE_VARIABLES)[number]["key"];
@@ -41,43 +42,11 @@ export type WhatsappTemplateVars = Record<WhatsappVariableKey, string>;
 export const WHATSAPP_REQUIRED_VARIABLE: WhatsappVariableKey = "link_foto";
 
 // ------------------------------------------------------------------
-// Emoji dibuat dari Unicode code point (bukan diketik langsung) supaya
-// nggak rusak jadi karakter � waktu file ini di-copy-paste.
+// Emoji di isi bawaan dibuat dari Unicode code point (bukan diketik
+// langsung) supaya nggak rusak waktu file ini di-copy-paste.
+// Admin TIDAK punya pilihan emoji di editor.
 // ------------------------------------------------------------------
 const cp = (...codes: number[]) => String.fromCodePoint(...codes);
-
-
-export const WHATSAPP_EMOJIS: string[] = [
-  cp(0x1f60d), // 😍
-  cp(0x1f970), // 🥰
-  cp(0x1f929), // 🤩
-  cp(0x1f618), // 😘
-  cp(0x1f495), // 💕
-  cp(0x1f496), // 💖
-  cp(0x2764, 0xfe0f), // ❤️
-  cp(0x1f339), // 🌹
-  cp(0x1f338), // 🌸
-  cp(0x1f33a), // 🌺
-  cp(0x2728), // ✨
-  cp(0x1f31f), // 🌟
-  cp(0x1f4ab), // 💫
-  cp(0x1f389), // 🎉
-  cp(0x1f381), // 🎁
-  cp(0x1f4f8), // 📸
-  cp(0x1f4f7), // 📷
-  cp(0x1f5bc, 0xfe0f), // 🖼️
-  cp(0x1f3a8), // 🎨
-  cp(0x1f4be), // 💾
-  cp(0x1f517), // 🔗
-  cp(0x1f44d), // 👍
-  cp(0x1f64f), // 🙏
-  cp(0x1f60a), // 😊
-  cp(0x1f44b), // 👋
-  cp(0x1f4ac), // 💬
-  cp(0x1f4e9), // 📩
-  cp(0x1f4f2), // 📲
-];
-
 
 const E = {
   film: cp(0x1f39e, 0xfe0f),
@@ -132,4 +101,78 @@ export function renderWhatsappTemplate(
         ? vars[key as WhatsappVariableKey]
         : match
     );
+}
+
+// ------------------------------------------------------------------
+// Helper editor: template <-> baris-baris yang bisa diedit
+// ------------------------------------------------------------------
+export type TemplatePart =
+  | { type: "text"; value: string }
+  | { type: "var"; key: WhatsappVariableKey };
+
+const VARIABLE_KEYS: string[] = WHATSAPP_TEMPLATE_VARIABLES.map((v) => v.key);
+
+/**
+ * Pecah template jadi baris, lalu tiap baris jadi potongan teks &
+ * variabel. Selalu selang-seling: teks, variabel, teks, variabel, teks
+ * (teks boleh kosong). Variabel yang salah ketik dianggap teks biasa.
+ */
+export function parseTemplateToLines(template: string): TemplatePart[][] {
+  return template
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => {
+      const parts: TemplatePart[] = [];
+      let buffer = "";
+
+      for (const chunk of line.split(/(\{\w+\})/g)) {
+        const match = /^\{(\w+)\}$/.exec(chunk);
+
+        if (match && VARIABLE_KEYS.includes(match[1])) {
+          parts.push({ type: "text", value: buffer });
+          buffer = "";
+          parts.push({ type: "var", key: match[1] as WhatsappVariableKey });
+        } else {
+          buffer += chunk;
+        }
+      }
+
+      parts.push({ type: "text", value: buffer });
+      return parts;
+    });
+}
+
+export function serializeTemplateLines(lines: TemplatePart[][]): string {
+  return lines
+    .map((parts) =>
+      parts
+        .map((part) => (part.type === "text" ? part.value : `{${part.key}}`))
+        .join("")
+    )
+    .join("\n");
+}
+
+/** Pastikan {link_foto} selalu ada, biar pelanggan pasti dapat link. */
+export function ensureRequiredVariables(template: string): string {
+  return template.includes(`{${WHATSAPP_REQUIRED_VARIABLE}}`)
+    ? template
+    : `${template.trimEnd()}\n\n{${WHATSAPP_REQUIRED_VARIABLE}}`;
+}
+
+/** Isi semua variabel dengan data sesi foto yang sebenarnya. */
+export function buildWhatsappVars(input: {
+  brand: string;
+  frame: string;
+  tanggal: string;
+  link: string;
+}): WhatsappTemplateVars {
+  return {
+    nama_brand: input.brand,
+    frame: input.frame,
+    tanggal: input.tanggal,
+    link_foto: input.link,
+    nomor_admin: formatPhoneDisplay(WA_ADMIN_PHONE),
+    instagram: WA_INSTAGRAM_URL,
+    tiktok: WA_TIKTOK_URL,
+  };
 }

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -138,8 +137,8 @@ export default function AdminFramesPage() {
         )
       );
 
-      // Pindah otomatis ke tab tujuan.
-      setView(nextArchived ? "archived" : "active");
+      // Tetap di tab yang sama: kartunya memudar keluar dengan halus,
+      // tanpa halaman lompat ke tab lain.
 
       toast.push(
         nextArchived
@@ -197,7 +196,7 @@ export default function AdminFramesPage() {
             Daftar Frame
           </h2>
 
-          <div className="inline-flex rounded-full bg-[#F5EBE0] p-1">
+          <div className="relative inline-flex rounded-full bg-[#F5EBE0] p-1">
             {(
               [
                 {
@@ -217,13 +216,27 @@ export default function AdminFramesPage() {
                 type="button"
                 onClick={() => setView(tab.id)}
                 className={clsx(
-                  "rounded-full px-4 py-1.5 font-serif text-xs font-semibold transition-all duration-200",
+                  "relative rounded-full px-4 py-1.5 font-serif text-xs font-semibold transition-colors duration-200",
                   view === tab.id
-                    ? "bg-[#6B2D2C] text-[#F5EBE0] shadow"
+                    ? "text-[#F5EBE0]"
                     : "text-[#4A1A1A]/70 hover:text-[#4A1A1A]"
                 )}
               >
-                {tab.label} ({tab.count})
+                {view === tab.id && (
+                  <motion.span
+                    layoutId="frame-view-pill"
+                    className="absolute inset-0 rounded-full bg-[#6B2D2C] shadow-sm"
+                    transition={{
+                      type: "spring",
+                      stiffness: 420,
+                      damping: 34,
+                    }}
+                  />
+                )}
+
+                <span className="relative z-10">
+                  {tab.label} ({tab.count})
+                </span>
               </button>
             ))}
           </div>
@@ -243,15 +256,13 @@ export default function AdminFramesPage() {
             </p>
           </div>
         ) : (
-          <div className={busyFrameId ? "opacity-90 transition-opacity" : ""}>
-            <FrameTable
-              frames={shownFrames}
-              archivedView={view === "archived"}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onToggleArchive={handleToggleArchive}
-            />
-          </div>
+          <FrameTable
+            frames={shownFrames}
+            archivedView={view === "archived"}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onToggleArchive={handleToggleArchive}
+          />
         )}
       </section>
     </div>

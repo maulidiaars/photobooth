@@ -2,8 +2,14 @@ import type { CreateFramePayload, Frame, UpdateFramePayload } from "@/types/fram
 
 const BASE = "/api/frames";
 
-export async function getFrames(): Promise<Frame[]> {
-  const res = await fetch(BASE, { cache: "no-store" });
+/**
+ * Default: cuma frame AKTIF (yang dilihat pengunjung).
+ * Admin bisa minta semuanya (termasuk yang diarsipkan) lewat
+ * `includeArchived: true` — server tetap ngecek login admin.
+ */
+export async function getFrames(options?: { includeArchived?: boolean }): Promise<Frame[]> {
+  const url = options?.includeArchived ? `${BASE}?includeArchived=1` : BASE;
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error("Gagal memuat daftar frame");
   const json = await res.json();
   return json.data as Frame[];
@@ -36,6 +42,11 @@ export async function updateFrame(id: string, payload: UpdateFramePayload): Prom
   if (!res.ok) throw new Error("Gagal memperbarui frame");
   const json = await res.json();
   return json.data as Frame;
+}
+
+/** Arsipkan (archived = true) atau aktifkan lagi (archived = false). */
+export async function setFrameArchived(id: string, archived: boolean): Promise<Frame> {
+  return updateFrame(id, { archived });
 }
 
 export async function deleteFrame(id: string): Promise<void> {

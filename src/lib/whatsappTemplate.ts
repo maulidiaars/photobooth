@@ -126,12 +126,12 @@ export function parseTemplateToLines(template: string): TemplatePart[][] {
       let buffer = "";
 
       for (const chunk of line.split(/(\{\w+\})/g)) {
-        const match = /^\{(\w+)\}$/.exec(chunk);
+        const name = /^\{(\w+)\}$/.exec(chunk)?.[1];
 
-        if (match && VARIABLE_KEYS.includes(match[1])) {
+        if (name && VARIABLE_KEYS.includes(name)) {
           parts.push({ type: "text", value: buffer });
           buffer = "";
-          parts.push({ type: "var", key: match[1] as WhatsappVariableKey });
+          parts.push({ type: "var", key: name as WhatsappVariableKey });
         } else {
           buffer += chunk;
         }

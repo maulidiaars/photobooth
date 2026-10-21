@@ -42,4 +42,5 @@ export const ROUTES = {
   adminDashboard: "/admin/dashboard",
   adminFrames: "/admin/frames",
   adminPhotos: "/admin/photos",
+  adminWhatsapp: "/admin/whatsapp",
 };

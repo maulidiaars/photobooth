@@ -19,21 +19,14 @@ import { ConfirmModal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { APP_NAME, APP_URL } from "@/lib/constants";
 import { formatDateTimeFullID } from "@/lib/dateUtils";
+import { getWhatsappTemplate } from "@/services/settingsService";
+import {
+  DEFAULT_WHATSAPP_TEMPLATE,
+  buildWhatsappVars,
+  ensureRequiredVariables,
+  renderWhatsappTemplate,
+} from "@/lib/whatsappTemplate";
 import type { Photo } from "@/types/photo";
-
-// ============================================
-// KONFIGURASI WHATSAPP ADMIN
-// ============================================
-const ADMIN_PHONE = "083833726472";
-
-// Akun sosial media yang ikut dikirim di pesan WhatsApp ke pengguna
-const TIKTOK_URL = "https://www.tiktok.com/@clikja.photobooth";
-const INSTAGRAM_URL = "https://www.instagram.com/clikjaphotobooth";
-
-function formatPhoneDisplay(raw: string) {
-  const d = raw.replace(/[^\d]/g, "");
-  return d.replace(/(\d{4})(\d{4})(\d+)/, "$1-$2-$3");
-}
 
 interface PhotoLightboxProps {
   photo: Photo | null;
@@ -108,87 +101,106 @@ export function PhotoLightbox({
   }, [photo, lightboxRawOpen, onClose]);
 
   // ============================================
+  // TEMPLATE WHATSAPP
+  // Diambil dari pengaturan admin (halaman Pesan WhatsApp) setiap
+  // kali foto dibuka, jadi perubahan yang baru disimpan langsung
+  // dipakai tanpa perlu deploy ulang.
+  // ============================================
+  const templateRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!photo?.id) return;
+
+    let cancelled = false;
+    templateRef.current = null;
+
+    getWhatsappTemplate()
+      .then((result) => {
+        if (!cancelled) templateRef.current = result.template;
+      })
+      .catch(() => {
+        // Gagal muat: nanti dipakai template bawaan saat kirim.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [photo?.id]);
+
+  // ============================================
   // WHATSAPP
   // ============================================
-const handleSendWhatsApp = () => {
-  if (!photo?.whatsapp_number) {
-    toast.push("Nomor WhatsApp tidak tersedia", "error");
-    return;
-  }
-
-  setSending(true);
-
-  try {
-    const cleanNumber = photo.whatsapp_number.replace(/[^0-9]/g, "");
-
-    let formattedNumber = cleanNumber;
-
-    if (formattedNumber.startsWith("0")) {
-      formattedNumber = `62${formattedNumber.slice(1)}`;
-    } else if (!formattedNumber.startsWith("62")) {
-      formattedNumber = `62${formattedNumber}`;
+  const handleSendWhatsApp = async () => {
+    if (!photo?.whatsapp_number) {
+      toast.push("Nomor WhatsApp tidak tersedia", "error");
+      return;
     }
 
-    const origin =
-      APP_URL ||
-      (typeof window !== "undefined"
-        ? window.location.origin
-        : "");
+    const currentPhoto = photo;
 
-    const photoLink = `${origin}/foto/${photo.id}`;
+    setSending(true);
 
-    // Emoji dibuat menggunakan Unicode code point
-    // supaya tidak berubah menjadi karakter �.
-    const emoji = {
-      film: String.fromCodePoint(0x1f39e, 0xfe0f),
-      frame: String.fromCodePoint(0x1f5bc, 0xfe0f),
-      calendar: String.fromCodePoint(0x1f5d3, 0xfe0f),
-      one: `1${String.fromCodePoint(0xfe0f, 0x20e3)}`,
-      two: `2${String.fromCodePoint(0xfe0f, 0x20e3)}`,
-      camera: String.fromCodePoint(0x1f4f8),
-      music: String.fromCodePoint(0x1f3b5),
-      wave: String.fromCodePoint(0x1f44b),
-    };
+    try {
+      const cleanNumber = currentPhoto.whatsapp_number!.replace(/[^0-9]/g, "");
 
-    const messageText =
-      `*${APP_NAME}*\n\n` +
-      `Haii, terima kasih banyak ya udah mampir dan berfoto bareng kami hari ini! ${emoji.film}\n\n` +
-      `${emoji.frame} Frame: *${photo.frame_nama ?? "Frame"}*\n` +
-      `${emoji.calendar} Tanggal: ${formatTime(photo.created_at)}\n\n` +
-      `Yeay, hasil foto kamu udah jadi! Klik link di bawah ini buat lihat & download-nya ya:\n` +
-      `${photoLink}\n\n` +
-      `Di halaman itu ada 2 bagian:\n` +
-      `${emoji.one} Hasil foto lengkap dengan frame — tinggal tekan tombol download-nya\n` +
-      `${emoji.two} Foto asli satuan (tanpa frame) — geser satu-satu, tiap foto ada tombol download sendiri\n\n` +
-      `Ada kendala atau mau cetak ulang? Hubungi admin kami di *${formatPhoneDisplay(
-        ADMIN_PHONE
-      )}*\n\n` +
-      `Yuk follow kami juga biar gak ketinggalan update seru lainnya:\n` +
-      `${emoji.camera} Instagram: ${INSTAGRAM_URL}\n` +
-      `${emoji.music} TikTok: ${TIKTOK_URL}\n\n` +
-      `Semoga harimu menyenangkan, sampai jumpa lagi! ${emoji.wave}\n\n` +
-      `_Salam hangat, tim ${APP_NAME}_`;
+      let formattedNumber = cleanNumber;
 
-    // URLSearchParams menangani encoding Unicode/emoji dengan benar.
-    const whatsappUrl =
-      `https://api.whatsapp.com/send/?phone=${formattedNumber}&` +
-      new URLSearchParams({
-        text: messageText,
-      }).toString();
+      if (formattedNumber.startsWith("0")) {
+        formattedNumber = `62${formattedNumber.slice(1)}`;
+      } else if (!formattedNumber.startsWith("62")) {
+        formattedNumber = `62${formattedNumber}`;
+      }
 
-    window.open(whatsappUrl, "_blank");
+      const origin =
+        APP_URL ||
+        (typeof window !== "undefined" ? window.location.origin : "");
 
-    toast.push(
-      "WhatsApp dibuka dengan link foto siap kirim!",
-      "success"
-    );
-  } catch (error) {
-    console.error("WhatsApp error:", error);
-    toast.push("Gagal membuka WhatsApp", "error");
-  } finally {
-    setSending(false);
-  }
-};
+      const photoLink = `${origin}/foto/${currentPhoto.id}`;
+
+      // Biasanya template sudah termuat saat foto dibuka, jadi WhatsApp
+      // langsung terbuka tanpa menunggu (penting supaya tidak diblokir
+      // browser sebagai pop-up).
+      let template = templateRef.current;
+
+      if (template === null) {
+        try {
+          template = (await getWhatsappTemplate()).template;
+        } catch {
+          template = DEFAULT_WHATSAPP_TEMPLATE;
+        }
+      }
+
+      const messageText = renderWhatsappTemplate(
+        ensureRequiredVariables(template),
+        buildWhatsappVars({
+          brand: APP_NAME,
+          frame: currentPhoto.frame_nama ?? "Frame",
+          tanggal: formatTime(currentPhoto.created_at),
+          link: photoLink,
+        })
+      );
+
+      // URLSearchParams menangani encoding Unicode/emoji dengan benar.
+      const whatsappUrl =
+        `https://api.whatsapp.com/send/?phone=${formattedNumber}&` +
+        new URLSearchParams({
+          text: messageText,
+        }).toString();
+
+      window.open(whatsappUrl, "_blank");
+
+      toast.push(
+        "WhatsApp dibuka dengan link foto siap kirim!",
+        "success"
+      );
+    } catch (error) {
+      console.error("WhatsApp error:", error);
+      toast.push("Gagal membuka WhatsApp", "error");
+    } finally {
+      setSending(false);
+    }
+  };
+
   // ============================================
   // DOWNLOAD RAW PHOTO
   // ============================================

@@ -69,6 +69,30 @@ const toTemplate = (lines: EditorLine[]) =>
 const isTextOnly = (line: EditorLine) =>
   line.parts.every((part) => part.type === "text");
 
+/**
+ * Penanda format WhatsApp (* atau _) yang menempel di sebelah
+ * variabel dipisah dari teks, supaya admin nggak lihat / ngerusak
+ * tanda bintang itu. Tanda ini tetap ikut tersimpan di template.
+ */
+function getMarkers(parts: TemplatePart[], index: number) {
+  const part = parts[index];
+  let rest = part?.type === "text" ? part.value : "";
+  let lead = "";
+  let trail = "";
+
+  if (parts[index - 1]?.type === "var" && /^[*_]/.test(rest)) {
+    lead = rest.charAt(0);
+    rest = rest.slice(1);
+  }
+
+  if (parts[index + 1]?.type === "var" && /[*_]$/.test(rest)) {
+    trail = rest.slice(-1);
+    rest = rest.slice(0, -1);
+  }
+
+  return { lead, display: rest, trail };
+}
+
 interface PendingFocus {
   lineId: string;
   partIndex: number;
@@ -174,7 +198,7 @@ function VariableChip({ variableKey }: { variableKey: WhatsappVariableKey }) {
   return (
     <span
       title={`${meta?.desc ?? variableKey}. Diisi otomatis dan tidak bisa diubah.`}
-      className="inline-flex h-6 shrink-0 select-none items-center gap-1 rounded-md bg-[#6B2D2C]/10 px-2 text-[11px] font-semibold text-[#6B2D2C]"
+      className="inline-flex h-6 shrink-0 select-none items-center gap-1 rounded-md border border-dashed border-[#C9A87C]/50 bg-[#C9A87C]/15 px-2 text-[11px] font-semibold text-[#E7CFA4]"
     >
       <Lock size={10} strokeWidth={2.6} />
       {meta?.label ?? variableKey}
@@ -182,8 +206,22 @@ function VariableChip({ variableKey }: { variableKey: WhatsappVariableKey }) {
   );
 }
 
+function MarkerGlyph({ marker }: { marker: string }) {
+  if (!marker) return null;
+
+  return (
+    <span
+      title="Penanda tebal/miring WhatsApp, diatur otomatis"
+      className="inline-flex h-6 select-none items-center font-mono text-xs text-[#C9A87C]/40"
+    >
+      {marker}
+    </span>
+  );
+}
+
 interface AutoTextProps {
   value: string;
+  spacer: boolean;
   fill: boolean;
   placeholder?: string;
   ariaLabel: string;
@@ -199,6 +237,7 @@ interface AutoTextProps {
  */
 function AutoText({
   value,
+  spacer,
   fill,
   placeholder,
   ariaLabel,
@@ -206,13 +245,15 @@ function AutoText({
   onChange,
   onKeyDown,
 }: AutoTextProps) {
-  const shared =
-    "whitespace-pre-wrap break-words px-0.5 text-sm leading-6 [grid-area:1/1]";
+  const shared = clsx(
+    "whitespace-pre-wrap break-words px-1 [grid-area:1/1]",
+    spacer ? "text-[11px] italic leading-6" : "text-sm leading-6"
+  );
 
   return (
     <span
       className={clsx(
-        "inline-grid min-w-[1.25rem] max-w-full",
+        "inline-grid min-w-[1rem] max-w-full",
         fill && "w-full flex-1 basis-full"
       )}
     >
@@ -231,7 +272,8 @@ function AutoText({
         onKeyDown={onKeyDown}
         className={clsx(
           shared,
-          "w-0 min-w-full resize-none overflow-hidden rounded-md bg-transparent text-[#3F3029] outline-none transition-colors placeholder:text-[#C7B6A8] focus:bg-white focus:ring-2 focus:ring-[#6B2D2C]/15"
+          "w-0 min-w-full resize-none overflow-hidden bg-transparent caret-[#C9A87C] outline-none placeholder:text-[#C9A87C]/35",
+          spacer ? "text-[#C9A87C]/70" : "text-[#F5EBE0]"
         )}
       />
     </span>
@@ -240,6 +282,7 @@ function AutoText({
 
 interface LineRowProps {
   line: EditorLine;
+  number: number;
   canRemove: boolean;
   registerRef: (
     partIndex: number
@@ -255,6 +298,7 @@ interface LineRowProps {
 
 function LineRow({
   line,
+  number,
   canRemove,
   registerRef,
   onChangeText,
@@ -263,35 +307,69 @@ function LineRow({
   onRemove,
 }: LineRowProps) {
   const textOnly = isTextOnly(line);
+  const firstPart = line.parts[0];
+  const spacer =
+    textOnly && firstPart?.type === "text" && firstPart.value === "";
+  const variant = !textOnly ? "auto" : spacer ? "spacer" : "text";
 
   return (
-    <div className="group flex items-start gap-2 rounded-xl px-3 py-0.5 transition-colors focus-within:bg-[#F8F3EC] hover:bg-[#F8F3EC]">
-      <div className="flex min-w-0 flex-1 flex-wrap items-start gap-x-1 gap-y-0.5 py-0.5">
-        {line.parts.map((part, index) =>
-          part.type === "var" ? (
-            <VariableChip key={`v-${index}`} variableKey={part.key} />
-          ) : (
-            <AutoText
-              key={`t-${index}`}
-              value={part.value}
-              fill={textOnly}
-              placeholder={textOnly ? "Baris kosong" : undefined}
-              ariaLabel="Isi kalimat"
-              textareaRef={registerRef(index)}
-              onChange={(value) => onChangeText(index, value)}
-              onKeyDown={(event) => onKeyDown(index, event)}
-            />
-          )
+    <div className="group flex items-start gap-2">
+      <span className="w-6 shrink-0 select-none pt-2 text-right font-mono text-[10px] text-[#C9A87C]/30">
+        {String(number).padStart(2, "0")}
+      </span>
+
+      <div
+        className={clsx(
+          "flex min-w-0 flex-1 flex-wrap items-start gap-x-1 gap-y-1 rounded-lg border px-2 py-1 transition-colors",
+          variant === "spacer" &&
+            "border-dashed border-[#3A2018] bg-transparent focus-within:border-[#C9A87C]/50 hover:border-[#6B2D2C]",
+          variant === "text" &&
+            "border-[#3A2018] bg-[#2A1510]/70 focus-within:border-[#C9A87C]/60 focus-within:bg-[#2A1510] hover:border-[#6B2D2C]",
+          variant === "auto" &&
+            "border-[#3A2018] border-l-2 border-l-[#C9A87C]/70 bg-[#150907] focus-within:border-y-[#C9A87C]/40 focus-within:border-r-[#C9A87C]/40 hover:bg-[#1C0E0B]"
         )}
+      >
+        {line.parts.map((part, index) => {
+          if (part.type === "var") {
+            return <VariableChip key={`v-${index}`} variableKey={part.key} />;
+          }
+
+          const { lead, display, trail } = getMarkers(line.parts, index);
+
+          return (
+            <span
+              key={`t-${index}`}
+              className={clsx(
+                "inline-flex max-w-full items-start gap-0.5",
+                textOnly && "w-full flex-1 basis-full"
+              )}
+            >
+              <MarkerGlyph marker={lead} />
+              <AutoText
+                value={display}
+                spacer={spacer}
+                fill={textOnly}
+                placeholder={
+                  spacer ? "Jarak antar paragraf (klik untuk menulis)" : undefined
+                }
+                ariaLabel="Isi kalimat"
+                textareaRef={registerRef(index)}
+                onChange={(value) => onChangeText(index, lead + value + trail)}
+                onKeyDown={(event) => onKeyDown(index, event)}
+              />
+              <MarkerGlyph marker={trail} />
+            </span>
+          );
+        })}
       </div>
 
-      <div className="flex shrink-0 items-center gap-0.5 pt-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100">
+      <div className="flex w-[3.25rem] shrink-0 items-center gap-0.5 pt-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100">
         <button
           type="button"
           onClick={onAddBelow}
           aria-label="Tambah baris di bawah"
           title="Tambah baris di bawah"
-          className="flex h-6 w-6 items-center justify-center rounded-md text-[#8A7A6F] transition-colors hover:bg-white hover:text-[#6B2D2C]"
+          className="flex h-6 w-6 items-center justify-center rounded-md text-[#C9A87C]/70 transition-colors hover:bg-[#3A2018] hover:text-[#F5EBE0]"
         >
           <Plus size={14} strokeWidth={2.4} />
         </button>
@@ -302,7 +380,7 @@ function LineRow({
             onClick={onRemove}
             aria-label="Hapus baris"
             title="Hapus baris"
-            className="flex h-6 w-6 items-center justify-center rounded-md text-[#8A7A6F] transition-colors hover:bg-white hover:text-[#A0524A]"
+            className="flex h-6 w-6 items-center justify-center rounded-md text-[#C9A87C]/70 transition-colors hover:bg-[#3A2018] hover:text-[#E58B80]"
           >
             <Trash2 size={13} strokeWidth={2.3} />
           </button>
@@ -390,9 +468,9 @@ export default function AdminWhatsappPage() {
     if (!target) return;
 
     const el = inputRefs.current.get(`${target.lineId}:${target.partIndex}`);
+    pendingFocus.current = null;
     if (!el) return;
 
-    pendingFocus.current = null;
     el.focus();
 
     const position = target.caret === "end" ? el.value.length : target.caret;
@@ -551,11 +629,12 @@ export default function AdminWhatsappPage() {
       if (isLastPart) {
         const caretStart = el.selectionStart ?? el.value.length;
         const caretEnd = el.selectionEnd ?? caretStart;
+        const { lead } = getMarkers(line.parts, partIndex);
 
         splitLine(
           line.id,
           partIndex,
-          el.value.slice(0, caretStart),
+          lead + el.value.slice(0, caretStart),
           el.value.slice(caretEnd)
         );
       } else {
@@ -670,14 +749,14 @@ export default function AdminWhatsappPage() {
         </section>
       ) : (
         <div className="grid min-w-0 grid-cols-1 items-start gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
-          {/* EDITOR */}
-          <section className="min-w-0 overflow-hidden rounded-3xl border border-[#E9DED2] bg-white shadow-[0_12px_40px_rgba(74,26,26,0.045)]">
-            <div className="flex items-center justify-between gap-3 border-b border-[#F0E7DD] px-5 py-4 sm:px-6">
+          {/* EDITOR (tema gelap) */}
+          <section className="min-w-0 overflow-hidden rounded-3xl border border-[#3A2018] bg-[#1B0D0A] shadow-[0_18px_50px_rgba(26,11,8,0.35)]">
+            <div className="flex items-center justify-between gap-3 border-b border-[#3A2018] bg-[#241210] px-5 py-4 sm:px-6">
               <div>
-                <h2 className="font-serif text-lg font-bold text-[#4A1A1A]">
+                <h2 className="font-serif text-lg font-bold text-[#F5EBE0]">
                   Isi pesan
                 </h2>
-                <p className="mt-0.5 text-xs text-[#8A7A6F]">
+                <p className="mt-0.5 text-xs text-[#C9A87C]/70">
                   Klik kalimat untuk mengubahnya. Tekan Enter untuk baris
                   baru.
                 </p>
@@ -686,7 +765,7 @@ export default function AdminWhatsappPage() {
               <span
                 className={clsx(
                   "shrink-0 text-xs tabular-nums",
-                  tooLong ? "font-semibold text-red-600" : "text-[#8A7A6F]"
+                  tooLong ? "font-semibold text-red-400" : "text-[#C9A87C]/60"
                 )}
               >
                 {value.length.toLocaleString("id-ID")} /{" "}
@@ -694,11 +773,33 @@ export default function AdminWhatsappPage() {
               </span>
             </div>
 
-            <div className="flex flex-col gap-0.5 px-2 py-3 sm:px-3">
-              {lines.map((line) => (
+            {/* Keterangan warna */}
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-[#3A2018] bg-[#1F0F0B] px-5 py-3 text-[11px] text-[#C9A87C]/80 sm:px-6">
+              <span className="flex items-center gap-2">
+                <span className="h-4 w-9 rounded border border-[#3A2018] bg-[#2A1510]" />
+                Kalimat, bisa kamu ubah
+              </span>
+
+              <span className="flex items-center gap-2">
+                <span className="inline-flex h-5 items-center gap-1 rounded-md border border-dashed border-[#C9A87C]/50 bg-[#C9A87C]/15 px-1.5 font-semibold text-[#E7CFA4]">
+                  <Lock size={9} strokeWidth={2.6} />
+                  Otomatis
+                </span>
+                Diisi sistem, terkunci
+              </span>
+
+              <span className="flex items-center gap-2">
+                <span className="w-9 border-t border-dashed border-[#6B4A3A]" />
+                Jarak antar paragraf
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-1.5 px-3 py-4 sm:px-4">
+              {lines.map((line, index) => (
                 <LineRow
                   key={line.id}
                   line={line}
+                  number={index + 1}
                   canRemove={lines.length > 1}
                   registerRef={registerRef(line.id)}
                   onChangeText={(partIndex, text) =>
@@ -713,16 +814,16 @@ export default function AdminWhatsappPage() {
               ))}
             </div>
 
-            <div className="border-t border-[#F0E7DD] bg-[#FFFCF8] px-5 py-4 sm:px-6">
-              <p className="mb-3 text-[11px] leading-5 text-[#8A7A6F]">
-                Pakai <code className="rounded bg-white px-1 py-0.5 text-[#6B2D2C]">*teks*</code>{" "}
+            <div className="border-t border-[#3A2018] bg-[#150907] px-5 py-4 sm:px-6">
+              <p className="mb-3 text-[11px] leading-5 text-[#C9A87C]/70">
+                Pakai <code className="rounded bg-[#2A1510] px-1 py-0.5 text-[#E7CFA4]">*teks*</code>{" "}
                 untuk tebal dan{" "}
-                <code className="rounded bg-white px-1 py-0.5 text-[#6B2D2C]">_teks_</code>{" "}
+                <code className="rounded bg-[#2A1510] px-1 py-0.5 text-[#E7CFA4]">_teks_</code>{" "}
                 untuk miring, sama seperti di WhatsApp.
               </p>
 
               {tooLong && (
-                <p className="mb-3 text-xs font-medium text-red-600">
+                <p className="mb-3 text-xs font-medium text-red-400">
                   Pesan melebihi batas karakter. Kurangi dulu sebelum
                   menyimpan.
                 </p>
@@ -733,7 +834,7 @@ export default function AdminWhatsappPage() {
                   type="button"
                   onClick={handleSave}
                   disabled={!dirty || empty || tooLong || saving}
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#6B2D2C] px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-[#6B2D2C]/10 transition hover:bg-[#4A1A1A] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#C9A87C] px-6 py-2.5 text-sm font-semibold text-[#2A1510] shadow-md transition hover:bg-[#D8B98D] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
                 >
                   {saving ? (
                     <LoaderCircle size={17} className="animate-spin" />
@@ -747,7 +848,7 @@ export default function AdminWhatsappPage() {
                   type="button"
                   onClick={handleReset}
                   disabled={saving}
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#E5D9CE] bg-white px-5 py-2.5 text-sm font-medium text-[#6D5548] transition hover:bg-[#F9F3EC] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#4A2A20] bg-transparent px-5 py-2.5 text-sm font-medium text-[#C9A87C] transition hover:bg-[#2A1510] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <RotateCcw size={15} />
                   Kembalikan bawaan

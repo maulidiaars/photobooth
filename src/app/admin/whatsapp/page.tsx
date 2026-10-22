@@ -232,7 +232,7 @@ function MarkerGlyph({ marker }: { marker: string }) {
   return (
     <span
       title="Penanda tebal/miring WhatsApp, diatur otomatis"
-      className="inline-flex h-7 select-none items-center font-mono text-xs text-[#8B5A4B]/40"
+      className="inline-flex h-7 select-none items-center font-mono text-xs text-[#8B5A4B]/50"
     >
       {marker}
     </span>
@@ -300,7 +300,7 @@ function AutoText({
           shared,
           "w-0 min-w-full resize-none overflow-hidden bg-transparent caret-[#6B2D2C] outline-none focus-visible:outline-none",
           spacer
-            ? "text-[#8B5A4B] placeholder:text-transparent group-hover:placeholder:text-[#8B5A4B]/50 focus:placeholder:text-[#8B5A4B]/60"
+            ? "text-[#8B5A4B] placeholder:text-[#8B5A4B]/60"
             : "text-ink placeholder:text-[#8B5A4B]/40"
         )}
       />
@@ -338,44 +338,52 @@ function LineRow({
   const firstPart = line.parts[0];
   const spacer =
     textOnly && firstPart?.type === "text" && firstPart.value === "";
+  const variant = !textOnly ? "auto" : spacer ? "spacer" : "text";
 
   return (
-    <div className="group flex items-start gap-1.5">
-      <span className="w-6 shrink-0 select-none pt-[7px] text-right font-serif text-[11px] italic text-[#8B5A4B]/40">
+    <div className="group flex items-start gap-2">
+      <span className="w-6 shrink-0 select-none pt-[9px] text-right font-serif text-xs italic text-[#8B5A4B]/60">
         {number}
       </span>
 
       <div
         className={clsx(
-          "relative flex min-w-0 flex-1 flex-wrap items-start gap-x-1.5 gap-y-1 rounded-xl px-3 transition-all duration-150",
-          "hover:bg-[#F5EBE0]/70 focus-within:bg-white focus-within:shadow-[0_0_0_1.5px_rgba(107,45,44,0.35),0_6px_18px_-8px_rgba(107,45,44,0.3)]",
-          spacer ? "py-0" : "py-1"
+          "relative flex min-w-0 flex-1 flex-wrap items-start gap-x-2 gap-y-1.5 rounded-xl border px-3 transition-all duration-150",
+          "hover:border-[#6B2D2C]/50 focus-within:border-[#6B2D2C] focus-within:ring-4 focus-within:ring-[#6B2D2C]/10",
+          variant === "text" &&
+            "border-[#D6C4AE] bg-white py-1.5 shadow-[inset_0_1px_2px_rgba(74,26,26,0.06)]",
+          variant === "spacer" &&
+            "border-dashed border-[#CDB9A2] bg-[#F9F1E4]/60 py-0.5 focus-within:bg-white",
+          variant === "auto" &&
+            "border-[#E3CFC0] border-l-4 border-l-[#6B2D2C]/60 bg-[#F9F1E4] py-1.5"
         )}
       >
-        {spacer && (
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-x-3 top-1/2 h-px -translate-y-1/2 border-t border-dotted border-[#8B5A4B]/25 group-focus-within:opacity-0"
-          />
-        )}
-
         {line.parts.map((part, index) => {
           if (part.type === "var") {
             return (
-              <span key={`v-${index}`} className="flex h-7 items-center">
+              <span key={`v-${index}`} className="flex h-8 items-center">
                 <VariableChip variableKey={part.key} />
               </span>
             );
           }
 
           const { lead, display, trail } = getMarkers(line.parts, index);
+          const empty = display === "" && !lead && !trail;
 
           return (
             <span
               key={`t-${index}`}
               className={clsx(
                 "relative inline-flex max-w-full items-start gap-0.5",
-                textOnly && "w-full flex-1 basis-full"
+                textOnly && "w-full flex-1 basis-full",
+                // Di baris yang ada bagian otomatisnya, tiap potongan
+                // teks yang bisa diketik dibuat jadi kotak putih sendiri.
+                !textOnly &&
+                  "min-h-8 min-w-[2.5rem] rounded-lg border px-1",
+                !textOnly &&
+                  (empty
+                    ? "border-dashed border-[#CDB9A2] bg-white/50 focus-within:border-solid focus-within:border-[#6B2D2C]/60 focus-within:bg-white"
+                    : "border-[#D6C4AE] bg-white")
               )}
             >
               <MarkerGlyph marker={lead} />
@@ -383,7 +391,13 @@ function LineRow({
                 value={display}
                 spacer={spacer}
                 fill={textOnly}
-                placeholder={spacer ? "jarak antar paragraf" : undefined}
+                placeholder={
+                  spacer
+                    ? "jarak antar paragraf — klik untuk menulis"
+                    : !textOnly
+                    ? "ketik"
+                    : undefined
+                }
                 ariaLabel="Isi kalimat"
                 textareaRef={registerRef(index)}
                 onChange={(value) => onChangeText(index, lead + value + trail)}
@@ -395,7 +409,7 @@ function LineRow({
         })}
       </div>
 
-      <div className="flex w-[3.25rem] shrink-0 items-center gap-0.5 pt-0.5 opacity-40 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100">
+      <div className="flex w-[3.25rem] shrink-0 items-center gap-0.5 pt-1 opacity-70 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
         <button
           type="button"
           onClick={onAddBelow}
@@ -417,6 +431,29 @@ function LineRow({
             <Trash2 size={14} strokeWidth={2.1} />
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+/** Satu contoh di legenda: gambar kecil + judul + penjelasan. */
+function LegendItem({
+  sample,
+  title,
+  caption,
+}: {
+  sample: ReactNode;
+  title: string;
+  caption: string;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      <div className="flex h-9 items-center">{sample}</div>
+      <div>
+        <p className="font-serif text-[13px] font-semibold text-[#4A1A1A]">
+          {title}
+        </p>
+        <p className="text-xs leading-5 text-[#8B5A4B]">{caption}</p>
       </div>
     </div>
   );
@@ -810,37 +847,87 @@ export default function AdminWhatsappPage() {
         <div className="grid min-w-0 grid-cols-1 items-start gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
           {/* ===================== EDITOR ===================== */}
           <section className="min-w-0 overflow-clip rounded-3xl border border-[#E9DED2] bg-[#FFFCF6] shadow-[0_24px_60px_-28px_rgba(74,26,26,0.35)]">
-            <div className="flex items-start justify-between gap-4 px-6 pb-4 pt-6 sm:px-8">
-              <div>
+            {/* Judul + penghitung karakter */}
+            <div className="flex flex-col gap-4 px-6 pb-5 pt-6 sm:flex-row sm:items-start sm:justify-between sm:px-8">
+              <div className="min-w-0">
                 <h2 className="font-serif text-xl font-bold text-[#4A1A1A]">
                   Isi pesan
                 </h2>
-                <p className="mt-1 text-[13px] leading-5 text-[#8B5A4B]">
-                  Klik kalimat mana saja untuk mengubahnya. Tekan{" "}
+                <p className="mt-1 text-[13px] leading-5 text-[#6B5A50]">
+                  Ketik langsung di <b>kotak putih</b> untuk mengubah kalimat.
+                  Tekan{" "}
                   <kbd className="rounded border border-[#E0D2C2] bg-white px-1.5 py-px font-mono text-[11px] text-[#6B2D2C]">
                     Enter
                   </kbd>{" "}
-                  untuk baris baru.
+                  untuk membuat baris baru.
                 </p>
               </div>
 
-              <span
-                className={clsx(
-                  "shrink-0 pt-1.5 font-serif text-xs italic tabular-nums",
-                  tooLong ? "font-semibold text-red-600" : "text-[#8B5A4B]/70"
-                )}
-              >
-                {value.length.toLocaleString("id-ID")} /{" "}
-                {WHATSAPP_TEMPLATE_MAX_LENGTH.toLocaleString("id-ID")}
-              </span>
+              <div className="w-full shrink-0 sm:w-44">
+                <p
+                  className={clsx(
+                    "text-xs tabular-nums",
+                    tooLong ? "font-semibold text-red-600" : "text-[#6B5A50]"
+                  )}
+                >
+                  <b>{value.length.toLocaleString("id-ID")}</b> dari{" "}
+                  {WHATSAPP_TEMPLATE_MAX_LENGTH.toLocaleString("id-ID")}{" "}
+                  karakter
+                </p>
+                <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[#E9DED2]">
+                  <div
+                    className={clsx(
+                      "h-full rounded-full transition-all duration-300",
+                      tooLong ? "bg-red-500" : "bg-[#6B2D2C]"
+                    )}
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        (value.length / WHATSAPP_TEMPLATE_MAX_LENGTH) * 100
+                      )}%`,
+                    }}
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="px-6 sm:px-8">
-              <Hairline />
+            {/* Keterangan: cara membaca kotak-kotak di bawah */}
+            <div className="border-y border-[#E9DED2] bg-[#F9F1E4]/70 px-6 py-4 sm:px-8">
+              <p className="mb-3 font-serif text-xs italic text-[#8B5A4B]">
+                Cara membaca kotak di bawah:
+              </p>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
+                <LegendItem
+                  sample={
+                    <span className="flex h-9 w-full items-center rounded-lg border border-[#D6C4AE] bg-white px-3 text-[13px] text-ink/70 shadow-[inset_0_1px_2px_rgba(74,26,26,0.06)]">
+                      Contoh kalimat
+                    </span>
+                  }
+                  title="Kotak putih"
+                  caption="Bisa diketik dan diubah"
+                />
+
+                <LegendItem
+                  sample={<AutoPill label="Link foto" />}
+                  title="Pil bergembok"
+                  caption="Diisi otomatis, tidak bisa diubah"
+                />
+
+                <LegendItem
+                  sample={
+                    <span className="flex h-7 w-full items-center rounded-lg border border-dashed border-[#CDB9A2] bg-[#F9F1E4]/60 px-3 text-xs italic text-[#8B5A4B]/70">
+                      jarak antar paragraf
+                    </span>
+                  }
+                  title="Kotak putus-putus"
+                  caption="Baris kosong sebagai jarak"
+                />
+              </div>
             </div>
 
             {/* Baris-baris pesan */}
-            <div className="flex flex-col gap-0.5 px-3 py-5 sm:px-5">
+            <div className="flex flex-col gap-2 px-3 py-6 sm:px-5">
               {lines.map((line, index) => (
                 <LineRow
                   key={line.id}
@@ -860,13 +947,6 @@ export default function AdminWhatsappPage() {
               ))}
             </div>
 
-            {/* Legenda satu baris */}
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-[#E9DED2] bg-[#F9F1E4]/70 px-6 py-3 text-xs text-[#8B5A4B] sm:px-8">
-              <span>Teks biasa bisa kamu ketik.</span>
-              <AutoPill label="Otomatis" small />
-              <span>diisi sistem untuk tiap pelanggan, tidak bisa diubah.</span>
-            </div>
-
             {/* Tombol simpan (nempel di bawah saat scroll) */}
             <div className="sticky bottom-0 z-10 border-t border-[#E9DED2] bg-[#FFFCF6]/95 px-6 py-4 backdrop-blur sm:px-8">
               {tooLong && (
@@ -876,30 +956,44 @@ export default function AdminWhatsappPage() {
                 </p>
               )}
 
-              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  disabled={saving}
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-3 text-sm font-medium text-[#8B5A4B] transition hover:bg-[#6B2D2C]/10 hover:text-[#6B2D2C] disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <RotateCcw size={15} />
-                  Kembalikan bawaan
-                </button>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 text-[13px] text-[#6B5A50]">
+                  <span
+                    className={clsx(
+                      "h-2 w-2 shrink-0 rounded-full",
+                      dirty ? "bg-amber-500" : "bg-emerald-600"
+                    )}
+                  />
+                  {dirty
+                    ? "Ada perubahan yang belum disimpan"
+                    : "Semua perubahan sudah tersimpan"}
+                </div>
 
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={!dirty || empty || tooLong || saving}
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#6B2D2C] px-7 py-2.5 font-serif text-[15px] font-medium tracking-wide text-[#F5EBE0] shadow-lg shadow-[#6B2D2C]/25 transition hover:bg-[#4A1A1A] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
-                >
-                  {saving ? (
-                    <LoaderCircle size={17} className="animate-spin" />
-                  ) : (
-                    <Save size={17} />
-                  )}
-                  {saving ? "Menyimpan..." : "Simpan perubahan"}
-                </button>
+                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    disabled={saving}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#D6C4AE] bg-white px-4 text-sm font-medium text-[#6B2D2C] transition hover:border-[#6B2D2C]/50 hover:bg-[#F5EBE0] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <RotateCcw size={15} />
+                    Kembalikan bawaan
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={!dirty || empty || tooLong || saving}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#6B2D2C] px-7 py-2.5 font-serif text-[15px] font-medium tracking-wide text-[#F5EBE0] shadow-lg shadow-[#6B2D2C]/25 transition hover:bg-[#4A1A1A] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                  >
+                    {saving ? (
+                      <LoaderCircle size={17} className="animate-spin" />
+                    ) : (
+                      <Save size={17} />
+                    )}
+                    {saving ? "Menyimpan..." : "Simpan perubahan"}
+                  </button>
+                </div>
               </div>
             </div>
           </section>

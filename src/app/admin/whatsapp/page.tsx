@@ -13,12 +13,15 @@ import clsx from "clsx";
 import {
   AlertCircle,
   CheckCheck,
+  Info,
   LoaderCircle,
   Lock,
   MessageCircle,
+  Pencil,
   Plus,
   RotateCcw,
   Save,
+  Smartphone,
   Trash2,
 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
@@ -149,7 +152,7 @@ function renderWhatsAppText(text: string): ReactNode[] {
 }
 
 /* ------------------------------------------------------------------ */
-/* Bubble WhatsApp (tanpa container / header / keyboard)               */
+/* Bubble WhatsApp                                                     */
 /* ------------------------------------------------------------------ */
 
 function WhatsAppBubble({ text, time }: { text: string; time: string }) {
@@ -187,6 +190,54 @@ function WhatsAppBubble({ text, time }: { text: string; time: string }) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Kartu catatan (dibedakan jelas dari area yang bisa diedit)          */
+/* ------------------------------------------------------------------ */
+
+function NoteCard({
+  title,
+  children,
+  tone = "info",
+}: {
+  title: string;
+  children: ReactNode;
+  tone?: "info" | "tip";
+}) {
+  return (
+    <div
+      className={clsx(
+        "flex gap-3 rounded-2xl border p-4 text-sm leading-6",
+        tone === "info"
+          ? "border-sky-200 bg-sky-50 text-sky-950"
+          : "border-amber-200 bg-amber-50 text-amber-950"
+      )}
+    >
+      <div
+        className={clsx(
+          "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
+          tone === "info"
+            ? "bg-sky-100 text-sky-700"
+            : "bg-amber-100 text-amber-700"
+        )}
+      >
+        <Info size={16} strokeWidth={2.4} />
+      </div>
+
+      <div className="min-w-0">
+        <p
+          className={clsx(
+            "text-[11px] font-bold uppercase tracking-wider",
+            tone === "info" ? "text-sky-700" : "text-amber-700"
+          )}
+        >
+          Catatan · {title}
+        </p>
+        <div className="mt-1">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Komponen editor                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -198,9 +249,9 @@ function VariableChip({ variableKey }: { variableKey: WhatsappVariableKey }) {
   return (
     <span
       title={`${meta?.desc ?? variableKey}. Diisi otomatis dan tidak bisa diubah.`}
-      className="inline-flex h-6 shrink-0 select-none items-center gap-1 rounded-md border border-dashed border-[#C9A87C]/50 bg-[#C9A87C]/15 px-2 text-[11px] font-semibold text-[#E7CFA4]"
+      className="inline-flex h-7 shrink-0 select-none items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-100 px-2.5 text-xs font-bold text-amber-900"
     >
-      <Lock size={10} strokeWidth={2.6} />
+      <Lock size={11} strokeWidth={2.6} />
       {meta?.label ?? variableKey}
     </span>
   );
@@ -212,7 +263,7 @@ function MarkerGlyph({ marker }: { marker: string }) {
   return (
     <span
       title="Penanda tebal/miring WhatsApp, diatur otomatis"
-      className="inline-flex h-6 select-none items-center font-mono text-xs text-[#C9A87C]/40"
+      className="inline-flex h-7 select-none items-center rounded bg-stone-100 px-1 font-mono text-xs font-bold text-stone-400"
     >
       {marker}
     </span>
@@ -247,7 +298,7 @@ function AutoText({
 }: AutoTextProps) {
   const shared = clsx(
     "whitespace-pre-wrap break-words px-1 [grid-area:1/1]",
-    spacer ? "text-[11px] italic leading-6" : "text-sm leading-6"
+    spacer ? "text-xs italic leading-7" : "text-[15px] leading-7"
   );
 
   return (
@@ -272,8 +323,8 @@ function AutoText({
         onKeyDown={onKeyDown}
         className={clsx(
           shared,
-          "w-0 min-w-full resize-none overflow-hidden bg-transparent caret-[#C9A87C] outline-none placeholder:text-[#C9A87C]/35",
-          spacer ? "text-[#C9A87C]/70" : "text-[#F5EBE0]"
+          "w-0 min-w-full resize-none overflow-hidden bg-transparent caret-garnet outline-none placeholder:text-stone-400 focus-visible:outline-none",
+          spacer ? "text-stone-500" : "text-ink"
         )}
       />
     </span>
@@ -314,19 +365,19 @@ function LineRow({
 
   return (
     <div className="group flex items-start gap-2">
-      <span className="w-6 shrink-0 select-none pt-2 text-right font-mono text-[10px] text-[#C9A87C]/30">
+      <span className="w-6 shrink-0 select-none pt-2.5 text-right font-mono text-[11px] text-stone-400">
         {String(number).padStart(2, "0")}
       </span>
 
       <div
         className={clsx(
-          "flex min-w-0 flex-1 flex-wrap items-start gap-x-1 gap-y-1 rounded-lg border px-2 py-1 transition-colors",
+          "flex min-w-0 flex-1 flex-wrap items-start gap-x-1.5 gap-y-1 rounded-xl border px-2.5 py-1.5 transition",
           variant === "spacer" &&
-            "border-dashed border-[#3A2018] bg-transparent focus-within:border-[#C9A87C]/50 hover:border-[#6B2D2C]",
+            "border-dashed border-stone-300 bg-stone-50/60 hover:border-stone-400 focus-within:border-garnet focus-within:bg-white focus-within:ring-2 focus-within:ring-garnet/15",
           variant === "text" &&
-            "border-[#3A2018] bg-[#2A1510]/70 focus-within:border-[#C9A87C]/60 focus-within:bg-[#2A1510] hover:border-[#6B2D2C]",
+            "border-stone-300 bg-white shadow-sm hover:border-stone-400 focus-within:border-garnet focus-within:ring-2 focus-within:ring-garnet/15",
           variant === "auto" &&
-            "border-[#3A2018] border-l-2 border-l-[#C9A87C]/70 bg-[#150907] focus-within:border-y-[#C9A87C]/40 focus-within:border-r-[#C9A87C]/40 hover:bg-[#1C0E0B]"
+            "border-amber-200 border-l-4 border-l-amber-400 bg-amber-50/60 hover:border-amber-300 hover:border-l-amber-400 focus-within:border-amber-300 focus-within:border-l-amber-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-amber-300/30"
         )}
       >
         {line.parts.map((part, index) => {
@@ -350,7 +401,9 @@ function LineRow({
                 spacer={spacer}
                 fill={textOnly}
                 placeholder={
-                  spacer ? "Jarak antar paragraf (klik untuk menulis)" : undefined
+                  spacer
+                    ? "Baris kosong = jarak antar paragraf (klik kalau mau diisi)"
+                    : undefined
                 }
                 ariaLabel="Isi kalimat"
                 textareaRef={registerRef(index)}
@@ -363,15 +416,15 @@ function LineRow({
         })}
       </div>
 
-      <div className="flex w-[3.25rem] shrink-0 items-center gap-0.5 pt-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100">
+      <div className="flex w-[3.5rem] shrink-0 items-center gap-0.5 pt-1.5">
         <button
           type="button"
           onClick={onAddBelow}
           aria-label="Tambah baris di bawah"
           title="Tambah baris di bawah"
-          className="flex h-6 w-6 items-center justify-center rounded-md text-[#C9A87C]/70 transition-colors hover:bg-[#3A2018] hover:text-[#F5EBE0]"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 transition hover:bg-emerald-50 hover:text-emerald-700"
         >
-          <Plus size={14} strokeWidth={2.4} />
+          <Plus size={15} strokeWidth={2.4} />
         </button>
 
         {textOnly && canRemove && (
@@ -380,9 +433,9 @@ function LineRow({
             onClick={onRemove}
             aria-label="Hapus baris"
             title="Hapus baris"
-            className="flex h-6 w-6 items-center justify-center rounded-md text-[#C9A87C]/70 transition-colors hover:bg-[#3A2018] hover:text-[#E58B80]"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 transition hover:bg-red-50 hover:text-red-600"
           >
-            <Trash2 size={13} strokeWidth={2.3} />
+            <Trash2 size={14} strokeWidth={2.3} />
           </button>
         )}
       </div>
@@ -673,7 +726,7 @@ export default function AdminWhatsappPage() {
 
   /* ----- tampilan ----- */
   return (
-    <main className="mx-auto flex w-full max-w-[1200px] flex-col gap-8 pb-10">
+    <main className="mx-auto flex w-full max-w-[1200px] flex-col gap-6 pb-10">
       {/* HEADER */}
       <motion.header
         initial={{ opacity: 0, y: 8 }}
@@ -682,18 +735,17 @@ export default function AdminWhatsappPage() {
         className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
       >
         <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#6B2D2C] text-white shadow-lg shadow-[#6B2D2C]/15">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-garnet text-white shadow-lg shadow-garnet/20">
             <MessageCircle size={22} strokeWidth={1.9} />
           </div>
 
           <div className="min-w-0">
-            <h1 className="font-serif text-2xl font-bold tracking-tight text-[#4A1A1A] sm:text-3xl">
+            <h1 className="font-serif text-2xl font-bold tracking-tight text-garnet-dark sm:text-3xl">
               Pesan WhatsApp
             </h1>
-            <p className="mt-1 max-w-xl text-sm leading-6 text-[#817269]">
-              Ubah kalimat pesan yang dikirim ke pelanggan setelah sesi foto.
-              Bagian yang bertanda gembok diisi otomatis dan tidak bisa
-              diubah.
+            <p className="mt-1 max-w-xl text-sm leading-6 text-stone-600">
+              Atur isi pesan yang dikirim ke pelanggan setelah sesi foto.
+              Hasilnya langsung terlihat di sebelah kanan.
             </p>
           </div>
         </div>
@@ -701,9 +753,9 @@ export default function AdminWhatsappPage() {
         {!loading && !loadError && (
           <div
             className={clsx(
-              "flex w-fit items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-medium transition-colors",
+              "flex w-fit items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-semibold transition-colors",
               dirty
-                ? "border-amber-200 bg-amber-50 text-amber-800"
+                ? "border-amber-300 bg-amber-50 text-amber-800"
                 : "border-emerald-200 bg-emerald-50 text-emerald-800"
             )}
           >
@@ -719,9 +771,9 @@ export default function AdminWhatsappPage() {
       </motion.header>
 
       {loading ? (
-        <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 rounded-3xl border border-[#E9DED2] bg-white">
-          <LoaderCircle size={26} className="animate-spin text-[#6B2D2C]" />
-          <p className="text-sm text-[#8A7A6F]">Memuat template pesan...</p>
+        <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 rounded-3xl border border-stone-200 bg-white">
+          <LoaderCircle size={26} className="animate-spin text-garnet" />
+          <p className="text-sm text-stone-500">Memuat template pesan...</p>
         </div>
       ) : loadError ? (
         <section className="rounded-3xl border border-red-200 bg-white p-6 sm:p-8">
@@ -731,16 +783,16 @@ export default function AdminWhatsappPage() {
             </div>
 
             <div className="min-w-0">
-              <h2 className="text-base font-semibold text-[#4A1A1A]">
+              <h2 className="text-base font-semibold text-garnet-dark">
                 Template gagal dimuat
               </h2>
-              <p className="mt-2 break-words text-sm leading-6 text-[#817269]">
+              <p className="mt-2 break-words text-sm leading-6 text-stone-600">
                 {loadError}
               </p>
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="mt-4 rounded-xl bg-[#6B2D2C] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#4A1A1A]"
+                className="mt-4 rounded-xl bg-garnet px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-garnet-dark"
               >
                 Coba muat ulang
               </button>
@@ -748,141 +800,219 @@ export default function AdminWhatsappPage() {
           </div>
         </section>
       ) : (
-        <div className="grid min-w-0 grid-cols-1 items-start gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
-          {/* EDITOR (tema gelap) */}
-          <section className="min-w-0 overflow-hidden rounded-3xl border border-[#3A2018] bg-[#1B0D0A] shadow-[0_18px_50px_rgba(26,11,8,0.35)]">
-            <div className="flex items-center justify-between gap-3 border-b border-[#3A2018] bg-[#241210] px-5 py-4 sm:px-6">
-              <div>
-                <h2 className="font-serif text-lg font-bold text-[#F5EBE0]">
-                  Isi pesan
-                </h2>
-                <p className="mt-0.5 text-xs text-[#C9A87C]/70">
-                  Klik kalimat untuk mengubahnya. Tekan Enter untuk baris
-                  baru.
-                </p>
-              </div>
+        <>
+          {/* CARA PAKAI (catatan) */}
+          <NoteCard title="Cara mengubah pesan">
+            <ol className="list-decimal space-y-0.5 pl-5">
+              <li>
+                Klik kalimat yang mau diubah di kotak putih, lalu ketik.
+              </li>
+              <li>
+                Tekan <b>Enter</b> untuk baris baru, tombol <b>+</b> untuk
+                menambah baris, ikon sampah untuk menghapus.
+              </li>
+              <li>
+                Cek hasilnya di pratinjau, lalu tekan <b>Simpan perubahan</b>{" "}
+                (atau <b>Ctrl + S</b>).
+              </li>
+            </ol>
+          </NoteCard>
 
-              <span
-                className={clsx(
-                  "shrink-0 text-xs tabular-nums",
-                  tooLong ? "font-semibold text-red-400" : "text-[#C9A87C]/60"
-                )}
-              >
-                {value.length.toLocaleString("id-ID")} /{" "}
-                {WHATSAPP_TEMPLATE_MAX_LENGTH.toLocaleString("id-ID")}
-              </span>
-            </div>
+          <div className="grid min-w-0 grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
+            {/* ===================== EDITOR ===================== */}
+            <div className="flex min-w-0 flex-col gap-4">
+              <section className="min-w-0 overflow-clip rounded-3xl border border-stone-200 bg-white shadow-[0_10px_34px_rgba(58,40,31,0.08)]">
+                <div className="flex items-center justify-between gap-3 border-b border-stone-200 px-5 py-4 sm:px-6">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-garnet/10 text-garnet">
+                      <Pencil size={17} strokeWidth={2.3} />
+                    </div>
+                    <div>
+                      <h2 className="font-serif text-lg font-bold text-garnet-dark">
+                        Tulis pesan di sini
+                      </h2>
+                      <p className="text-xs text-stone-500">
+                        Hanya kotak putih dan kuning yang bisa diedit
+                      </p>
+                    </div>
+                  </div>
 
-            {/* Keterangan warna */}
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-[#3A2018] bg-[#1F0F0B] px-5 py-3 text-[11px] text-[#C9A87C]/80 sm:px-6">
-              <span className="flex items-center gap-2">
-                <span className="h-4 w-9 rounded border border-[#3A2018] bg-[#2A1510]" />
-                Kalimat, bisa kamu ubah
-              </span>
+                  <span
+                    className={clsx(
+                      "shrink-0 rounded-full px-2.5 py-1 text-xs tabular-nums",
+                      tooLong
+                        ? "bg-red-50 font-semibold text-red-600"
+                        : "bg-stone-100 text-stone-500"
+                    )}
+                  >
+                    {value.length.toLocaleString("id-ID")} /{" "}
+                    {WHATSAPP_TEMPLATE_MAX_LENGTH.toLocaleString("id-ID")}
+                  </span>
+                </div>
 
-              <span className="flex items-center gap-2">
-                <span className="inline-flex h-5 items-center gap-1 rounded-md border border-dashed border-[#C9A87C]/50 bg-[#C9A87C]/15 px-1.5 font-semibold text-[#E7CFA4]">
-                  <Lock size={9} strokeWidth={2.6} />
-                  Otomatis
-                </span>
-                Diisi sistem, terkunci
-              </span>
+                {/* Keterangan warna */}
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-stone-200 bg-[#FBF6EC] px-5 py-3 text-xs text-stone-600 sm:px-6">
+                  <span className="font-bold uppercase tracking-wider text-stone-500">
+                    Keterangan:
+                  </span>
 
-              <span className="flex items-center gap-2">
-                <span className="w-9 border-t border-dashed border-[#6B4A3A]" />
-                Jarak antar paragraf
-              </span>
-            </div>
+                  <span className="flex items-center gap-2">
+                    <span className="h-5 w-9 rounded-md border border-stone-300 bg-white" />
+                    Kalimat biasa (bisa diubah)
+                  </span>
 
-            <div className="flex flex-col gap-1.5 px-3 py-4 sm:px-4">
-              {lines.map((line, index) => (
-                <LineRow
-                  key={line.id}
-                  line={line}
-                  number={index + 1}
-                  canRemove={lines.length > 1}
-                  registerRef={registerRef(line.id)}
-                  onChangeText={(partIndex, text) =>
-                    changeText(line.id, partIndex, text)
-                  }
-                  onKeyDown={(partIndex, event) =>
-                    handleKeyDown(line, partIndex, event)
-                  }
-                  onAddBelow={() => addLineBelow(line.id)}
-                  onRemove={() => removeLine(line.id)}
-                />
-              ))}
-            </div>
+                  <span className="flex items-center gap-2">
+                    <span className="inline-flex h-5 items-center gap-1 rounded-md border border-amber-300 bg-amber-100 px-1.5 font-bold text-amber-900">
+                      <Lock size={10} strokeWidth={2.6} />
+                      Otomatis
+                    </span>
+                    Diisi sistem (terkunci)
+                  </span>
 
-            <div className="border-t border-[#3A2018] bg-[#150907] px-5 py-4 sm:px-6">
-              <p className="mb-3 text-[11px] leading-5 text-[#C9A87C]/70">
-                Pakai <code className="rounded bg-[#2A1510] px-1 py-0.5 text-[#E7CFA4]">*teks*</code>{" "}
-                untuk tebal dan{" "}
-                <code className="rounded bg-[#2A1510] px-1 py-0.5 text-[#E7CFA4]">_teks_</code>{" "}
-                untuk miring, sama seperti di WhatsApp.
-              </p>
+                  <span className="flex items-center gap-2">
+                    <span className="h-5 w-9 rounded-md border border-dashed border-stone-300 bg-stone-50" />
+                    Jarak antar paragraf
+                  </span>
+                </div>
 
-              {tooLong && (
-                <p className="mb-3 text-xs font-medium text-red-400">
-                  Pesan melebihi batas karakter. Kurangi dulu sebelum
-                  menyimpan.
-                </p>
-              )}
+                {/* Baris-baris pesan */}
+                <div className="flex flex-col gap-2 bg-[#FFFDF8] px-3 py-5 sm:px-4">
+                  {lines.map((line, index) => (
+                    <LineRow
+                      key={line.id}
+                      line={line}
+                      number={index + 1}
+                      canRemove={lines.length > 1}
+                      registerRef={registerRef(line.id)}
+                      onChangeText={(partIndex, text) =>
+                        changeText(line.id, partIndex, text)
+                      }
+                      onKeyDown={(partIndex, event) =>
+                        handleKeyDown(line, partIndex, event)
+                      }
+                      onAddBelow={() => addLineBelow(line.id)}
+                      onRemove={() => removeLine(line.id)}
+                    />
+                  ))}
+                </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={!dirty || empty || tooLong || saving}
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#C9A87C] px-6 py-2.5 text-sm font-semibold text-[#2A1510] shadow-md transition hover:bg-[#D8B98D] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
-                >
-                  {saving ? (
-                    <LoaderCircle size={17} className="animate-spin" />
-                  ) : (
-                    <Save size={17} />
+                {/* Tombol simpan (nempel di bawah saat scroll) */}
+                <div className="sticky bottom-0 z-10 border-t border-stone-200 bg-white/95 px-5 py-4 backdrop-blur sm:px-6">
+                  {tooLong && (
+                    <p className="mb-3 text-xs font-semibold text-red-600">
+                      Pesan melebihi batas karakter. Kurangi dulu sebelum
+                      menyimpan.
+                    </p>
                   )}
-                  {saving ? "Menyimpan..." : "Simpan perubahan"}
-                </button>
 
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  disabled={saving}
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#4A2A20] bg-transparent px-5 py-2.5 text-sm font-medium text-[#C9A87C] transition hover:bg-[#2A1510] disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <RotateCcw size={15} />
-                  Kembalikan bawaan
-                </button>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs text-stone-500">
+                      {dirty
+                        ? "Ada perubahan yang belum disimpan."
+                        : "Semua perubahan sudah tersimpan."}
+                    </p>
+
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <button
+                        type="button"
+                        onClick={handleReset}
+                        disabled={saving}
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-5 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <RotateCcw size={15} />
+                        Kembalikan bawaan
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={!dirty || empty || tooLong || saving}
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-forest px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-forest-dark disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                      >
+                        {saving ? (
+                          <LoaderCircle size={17} className="animate-spin" />
+                        ) : (
+                          <Save size={17} />
+                        )}
+                        {saving ? "Menyimpan..." : "Simpan perubahan"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* CATATAN: tebal / miring */}
+              <NoteCard title="Huruf tebal & miring" tone="tip">
+                <p>
+                  Ketik <code className="rounded bg-white px-1.5 py-0.5 font-mono text-[13px] font-bold">*teks*</code>{" "}
+                  supaya <b>tebal</b>, dan{" "}
+                  <code className="rounded bg-white px-1.5 py-0.5 font-mono text-[13px] font-bold">_teks_</code>{" "}
+                  supaya <i>miring</i>, sama seperti di WhatsApp. Tanda{" "}
+                  <code className="rounded bg-white px-1.5 py-0.5 font-mono text-[13px] font-bold">*</code>{" "}
+                  di sebelah kotak kuning diatur otomatis, biarkan saja.
+                </p>
+              </NoteCard>
+
+              {/* CATATAN: bagian otomatis */}
+              <NoteCard title="Bagian otomatis (bergembok)">
+                <p className="mb-2">
+                  Kotak kuning bergembok akan diganti data asli tiap pelanggan
+                  saat pesan dikirim. Kamu tidak perlu mengetiknya:
+                </p>
+                <ul className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
+                  {WHATSAPP_TEMPLATE_VARIABLES.map((item) => (
+                    <li key={item.key} className="flex items-start gap-2">
+                      <span className="mt-0.5 inline-flex h-5 shrink-0 items-center gap-1 rounded-md border border-amber-300 bg-amber-100 px-1.5 text-[11px] font-bold text-amber-900">
+                        <Lock size={9} strokeWidth={2.6} />
+                        {item.label}
+                      </span>
+                      <span className="text-[13px] leading-5 text-sky-900/80">
+                        {item.desc}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-[13px] text-sky-900/80">
+                  Link foto selalu disertakan otomatis supaya pelanggan pasti
+                  bisa mengunduh fotonya.
+                </p>
+              </NoteCard>
+            </div>
+
+            {/* ===================== PRATINJAU ===================== */}
+            <aside className="min-w-0 xl:sticky xl:top-2">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="flex items-center gap-2 font-serif text-lg font-bold text-garnet-dark">
+                  <Smartphone size={18} strokeWidth={2.2} />
+                  Pratinjau
+                </h2>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                  LANGSUNG
+                </span>
               </div>
-            </div>
-          </section>
 
-          {/* PREVIEW: bubble WhatsApp polos, tanpa container */}
-          <aside className="min-w-0 xl:sticky xl:top-2">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="font-serif text-lg font-bold text-[#4A1A1A]">
-                Pratinjau
-              </h2>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-                LANGSUNG
-              </span>
-            </div>
+              <div className="rounded-3xl border border-stone-200 bg-[#EFE7DA] p-4 sm:p-5">
+                <p className="mb-3 text-center text-[11px] font-medium text-stone-500">
+                  Begini tampilan pesan di WhatsApp pelanggan
+                </p>
 
-            {empty ? (
-              <p className="text-sm italic text-[#A39489]">
-                Isi pesan akan muncul di sini.
+                {empty ? (
+                  <p className="py-6 text-center text-sm italic text-stone-500">
+                    Isi pesan akan muncul di sini.
+                  </p>
+                ) : (
+                  <WhatsAppBubble text={previewText} time={previewTime} />
+                )}
+              </div>
+
+              <p className="mt-3 text-[11px] leading-5 text-stone-500">
+                Data di pratinjau hanya contoh. Saat dikirim, bagian bergembok
+                diganti data asli tiap pelanggan.
               </p>
-            ) : (
-              <WhatsAppBubble text={previewText} time={previewTime} />
-            )}
-
-            <p className="mt-4 text-[11px] leading-5 text-[#9A8B80]">
-              Data di pratinjau hanya contoh. Saat dikirim, bagian bergembok
-              diganti data asli tiap pelanggan.
-            </p>
-          </aside>
-        </div>
+            </aside>
+          </div>
+        </>
       )}
     </main>
   );
